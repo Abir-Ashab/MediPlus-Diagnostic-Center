@@ -16,6 +16,7 @@ import { FiLogOut } from "react-icons/fi";
 import { RiAdminLine } from "react-icons/ri";
 import { TbBed } from "react-icons/tb";
 import { MdDashboardCustomize } from "react-icons/md";
+import { FaMoneyBillWave } from "react-icons/fa"; // Added for revenue icons
 import { useDispatch, useSelector } from "react-redux";
 
 const Sidebar = () => {
@@ -170,11 +171,11 @@ const Sidebar = () => {
                 </div>
               </Link>
             ) : null}
-            {user?.userType === "doctor" ? (
+            {user?.userType === "nurse" ? (
               <Link
                 className="link"
                 activeclassname="active"
-                to={"/checkappointment"}
+                to={"/appointments"}
               >
                 <div className="icon">
                   <BsFillBookmarkCheckFill className="mainIcon" />
@@ -204,23 +205,61 @@ const Sidebar = () => {
                 </div>
               </Link>
             ) : null}
-            {/* {user?.userType === "doctor" ? (
+
+            {/* Revenue links - added for nurse and admin users */}
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
               <Link
                 className="link"
                 activeclassname="active"
-                to={"/patientdetails"}
+                to={"/hospital-revenue"}
               >
                 <div className="icon">
-                  <TbListDetails className="mainIcon" />
+                  <FaMoneyBillWave className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
                   className="link_text"
                 >
-                  Patients
+                  Hospital Revenue
                 </div>
               </Link>
-            ) : null} */}
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/doctor-revenue"}
+              >
+                <div className="icon">
+                  <RiSecurePaymentLine className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Doctor Revenue
+                </div>
+              </Link>
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/broker-revenue"}
+              >
+                <div className="icon">
+                  <FaMoneyBillWave className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Broker Revenue
+                </div>
+              </Link>
+            ) : null}
 
             <Link
               className="LogOutPath link"

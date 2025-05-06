@@ -17,6 +17,10 @@ import Add_Patient from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Add_Pa
 import Book_Appointment from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Book_Appointment";
 import Nurse_Profile from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Nurse_Profile";
 import FrontPage from "../Pages/Dashboard/Main-Dashboard/GlobalFiles/FrontPage";
+import Hospital_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Hospital_Revenue";
+import Doctor_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Doctor_Revenue";
+import Broker_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Broker_Revenue";
+
 const AllRoutes = () => {
   return (
     <>
@@ -28,9 +32,12 @@ const AllRoutes = () => {
         <Route path="/admin" element={<Add_Admin />} />
         <Route path="/doctorprofile" element={<Doctor_Profile />} />
         <Route path="/createslip" element={<Discharge_and_Create_Slip />} />
-        <Route path="/addpatient" element={<Add_Patient />} />
         <Route path="/bookappointment" element={<Book_Appointment />} />
         <Route path="/nurseprofile" element={<Nurse_Profile />} />
+        <Route path="/hospital-revenue" element={<Hospital_Revenue />} />
+        <Route path="/appointments" element={<Check_Appointment />} />
+        <Route path="/doctor-revenue" element={<Doctor_Revenue />} />
+        <Route path="/broker-revenue" element={<Broker_Revenue />} />
       </Routes>
     </>
   );

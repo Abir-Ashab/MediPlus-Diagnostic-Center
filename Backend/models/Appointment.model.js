@@ -8,7 +8,7 @@ const appointmentSchema = mongoose.Schema({
 
   patientID: {
     type: Number,
-    required: true,
+    // required: true,
   },
 
   patientName: {
@@ -31,8 +31,48 @@ const appointmentSchema = mongoose.Schema({
     type: String,
   },
 
-  department: {
-    type: String,
+  // Replace department with tests array
+  tests: [{
+    testName: {
+      type: String,
+      required: true
+    },
+    testPrice: {
+      type: Number,
+      required: true
+    }
+  }],
+
+  // Add total amount field
+  totalAmount: {
+    type: Number,
+    required: true
+  },
+
+  // Add doctor name field
+  doctorName: {
+    type: String
+  },
+
+  // Add broker name field
+  brokerName: {
+    type: String
+  },
+
+  // Revenue distribution fields
+  hospitalRevenue: {
+    type: Number,
+    required: true
+  },
+
+  doctorRevenue: {
+    type: Number,
+    default: 0
+  },
+
+  brokerRevenue: {
+    type: Number,
+    default: 0
   },
 
   time: {
