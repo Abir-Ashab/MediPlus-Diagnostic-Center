@@ -43,15 +43,15 @@ const Add_Nurse = () => {
     e.preventDefault();
     setLoading(true);
     dispatch(NurseRegister(NurseValue)).then((res) => {
-      if (res.message === "Nures already exists") {
+      if (res.message === "Manager already exists") {
         setLoading(false);
-        return notify("Nurse Already Exist");
+        return notify("Manager Already Exist");
       }
       if (res.message === "error") {
         setLoading(false);
         return notify("Something went wrong, Please try Again");
       }
-      notify("Nurse Added");
+      notify("Manager Added");
 
       let data = {
         email: res.data.email,
