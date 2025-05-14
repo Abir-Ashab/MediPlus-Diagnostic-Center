@@ -20,6 +20,7 @@ import FrontPage from "../Pages/Dashboard/Main-Dashboard/GlobalFiles/FrontPage";
 import Hospital_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Hospital_Revenue";
 import Doctor_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Doctor_Revenue";
 import Broker_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Broker_Revenue";
+import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Add_Broker";
 
 const AllRoutes = () => {
   return (
@@ -27,7 +28,9 @@ const AllRoutes = () => {
       <Routes>
         <Route path="/" element={<DLogin />} />
         <Route path="/dashboard" element={<FrontPage />} />
-        <Route path="/addoctor" element={<AddDoctor />} />
+        <Route path="/adddoctor" element={<AddDoctor />} />
+        {/* <Route path="/addpatient" element={<Add_Patient/>}/> */}
+        <Route path="/addbroker" element={<AddBroker/>}/>
         <Route path="/addManager" element={<Add_Nurse />} />
         <Route path="/admin" element={<Add_Admin />} />
         <Route path="/doctorprofile" element={<Doctor_Profile />} />

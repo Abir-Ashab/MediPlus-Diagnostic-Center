@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
-const brokerSchema = mongoose.Schema({
+// Check if the model is already compiled to avoid the OverwriteModelError
+const BrokerModel = mongoose.models.broker || mongoose.model("broker", mongoose.Schema({
   userType: {
     type: String,
     default: "broker",
@@ -76,8 +77,6 @@ const brokerSchema = mongoose.Schema({
   notes: {
     type: String,
   }
-});
-
-const BrokerModel = mongoose.model("broker", brokerSchema);
+}));
 
 module.exports = { BrokerModel };

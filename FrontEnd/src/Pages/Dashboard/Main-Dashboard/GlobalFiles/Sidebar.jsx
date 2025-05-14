@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { AiOutlineUserAdd } from "react-icons/ai";
 import { FaAmbulance } from "react-icons/fa";
+import { FaUserMd } from "react-icons/fa";
 import { GiNurseFemale } from "react-icons/gi";
 import { RiSecurePaymentLine } from "react-icons/ri";
 import { SlUserFollow } from "react-icons/sl";
@@ -37,7 +38,7 @@ const Sidebar = () => {
         <div style={{ width: isOpen ? "200px" : "70px" }} className={`sidebar`}>
           <div className="top_section">
             <h1 style={{ display: isOpen ? "block" : "none" }} className="logo">
-              HMS
+              XYZ 
             </h1>
             <div
               style={{ marginLeft: isOpen ? "50px" : "0px" }}
@@ -80,7 +81,7 @@ const Sidebar = () => {
               <Link
                 className="link"
                 activeclassname="active"
-                to={"/addpatient"}
+                to={"/addbroker"}
               >
                 <div className="icon">
                   <FaHospitalUser className="mainIcon" />
@@ -89,7 +90,7 @@ const Sidebar = () => {
                   style={{ display: isOpen ? "block" : "none" }}
                   className="link_text"
                 >
-                  Add Patient
+                  Add Broker
                 </div>
               </Link>
             ) : null}
@@ -221,6 +222,24 @@ const Sidebar = () => {
                   className="link_text"
                 >
                   Hospital Revenue
+                </div>
+              </Link>
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/adddoctor"}
+              >
+                <div className="icon">
+                  <FaUserMd className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Add Doctor
                 </div>
               </Link>
             ) : null}

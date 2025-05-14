@@ -155,7 +155,8 @@ export const DoctorsList = [
   { id: 5, name: "Dr. Sadia Khan" },
   { id: 6, name: "Dr. Tahmid Hasan" },
   { id: 7, name: "Dr. Nadia Sultana" },
-  { id: 8, name: "Dr. Rafiq Islam" }
+  { id: 8, name: "Dr. Rafiq Islam" },
+  { id: 9, name: "Dr. Faiza Karim" }
 ];
 
 export const BrokersList = [

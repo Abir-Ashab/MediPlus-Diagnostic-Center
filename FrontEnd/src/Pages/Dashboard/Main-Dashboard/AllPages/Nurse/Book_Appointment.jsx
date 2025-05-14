@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { CommonProblem, TestsList, DoctorsList, BrokersList } from "./MixedObjectData";
+import { CommonProblem, TestsList } from "./MixedObjectData";
 import "./CSS/Book_appointment.css";
 import { useDispatch } from "react-redux";
 import { AddPatients, CreateBooking } from "../../../../../Redux/Datas/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios"; // Import axios for API calls
 const notify = (text) => toast(text);
 
 const Book_Appointment = () => {
   const dispatch = useDispatch();
   const [Loading, setLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]); // State to store doctors from API
+  const [brokers, setBrokers] = useState([]); // State to store brokers from API
+  const [loadingDoctors, setLoadingDoctors] = useState(true); // State to track doctors loading
+  const [loadingBrokers, setLoadingBrokers] = useState(true); // State to track brokers loading
 
   const InitValue = {
     patientName: "",
@@ -30,10 +35,46 @@ const Book_Appointment = () => {
   const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "" }]);
   const [totalAmount, setTotalAmount] = useState(0);
   
-  // New states for revenue distribution
+  // States for revenue distribution
   const [hospitalRevenue, setHospitalRevenue] = useState(0);
   const [doctorRevenue, setDoctorRevenue] = useState(0);
   const [brokerRevenue, setBrokerRevenue] = useState(0);
+
+  // Fetch doctors from the backend API
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        setLoadingDoctors(true);
+        const response = await axios.get("http://localhost:5000/doctors"); // Update with your actual API endpoint
+        setDoctors(response.data);
+        setLoadingDoctors(false);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+        notify("Failed to load doctors. Please try again later.");
+        setLoadingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  // Fetch brokers from the backend API
+  useEffect(() => {
+    const fetchBrokers = async () => {
+      try {
+        setLoadingBrokers(true);
+        const response = await axios.get("http://localhost:5000/brokers"); // Updated broker API endpoint
+        setBrokers(response.data);
+        setLoadingBrokers(false);
+      } catch (error) {
+        console.error("Error fetching brokers:", error);
+        notify("Failed to load brokers. Please try again later.");
+        setLoadingBrokers(false);
+      }
+    };
+
+    fetchBrokers();
+  }, []);
 
   // Calculate total amount whenever selected tests change
   useEffect(() => {
@@ -409,11 +450,14 @@ const Book_Appointment = () => {
                       value={BookAppoint.doctorName}
                       onChange={HandleAppointment}
                       style={{ width: "100%", padding: "10px" }}
+                      disabled={loadingDoctors}
                     >
-                      <option value="">Select Doctor</option>
-                      {DoctorsList.map((doctor) => (
-                        <option key={doctor.id} value={doctor.name}>
-                          {doctor.name}
+                      <option value="">
+                        {loadingDoctors ? "Loading doctors..." : "Select Doctor"}
+                      </option>
+                      {doctors.map((doctor) => (
+                        <option key={doctor._id} value={doctor.name || doctor.docName}>
+                          {doctor.name || doctor.docName} - {doctor.specialization}
                         </option>
                       ))}
                     </select>
@@ -429,11 +473,14 @@ const Book_Appointment = () => {
                       value={BookAppoint.brokerName}
                       onChange={HandleAppointment}
                       style={{ width: "100%", padding: "10px" }}
+                      disabled={loadingBrokers}
                     >
-                      <option value="">Select Broker</option>
-                      {BrokersList.map((broker) => (
-                        <option key={broker.id} value={broker.name}>
-                          {broker.name}
+                      <option value="">
+                        {loadingBrokers ? "Loading brokers..." : "Select Broker"}
+                      </option>
+                      {brokers.map((broker) => (
+                        <option key={broker._id} value={broker.name || broker.docName}>
+                          {broker.name || broker.docName}
                         </option>
                       ))}
                     </select>
