@@ -15,6 +15,7 @@ const paymentRouter = require("./routes/Payments.route");
 const prescriptionRouter = require("./routes/Prescriptions.Route");
 const reportRouter = require("./routes/Reports.Route");
 const brokerRoutes = require("./routes/Brokers.Route")
+const testOrder = require("./routes/testOrderRoutes")
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/admin", adminRouter);
+app.use("/testorders", testOrder)
 app.use("/ambulances", ambulanceRouter);
 app.use("/appointments", appointmentRouter);
 app.use("/beds", bedRouter);

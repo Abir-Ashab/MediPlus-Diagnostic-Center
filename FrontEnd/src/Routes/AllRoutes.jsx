@@ -21,12 +21,16 @@ import Hospital_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/H
 import Doctor_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Doctor_Revenue";
 import Broker_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Broker_Revenue";
 import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Add_Broker";
+import Test_Order from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Test_Order";
+import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/TestOrdersList";
 
 const AllRoutes = () => {
   return (
     <>
       <Routes>
         <Route path="/" element={<DLogin />} />
+        <Route path="/booktest" element={<Test_Order />} />
+        <Route path="/testorders" element={<TestOrdersList />} />
         <Route path="/dashboard" element={<FrontPage />} />
         <Route path="/adddoctor" element={<AddDoctor />} />
         {/* <Route path="/addpatient" element={<Add_Patient/>}/> */}

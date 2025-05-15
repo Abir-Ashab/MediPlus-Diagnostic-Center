@@ -29,6 +29,7 @@ const Book_Appointment = () => {
     brokerName: "",
     date: "",
     time: "",
+    doctorFee: 0
   };
 
   const [BookAppoint, setBookAppoint] = useState(InitValue);
@@ -40,6 +41,7 @@ const Book_Appointment = () => {
   const [doctorRevenue, setDoctorRevenue] = useState(0);
   const [brokerRevenue, setBrokerRevenue] = useState(0);
 
+  
   // Fetch doctors from the backend API
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -76,21 +78,49 @@ const Book_Appointment = () => {
     fetchBrokers();
   }, []);
 
+  useEffect(() => {
+  if (BookAppoint.doctorName) {
+    const selectedDoctor = doctors.find(
+      d => d.name === BookAppoint.doctorName || d.docName === BookAppoint.doctorName
+    );
+    
+    if (selectedDoctor) {
+      const fee = selectedDoctor.consultationFee || 500; // Default fee if not specified
+      
+      setBookAppoint(prev => ({
+        ...prev,
+        doctorFee: fee
+      }));
+      
+      // Update selectedTests with doctor fee
+      const doctorFeeTest = {
+        id: Date.now(),
+        testId: "doctor-fee",
+        customName: "Doctor Fee",
+        customPrice: fee
+      };
+      
+      setSelectedTests([doctorFeeTest]);
+    }
+  }
+}, [BookAppoint.doctorName, doctors]);
+
+
   // Calculate total amount whenever selected tests change
   useEffect(() => {
-    const calculateTotal = () => {
-      return selectedTests.reduce((sum, test) => {
-        const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
-        return sum + (selectedTest && test.testId ? selectedTest.price : 0);
-      }, 0);
-    };
+    let total = 0;
     
-    const total = calculateTotal();
+    // For doctor fee test
+    if (selectedTests.some(test => test.testId === "doctor-fee")) {
+      total += BookAppoint.doctorFee;
+    }
     setTotalAmount(total);
 
     // Calculate revenue distribution
     calculateRevenueDistribution(total, BookAppoint.doctorName, BookAppoint.brokerName);
-  }, [selectedTests, BookAppoint.doctorName, BookAppoint.brokerName]);
+  }, [selectedTests, BookAppoint.doctorName, BookAppoint.brokerName, BookAppoint.doctorFee]);
+
+
 
   // Function to calculate revenue distribution
   const calculateRevenueDistribution = (amount, doctor, broker) => {
@@ -149,14 +179,18 @@ const Book_Appointment = () => {
     }
 
     // Create tests array with name and price for each selected test
+    // Create tests array with name and price for each selected test
     const testsWithPrices = selectedTests
       .filter(test => test.testId !== "") // Filter out empty selections
       .map(test => {
-        const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
-        return {
-          testName: selectedTest.title,
-          testPrice: selectedTest.price
-        };
+        if (test.testId === "doctor-fee") {
+          return {
+            testName: "Doctor Fee",
+            testPrice: BookAppoint.doctorFee
+          };
+        } else {
+          // Handle regular tests
+        }
       });
 
     setLoading(true);
@@ -331,10 +365,10 @@ const Book_Appointment = () => {
               </div>
 
               {/* TESTS SECTION - DROPDOWN WITH ADD MORE BUTTON */}
-              <div>
+              {/* <div>
                 <label>Select Tests</label>
                 <div style={{ marginBottom: "15px" }}>
-                  {selectedTests.map((test, index) => (
+                  {selectedTests.map((test, index) => ( 
                     <div key={test.id} style={{ 
                       display: "flex", 
                       alignItems: "center", 
@@ -387,8 +421,43 @@ const Book_Appointment = () => {
                     + Add More Test
                   </button>
                 </div>
-              </div>
+              </div> */}
 
+              {/* DOCTOR FEE SECTION */}
+              <div>
+                <label>Doctor Fee</label>
+                <div style={{ marginBottom: "15px" }}>
+                  {selectedTests.map((test, index) => {
+                    if (test.testId === "doctor-fee") {
+                      return (
+                        <div key={test.id} style={{ 
+                          display: "flex", 
+                          alignItems: "center", 
+                          marginBottom: "10px" 
+                        }}>
+                          <div className="inputdiv" style={{ flex: 1, marginRight: "10px" }}>
+                            <input
+                              type="text"
+                              value={`Doctor Fee: ${BookAppoint.doctorFee} Taka`}
+                              readOnly
+                              style={{ 
+                                backgroundColor: "#f9f9f9", 
+                                fontWeight: "bold",
+                                fontSize: "16px",
+                                color: "#2c3e50",
+                                textAlign: "right",
+                                padding: "10px",
+                                width: "100%"
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
               {/* DISPLAY TOTAL AMOUNT */}
               <div>
                 <label>Total Amount</label>

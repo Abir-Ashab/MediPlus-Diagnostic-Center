@@ -13,25 +13,148 @@ const Hospital_Revenue = () => {
   });
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
-  const [filteredAppointments, setFilteredAppointments] = useState([]);
-  const [appointments, setAppointments] = useState([]);
+  const [filteredRecords, setFilteredRecords] = useState([]);
+  const [records, setRecords] = useState([]);
 
   // Fetch hospital revenue data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:5000/appointments/revenue/hospital");
-        setRevenueData({
-          totalRevenue: response.data.summary.totalRevenue || 0,
-          appointments: response.data.summary.appointments || 0,
-          monthlyData: response.data.monthly || []
+        
+        // Fetch appointment revenue data
+        const appointmentResponse = await axios.get("http://localhost:5000/appointments/revenue/hospital");
+        
+        // Try to fetch test order revenue data
+        let testOrderResponse;
+        try {
+          testOrderResponse = await axios.get("http://localhost:5000/testorders");
+        } catch (error) {
+          console.warn("Could not fetch test orders, continuing with appointment data only", error);
+          testOrderResponse = { data: [] };
+        }
+        
+        // Calculate test order revenue and combine with appointment data
+        let totalTestOrderRevenue = 0;
+        let totalTestOrders = 0;
+        
+        // Process test orders
+        testOrderResponse.data.forEach(order => {
+          if (order.hospitalRevenue) {
+            totalTestOrderRevenue += order.hospitalRevenue;
+            totalTestOrders += 1;
+          }
         });
         
         // Also fetch all appointments for filtering
         const appointmentsRes = await axios.get("http://localhost:5000/appointments");
-        setAppointments(appointmentsRes.data);
-        setFilteredAppointments(appointmentsRes.data);
+        
+        // Format appointments to include type
+        const formattedAppointments = appointmentsRes.data.map(appointment => ({
+          ...appointment,
+          recordType: "Appointment"  // Add a type to differentiate
+        }));
+        
+        // Format test orders to match appointment structure for consistent display
+        const formattedTestOrders = testOrderResponse.data.map(order => ({
+          patientName: order.patientName,
+          date: order.date,
+          time: order.time,
+          tests: order.tests || [],
+          totalAmount: order.totalAmount,
+          hospitalRevenue: order.hospitalRevenue,
+          recordType: "Test Order"  // Add a type to differentiate
+        }));
+        
+        // Combine and sort by date (most recent first)
+        const combinedRecords = [...formattedAppointments, ...formattedTestOrders].sort((a, b) => {
+          return new Date(b.date) - new Date(a.date);
+        });
+        
+        // Create monthly data by combining both sources
+        const appointmentMonthlyData = appointmentResponse.data.monthly || [];
+        
+        // Process test orders by month for chart data
+        const testOrdersByMonth = {};
+        testOrderResponse.data.forEach(order => {
+          if (order.date && order.hospitalRevenue) {
+            // Extract month from date string (assuming format YYYY-MM-DD or MM/DD/YYYY)
+            let dateParts;
+            if (order.date.includes('-')) {
+              dateParts = order.date.split('-');
+            } else if (order.date.includes('/')) {
+              dateParts = order.date.split('/');
+            }
+            
+            let month;
+            if (dateParts) {
+              // Check format based on parts
+              if (dateParts[0].length === 4) {
+                // YYYY-MM-DD
+                month = dateParts[1];
+              } else {
+                // MM/DD/YYYY
+                month = dateParts[0];
+              }
+              
+              // Convert to month name
+              const monthNames = ["January", "February", "March", "April", "May", "June", 
+                                "July", "August", "September", "October", "November", "December"];
+              const monthIndex = parseInt(month, 10) - 1;  // Convert to 0-based index
+              const monthName = monthNames[monthIndex];
+              
+              if (!testOrdersByMonth[monthName]) {
+                testOrdersByMonth[monthName] = { revenue: 0, count: 0 };
+              }
+              testOrdersByMonth[monthName].revenue += order.hospitalRevenue;
+              testOrdersByMonth[monthName].count += 1;
+            }
+          }
+        });
+        
+        // Combine monthly data from both sources
+        const combinedMonthlyData = [...appointmentMonthlyData];
+        
+        // Add test order monthly data to existing months or create new entries
+        Object.keys(testOrdersByMonth).forEach(month => {
+          const existingMonthIndex = combinedMonthlyData.findIndex(item => item._id === month);
+          
+          if (existingMonthIndex >= 0) {
+            // Update existing month
+            combinedMonthlyData[existingMonthIndex].revenue += testOrdersByMonth[month].revenue;
+            combinedMonthlyData[existingMonthIndex].count += testOrdersByMonth[month].count;
+          } else {
+            // Add new month
+            combinedMonthlyData.push({
+              _id: month,
+              revenue: testOrdersByMonth[month].revenue,
+              count: testOrdersByMonth[month].count
+            });
+          }
+        });
+        
+        // Sort monthly data by month number
+        const monthOrder = {
+          "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+          "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+        };
+        
+        combinedMonthlyData.sort((a, b) => monthOrder[a._id] - monthOrder[b._id]);
+        
+        // Calculate updated summary
+        const totalHospitalRevenue = 
+          (appointmentResponse.data.summary.totalRevenue || 0) + totalTestOrderRevenue;
+        const totalAppointments = 
+          (appointmentResponse.data.summary.appointments || 0) + totalTestOrders;
+        
+        setRevenueData({
+          totalRevenue: totalHospitalRevenue,
+          appointments: totalAppointments,
+          monthlyData: combinedMonthlyData
+        });
+        
+        setRecords(combinedRecords);
+        setFilteredRecords(combinedRecords);
         
         setLoading(false);
       } catch (error) {
@@ -59,17 +182,17 @@ const Hospital_Revenue = () => {
       return;
     }
 
-    const filtered = appointments.filter(appointment => {
-      const appointmentDate = new Date(appointment.date);
-      return appointmentDate >= startDate && appointmentDate <= endDate;
+    const filtered = records.filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate >= startDate && recordDate <= endDate;
     });
 
-    setFilteredAppointments(filtered);
+    setFilteredRecords(filtered);
 
-    // Calculate total revenue for filtered appointments
-    const totalHospitalRevenue = filtered.reduce((sum, appointment) => sum + appointment.hospitalRevenue, 0);
+    // Calculate total revenue for filtered records
+    const totalHospitalRevenue = filtered.reduce((sum, record) => sum + record.hospitalRevenue, 0);
     
-    toast.success(`Found ${filtered.length} appointments in selected date range`);
+    toast.success(`Found ${filtered.length} records in selected date range`);
     setRevenueData({
       ...revenueData,
       totalRevenue: totalHospitalRevenue,
@@ -80,15 +203,15 @@ const Hospital_Revenue = () => {
   // Reset filters
   const resetFilters = () => {
     setDateRange({ start: "", end: "" });
-    setFilteredAppointments(appointments);
+    setFilteredRecords(records);
     
-    // Recalculate total from all appointments
-    const totalHospitalRevenue = appointments.reduce((sum, appointment) => sum + appointment.hospitalRevenue, 0);
+    // Recalculate total from all records
+    const totalHospitalRevenue = records.reduce((sum, record) => sum + record.hospitalRevenue, 0);
     
     setRevenueData({
       ...revenueData,
       totalRevenue: totalHospitalRevenue,
-      appointments: appointments.length
+      appointments: records.length
     });
   };
 
@@ -130,7 +253,7 @@ const Hospital_Revenue = () => {
                 borderRadius: "8px",
                 boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
               }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: "18px" }}>Total Appointments</h3>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "18px" }}>Total Records</h3>
                 <h2 style={{ margin: "0", fontSize: "28px" }}>{revenueData.appointments}</h2>
               </div>
               
@@ -142,7 +265,7 @@ const Hospital_Revenue = () => {
                 borderRadius: "8px",
                 boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
               }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: "18px" }}>Average Revenue per Appointment</h3>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "18px" }}>Average Revenue per Record</h3>
                 <h2 style={{ margin: "0", fontSize: "28px" }}>
                   {revenueData.appointments > 0 
                     ? (revenueData.totalRevenue / revenueData.appointments).toFixed(0) 
@@ -230,49 +353,61 @@ const Hospital_Revenue = () => {
               )}
             </div>
             
-            {/* Recent Appointments Table */}
+            {/* Recent Records Table */}
             <div>
-              <h3>Recent Appointments</h3>
+              <h3>Recent Records</h3>
               {loading ? (
-                <p>Loading appointment data...</p>
-              ) : filteredAppointments.length > 0 ? (
+                <p>Loading record data...</p>
+              ) : filteredRecords.length > 0 ? (
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ backgroundColor: "#f5f5f5" }}>
                         <th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>Patient Name</th>
                         <th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>Date</th>
-                        <th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>Tests</th>
+                        <th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>Type</th>
+                        <th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>Tests/Procedures</th>
                         <th style={{ padding: "12px", textAlign: "right", borderBottom: "1px solid #ddd" }}>Total Amount</th>
                         <th style={{ padding: "12px", textAlign: "right", borderBottom: "1px solid #ddd" }}>Hospital Revenue</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAppointments.slice(0, 10).map((appointment, index) => (
+                      {filteredRecords.slice(0, 10).map((record, index) => (
                         <tr key={index} style={{ backgroundColor: index % 2 === 0 ? "#fff" : "#f9f9f9" }}>
-                          <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{appointment.patientName}</td>
-                          <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{appointment.date}</td>
+                          <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{record.patientName}</td>
+                          <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{record.date}</td>
+                          <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{record.recordType}</td>
                           <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>
-                            {appointment.tests?.map(test => test.testName).join(", ")}
+                            {record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A"}
                           </td>
                           <td style={{ padding: "12px", textAlign: "right", borderBottom: "1px solid #ddd" }}>
-                            {appointment.totalAmount} Taka
+                            {record.totalAmount} Taka
                           </td>
                           <td style={{ padding: "12px", textAlign: "right", borderBottom: "1px solid #ddd", fontWeight: "bold", color: "#1e88e5" }}>
-                            {appointment.hospitalRevenue} Taka
+                            {record.hospitalRevenue} Taka
                           </td>
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr style={{ backgroundColor: "#f0f0f0" }}>
+                        <td colSpan="5" style={{ padding: "12px", fontWeight: "bold", textAlign: "right" }}>
+                          Total ({filteredRecords.length > 10 ? "showing 10 of " + filteredRecords.length : filteredRecords.length}):
+                        </td>
+                        <td style={{ padding: "12px", fontWeight: "bold", textAlign: "right", color: "#1e88e5" }}>
+                          {filteredRecords.slice(0, 10).reduce((sum, record) => sum + record.hospitalRevenue, 0).toFixed(0)} Taka
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
-                  {filteredAppointments.length > 10 && (
+                  {filteredRecords.length > 10 && (
                     <p style={{ textAlign: "center", color: "#666", marginTop: "10px" }}>
-                      Showing 10 of {filteredAppointments.length} appointments
+                      Showing 10 of {filteredRecords.length} records
                     </p>
                   )}
                 </div>
               ) : (
-                <p>No appointment data available</p>
+                <p>No record data available</p>
               )}
             </div>
           </div>

@@ -1,5 +1,77 @@
 import * as types from "./types";
 import axios from "axios";
+export const CREATE_TEST_ORDER_REQUEST = "CREATE_TEST_ORDER_REQUEST";
+export const CREATE_TEST_ORDER_SUCCESS = "CREATE_TEST_ORDER_SUCCESS";
+export const CREATE_TEST_ORDER_FAILURE = "CREATE_TEST_ORDER_FAILURE";
+
+export const GET_ALL_TEST_ORDERS_REQUEST = "GET_ALL_TEST_ORDERS_REQUEST";
+export const GET_ALL_TEST_ORDERS_SUCCESS = "GET_ALL_TEST_ORDERS_SUCCESS";
+export const GET_ALL_TEST_ORDERS_FAILURE = "GET_ALL_TEST_ORDERS_FAILURE";
+
+// Add these new action creators to your existing action.js file
+export const CreateTestOrder = (data) => async (dispatch) => {
+  try {
+    dispatch({ type: CREATE_TEST_ORDER_REQUEST });
+    
+    // Make API call to create test order
+    const response = await fetch("http://localhost:5000/testorders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    
+    const result = await response.json();
+    console.log(result);
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Something went wrong");
+    }
+    
+    dispatch({
+      type: CREATE_TEST_ORDER_SUCCESS,
+      payload: result,
+    });
+    
+    return result;
+  } catch (error) {
+    dispatch({
+      type: CREATE_TEST_ORDER_FAILURE,
+      payload: error.message,
+    });
+    throw error;
+  }
+};
+
+export const GetAllTestOrders = () => async (dispatch) => {
+  try {
+    dispatch({ type: GET_ALL_TEST_ORDERS_REQUEST });
+    
+    // Make API call to fetch all test orders
+    const response = await fetch("http://localhost:5000/testorders");
+    
+    const result = await response.json();
+    console.log(result);
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Something went wrong");
+    }
+    
+    dispatch({
+      type: GET_ALL_TEST_ORDERS_SUCCESS,
+      payload: result,
+    });
+    
+    return result;
+  } catch (error) {
+    dispatch({
+      type: GET_ALL_TEST_ORDERS_FAILURE,
+      payload: error.message,
+    });
+    throw error;
+  }
+};
 
 // CreateReport
 export const CreateReport = (data) => async (dispatch) => {
