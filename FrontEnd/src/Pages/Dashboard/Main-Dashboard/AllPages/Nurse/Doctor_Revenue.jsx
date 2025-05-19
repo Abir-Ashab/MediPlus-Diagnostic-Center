@@ -218,11 +218,11 @@ const Doctor_Revenue = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={pieChartData}
+                          data={pieChartData.filter(entry => entry.name && entry.value)}
                           cx="50%"
                           cy="50%"
                           labelLine={true}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => name && percent &&  `${name}: ${(percent * 100).toFixed(0)}%`}
                           outerRadius={150}
                           fill="#8884d8"
                           dataKey="value"
@@ -247,6 +247,7 @@ const Doctor_Revenue = () => {
                       padding: "10px"
                     }}>
                       {revenueData.doctors.map((doctor, index) => (
+                        doctor._id != null &&
                         <div 
                           key={index}
                           onClick={() => handleDoctorSelect(doctor._id)}

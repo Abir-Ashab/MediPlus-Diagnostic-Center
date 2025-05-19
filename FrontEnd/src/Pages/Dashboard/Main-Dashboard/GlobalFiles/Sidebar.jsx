@@ -1,23 +1,27 @@
 import React, { useState } from "react";
-import { AiOutlineUserAdd } from "react-icons/ai";
-import { FaAmbulance } from "react-icons/fa";
-import { FaUserMd } from "react-icons/fa";
-import { GiNurseFemale } from "react-icons/gi";
-import { RiSecurePaymentLine } from "react-icons/ri";
-import { SlUserFollow } from "react-icons/sl";
-import { BsBookmarkPlus, BsFillBookmarkCheckFill } from "react-icons/bs";
-import { BiDetail } from "react-icons/bi";
-import { CgProfile } from "react-icons/cg";
-import { FaHospitalUser } from "react-icons/fa";
-import { TbReportMedical } from "react-icons/tb";
-import { MdBedroomChild } from "react-icons/md";
+// Updated imports with more meaningful icons
+import { RiUserAddLine } from "react-icons/ri"; // For adding users
+import { FaAmbulance } from "react-icons/fa"; // Kept for emergency
+import { FaUserMd } from "react-icons/fa"; // Kept for doctor
+import { FaNotesMedical } from "react-icons/fa"; // For reports/medical notes
+import { MdPayment } from "react-icons/md"; // For payment
+import { MdOutlinePersonPin } from "react-icons/md"; // For user profile/follow
+import { BsCalendarPlus } from "react-icons/bs"; // For booking appointments
+import { BsCalendarCheck } from "react-icons/bs"; // For appointment confirmations
+import { FaFileMedical } from "react-icons/fa"; // For medical details/files
+import { CgProfile } from "react-icons/cg"; // Kept for profile
+import { FaHospitalUser } from "react-icons/fa"; // Kept for hospital user
+import { FaClipboardList } from "react-icons/fa"; // For medical reports
+import { MdChildCare } from "react-icons/md"; // Kept for children
 import { Link } from "react-router-dom";
-import { ImMenu } from "react-icons/im";
-import { FiLogOut } from "react-icons/fi";
-import { RiAdminLine } from "react-icons/ri";
-import { TbBed } from "react-icons/tb";
-import { MdDashboardCustomize } from "react-icons/md";
-import { FaMoneyBillWave } from "react-icons/fa"; // Added for revenue icons
+import { GiHamburgerMenu } from "react-icons/gi"; // Better hamburger menu icon
+import { BiLogOut } from "react-icons/bi"; // For logout
+import { MdAdminPanelSettings } from "react-icons/md"; // For admin panel
+import { GiMedicines } from "react-icons/gi"; // For medical tests
+import { MdDashboard } from "react-icons/md"; // For dashboard
+import { FaMoneyBillWave } from "react-icons/fa"; // Kept for revenue
+import { FaUserNurse } from "react-icons/fa"; // Better nurse icon
+import { FaHandshake } from "react-icons/fa"; // For broker
 import { useDispatch, useSelector } from "react-redux";
 
 const Sidebar = () => {
@@ -35,22 +39,22 @@ const Sidebar = () => {
   return (
     <>
       <div>
-        <div style={{ width: isOpen ? "200px" : "70px" }} className={`sidebar`}>
+        <div style={{ width: isOpen ? "230px" : "80px" }} className={`sidebar`}>
           <div className="top_section">
             <h1 style={{ display: isOpen ? "block" : "none" }} className="logo">
-              XYZ 
+              Mediplus 
             </h1>
             <div
               style={{ marginLeft: isOpen ? "50px" : "0px" }}
               className="bars"
             >
-              <ImMenu onClick={toggle} style={{ cursor: "pointer" }} />
+              <GiHamburgerMenu onClick={toggle} style={{ cursor: "pointer" }} />
             </div>
           </div>
           <div className="bottomSection">
             <Link className="link" activeclassname="active" to={"/dashboard"}>
               <div className="icon">
-                <MdDashboardCustomize className="mainIcon" />
+                <MdDashboard className="mainIcon" />
               </div>
               <div
                 style={{ display: isOpen ? "block" : "none" }}
@@ -84,7 +88,7 @@ const Sidebar = () => {
                 to={"/addbroker"}
               >
                 <div className="icon">
-                  <FaHospitalUser className="mainIcon" />
+                  <FaHandshake className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -102,7 +106,7 @@ const Sidebar = () => {
                 to={"/bookappointment"}
               >
                 <div className="icon">
-                  <BsBookmarkPlus className="mainIcon" />
+                  <BsCalendarPlus className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -112,10 +116,29 @@ const Sidebar = () => {
                 </div>
               </Link>
             ) : null}
+
+             {user?.userType === "nurse" ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/booktest"}
+              >
+                <div className="icon">
+                  <FaFileMedical className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                   Book Test
+                </div>
+              </Link>
+            ) : null}
+
             {user?.userType === "admin" ? (
               <Link className="link" activeclassname="active" to={"/addManager"}>
                 <div className="icon">
-                  <GiNurseFemale className="mainIcon" />
+                  <FaUserNurse className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -128,7 +151,7 @@ const Sidebar = () => {
             {user?.userType === "admin" ? (
               <Link className="link" activeclassname="active" to={"/admin"}>
                 <div className="icon">
-                  <RiAdminLine
+                  <MdAdminPanelSettings
                     className="mainIcon"
                     style={{ color: "white" }}
                   />
@@ -148,7 +171,7 @@ const Sidebar = () => {
                 to={"/doctorprofile"}
               >
                 <div className="icon">
-                  <SlUserFollow className="mainIcon" />
+                  <MdOutlinePersonPin className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -162,7 +185,7 @@ const Sidebar = () => {
             {user?.userType === "doctor" ? (
               <Link className="link" activeclassname="active" to={"/reports"}>
                 <div className="icon">
-                  <TbReportMedical className="mainIcon" />
+                  <FaClipboardList className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -172,6 +195,7 @@ const Sidebar = () => {
                 </div>
               </Link>
             ) : null}
+
             {user?.userType === "nurse" ? (
               <Link
                 className="link"
@@ -179,7 +203,7 @@ const Sidebar = () => {
                 to={"/appointments"}
               >
                 <div className="icon">
-                  <BsFillBookmarkCheckFill className="mainIcon" />
+                  <BsCalendarCheck className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -189,6 +213,25 @@ const Sidebar = () => {
                 </div>
               </Link>
             ) : null}
+
+             {user?.userType === "nurse" ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/testorders"}
+              >
+                <div className="icon">
+                  <GiMedicines className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Test Orders
+                </div>
+              </Link>
+            ) : null}
+
             {user?.userType === "doctor" ? (
               <Link
                 className="link"
@@ -196,7 +239,7 @@ const Sidebar = () => {
                 to={"/createslip"}
               >
                 <div className="icon">
-                  <BiDetail className="mainIcon" />
+                  <FaNotesMedical className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -251,7 +294,7 @@ const Sidebar = () => {
                 to={"/doctor-revenue"}
               >
                 <div className="icon">
-                  <RiSecurePaymentLine className="mainIcon" />
+                  <MdPayment className="mainIcon" />
                 </div>
                 <div
                   style={{ display: isOpen ? "block" : "none" }}
@@ -288,7 +331,7 @@ const Sidebar = () => {
               to={"/"}
             >
               <div className="icon">
-                <FiLogOut />
+                <BiLogOut />
               </div>
               <div
                 style={{ display: isOpen ? "block" : "none" }}

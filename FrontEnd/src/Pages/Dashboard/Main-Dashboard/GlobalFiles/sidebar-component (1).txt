@@ -1,0 +1,421 @@
+import React, { useState } from "react";
+// Updated imports with more meaningful icons
+import { RiUserAddLine } from "react-icons/ri"; // For adding users
+import { FaAmbulance } from "react-icons/fa"; // Kept for emergency
+import { FaUserMd } from "react-icons/fa"; // Kept for doctor
+import { FaNotesMedical } from "react-icons/fa"; // For reports/medical notes
+import { MdPayment } from "react-icons/md"; // For payment
+import { MdOutlinePersonPin } from "react-icons/md"; // For user profile/follow
+import { BsCalendarPlus } from "react-icons/bs"; // For booking appointments
+import { BsCalendarCheck } from "react-icons/bs"; // For appointment confirmations
+import { FaFileMedical } from "react-icons/fa"; // For medical details/files
+import { CgProfile } from "react-icons/cg"; // Kept for profile
+import { FaHospitalUser } from "react-icons/fa"; // Kept for hospital user
+import { FaClipboardList } from "react-icons/fa"; // For medical reports
+import { MdChildCare } from "react-icons/md"; // Kept for children
+import { Link } from "react-router-dom";
+import { GiHamburgerMenu } from "react-icons/gi"; // Better hamburger menu icon
+import { BiLogOut } from "react-icons/bi"; // For logout
+import { MdAdminPanelSettings } from "react-icons/md"; // For admin panel
+import { GiMedicines } from "react-icons/gi"; // For medical tests
+import { MdDashboard } from "react-icons/md"; // For dashboard
+import { FaMoneyBillWave } from "react-icons/fa"; // Kept for revenue
+import { FaUserNurse } from "react-icons/fa"; // Better nurse icon
+import { FaHandshake } from "react-icons/fa"; // For broker
+import { useDispatch, useSelector } from "react-redux";
+
+// Define styles as objects for reuse
+const sidebarStyles = {
+  container: (isOpen) => ({
+    width: isOpen ? "240px" : "70px",
+    backgroundColor: "#1e40af", // Deep blue background
+    height: "100vh",
+    color: "#ffffff",
+    transition: "all 0.3s ease",
+    boxShadow: "2px 0 10px rgba(0,0,0,0.2)",
+    position: "fixed",
+    zIndex: 100,
+    overflowX: "hidden"
+  }),
+  topSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "20px 15px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)"
+  },
+  logo: (isOpen) => ({
+    display: isOpen ? "block" : "none",
+    fontSize: "22px",
+    fontWeight: "bold",
+    margin: 0,
+    color: "#ffffff"
+  }),
+  bars: (isOpen) => ({
+    marginLeft: isOpen ? "50px" : "0px",
+    width: "30px",
+    height: "30px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.3s ease"
+  }),
+  bottomSection: {
+    padding: "10px 0",
+    height: "calc(100% - 80px)",
+    overflowY: "auto"
+  },
+  linkStyle: (isActive) => ({
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 15px",
+    textDecoration: "none",
+    color: "#ffffff",
+    transition: "all 0.2s ease",
+    backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+    borderLeft: isActive ? "4px solid #ffffff" : "4px solid transparent",
+    margin: "5px 0"
+  }),
+  icon: {
+    minWidth: "35px",
+    height: "35px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "8px",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginRight: "10px"
+  },
+  linkText: (isOpen) => ({
+    display: isOpen ? "block" : "none",
+    fontSize: "14px",
+    fontWeight: "500",
+    whiteSpace: "nowrap"
+  }),
+  iconSize: {
+    fontSize: "18px"
+  }
+};
+
+const Sidebar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState("/dashboard");
+  const dispatch = useDispatch();
+
+  const {
+    data: { user },
+  } = useSelector((state) => state.auth);
+
+  function toggle() {
+    setIsOpen(!isOpen);
+  }
+
+  const handleLinkClick = (path) => {
+    setActiveItem(path);
+  };
+
+  return (
+    <>
+      <div>
+        <div style={sidebarStyles.container(isOpen)} className="sidebar">
+          <div style={sidebarStyles.topSection}>
+            <h1 style={sidebarStyles.logo(isOpen)} className="logo">
+              Mediplus 
+            </h1>
+            <div style={sidebarStyles.bars(isOpen)} className="bars">
+              <GiHamburgerMenu 
+                onClick={toggle} 
+                style={{ fontSize: "20px" }} 
+              />
+            </div>
+          </div>
+          <div style={sidebarStyles.bottomSection}>
+            <Link 
+              className="link" 
+              to="/dashboard"
+              style={sidebarStyles.linkStyle(activeItem === "/dashboard")}
+              onClick={() => handleLinkClick("/dashboard")}
+            >
+              <div style={sidebarStyles.icon}>
+                <MdDashboard style={sidebarStyles.iconSize} />
+              </div>
+              <div style={sidebarStyles.linkText(isOpen)}>
+                Dashboard
+              </div>
+            </Link>
+
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/nurseprofile"
+                style={sidebarStyles.linkStyle(activeItem === "/nurseprofile")}
+                onClick={() => handleLinkClick("/nurseprofile")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <CgProfile style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Profile
+                </div>
+              </Link>
+            )}
+            
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/addbroker"
+                style={sidebarStyles.linkStyle(activeItem === "/addbroker")}
+                onClick={() => handleLinkClick("/addbroker")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <FaHandshake style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Add Broker
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/bookappointment"
+                style={sidebarStyles.linkStyle(activeItem === "/bookappointment")}
+                onClick={() => handleLinkClick("/bookappointment")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <BsCalendarPlus style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                   Book Appointments
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/booktest"
+                style={sidebarStyles.linkStyle(activeItem === "/booktest")}
+                onClick={() => handleLinkClick("/booktest")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <FaFileMedical style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                   Book Test
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "admin" && (
+              <Link 
+                className="link" 
+                to="/addManager"
+                style={sidebarStyles.linkStyle(activeItem === "/addManager")}
+                onClick={() => handleLinkClick("/addManager")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <FaUserNurse style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Add Manager
+                </div>
+              </Link>
+            )}
+            
+            {user?.userType === "admin" && (
+              <Link 
+                className="link" 
+                to="/admin"
+                style={sidebarStyles.linkStyle(activeItem === "/admin")}
+                onClick={() => handleLinkClick("/admin")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <MdAdminPanelSettings style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Add Admin
+                </div>
+              </Link>
+            )}
+            
+            {user?.userType === "doctor" && (
+              <Link
+                className="link"
+                to="/doctorprofile"
+                style={sidebarStyles.linkStyle(activeItem === "/doctorprofile")}
+                onClick={() => handleLinkClick("/doctorprofile")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <MdOutlinePersonPin style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Profile
+                </div>
+              </Link>
+            )}
+          
+            {user?.userType === "doctor" && (
+              <Link 
+                className="link" 
+                to="/reports"
+                style={sidebarStyles.linkStyle(activeItem === "/reports")}
+                onClick={() => handleLinkClick("/reports")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <FaClipboardList style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Reports
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/appointments"
+                style={sidebarStyles.linkStyle(activeItem === "/appointments")}
+                onClick={() => handleLinkClick("/appointments")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <BsCalendarCheck style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Appointments
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "nurse" && (
+              <Link
+                className="link"
+                to="/testorders"
+                style={sidebarStyles.linkStyle(activeItem === "/testorders")}
+                onClick={() => handleLinkClick("/testorders")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <GiMedicines style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Test Orders
+                </div>
+              </Link>
+            )}
+
+            {user?.userType === "doctor" && (
+              <Link
+                className="link"
+                to="/createslip"
+                style={sidebarStyles.linkStyle(activeItem === "/createslip")}
+                onClick={() => handleLinkClick("/createslip")}
+              >
+                <div style={sidebarStyles.icon}>
+                  <FaNotesMedical style={sidebarStyles.iconSize} />
+                </div>
+                <div style={sidebarStyles.linkText(isOpen)}>
+                  Create Report
+                </div>
+              </Link>
+            )}
+
+            {/* Revenue links - added for nurse and admin users */}
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/hospital-revenue"}
+              >
+                <div className="icon">
+                  <FaMoneyBillWave className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Hospital Revenue
+                </div>
+              </Link>
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/adddoctor"}
+              >
+                <div className="icon">
+                  <FaUserMd className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Add Doctor
+                </div>
+              </Link>
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/doctor-revenue"}
+              >
+                <div className="icon">
+                  <MdPayment className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Doctor Revenue
+                </div>
+              </Link>
+            ) : null}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") ? (
+              <Link
+                className="link"
+                activeclassname="active"
+                to={"/broker-revenue"}
+              >
+                <div className="icon">
+                  <FaMoneyBillWave className="mainIcon" />
+                </div>
+                <div
+                  style={{ display: isOpen ? "block" : "none" }}
+                  className="link_text"
+                >
+                  Broker Revenue
+                </div>
+              </Link>
+            ) : null}
+
+            <Link
+              className="LogOutPath link"
+              onClick={() => {
+                dispatch({ type: "AUTH_LOGOUT" });
+              }}
+              to={"/"}
+            >
+              <div className="icon">
+                <BiLogOut />
+              </div>
+              <div
+                style={{ display: isOpen ? "block" : "none" }}
+                className="link_text"
+              >
+                Logout
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default Sidebar;
