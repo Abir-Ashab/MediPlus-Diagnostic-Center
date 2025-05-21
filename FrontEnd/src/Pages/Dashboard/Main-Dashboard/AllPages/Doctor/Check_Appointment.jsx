@@ -23,9 +23,9 @@ const Check_Appointment = () => {
   
   // Filter appointments based on search term
   const filteredAppointments = AllAppointment?.filter(appointment =>
-    appointment.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    appointment.disease?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    appointment.mobile?.includes(searchTerm)
+    (appointment.patientName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (appointment.disease?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (appointment.mobile && typeof appointment.mobile === 'string' && appointment.mobile.includes(searchTerm))
   );
 
   // Delete Appointment Handler
@@ -136,7 +136,7 @@ const Check_Appointment = () => {
           {/* Appointment Details Modal */}
           <Modal
             title="Appointment Details"
-            visible={isModalVisible}
+            open={isModalVisible}
             onCancel={handleCloseModal}
             footer={[
               <Button key="back" onClick={handleCloseModal}>
