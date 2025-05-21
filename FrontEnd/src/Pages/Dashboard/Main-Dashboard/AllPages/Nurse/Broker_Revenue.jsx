@@ -21,10 +21,11 @@ const Broker_Revenue = () => {
       try {
         setLoading(true);
         const response = await axios.get("http://localhost:5000/appointments/revenue/broker");
+        const filteredBrokers = (response.data.brokers || []).filter(broker => broker._id !== null);
         setRevenueData({
-          brokers: response.data.brokers || [],
+          brokers: filteredBrokers,
           totalBrokerRevenue: response.data.summary.totalBrokerRevenue || 0,
-          totalAppointments: response.data.summary.totalAppointments || 0
+          totalAppointments: filteredBrokers.reduce((sum, broker) => sum + broker.appointments, 0)
         });
         setLoading(false);
       } catch (error) {
@@ -150,6 +151,7 @@ const Broker_Revenue = () => {
                   </thead>
                   <tbody>
                     {revenueData.brokers.map((broker, index) => (
+                       broker._id != null &&
                       <tr key={index} style={{ backgroundColor: index % 2 === 0 ? "#fff" : "#f9f9f9" }}>
                         <td style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>{broker._id}</td>
                         <td style={{ padding: "12px", textAlign: "center", borderBottom: "1px solid #ddd" }}>{broker.appointments}</td>

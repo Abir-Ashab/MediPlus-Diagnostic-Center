@@ -24,11 +24,14 @@ const Hospital_Revenue = () => {
         
         // Fetch appointment revenue data
         const appointmentResponse = await axios.get("http://localhost:5000/appointments/revenue/hospital");
-        
+        // console.log(appointmentResponse);
+      
         // Try to fetch test order revenue data
         let testOrderResponse;
         try {
           testOrderResponse = await axios.get("http://localhost:5000/testorders");
+          console.log(testOrderResponse);
+          const hospitalRevenue = (appointmentResponse.data.brokers || []).filter(broker => broker._id !== null);
         } catch (error) {
           console.warn("Could not fetch test orders, continuing with appointment data only", error);
           testOrderResponse = { data: [] };
@@ -48,6 +51,7 @@ const Hospital_Revenue = () => {
         
         // Also fetch all appointments for filtering
         const appointmentsRes = await axios.get("http://localhost:5000/appointments");
+        console.log(appointmentsRes);
         
         // Format appointments to include type
         const formattedAppointments = appointmentsRes.data.map(appointment => ({
@@ -61,7 +65,7 @@ const Hospital_Revenue = () => {
           date: order.date,
           time: order.time,
           tests: order.tests || [],
-          totalAmount: order.totalAmount,
+          totalAmount: order.totalAmount || 0,
           hospitalRevenue: order.hospitalRevenue,
           recordType: "Test Order"  // Add a type to differentiate
         }));

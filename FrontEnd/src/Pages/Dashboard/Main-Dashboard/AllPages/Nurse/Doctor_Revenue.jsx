@@ -23,7 +23,10 @@ const Doctor_Revenue = () => {
         
         // Fetch appointment revenue data
         const appointmentResponse = await axios.get("http://localhost:5000/appointments/revenue/doctor");
+        console.log(appointmentResponse);
         
+        const doctorsRevenue = (appointmentResponse.data.doctors || []).filter(doctor => doctor._id !== null);
+        console.log(doctorsRevenue);
         // Try to fetch test order revenue data
         let testOrderResponse;
         try {
@@ -49,7 +52,7 @@ const Doctor_Revenue = () => {
         });
         
         // Combine appointment data with test order data
-        const combinedDoctors = [...appointmentResponse.data.doctors];
+        const combinedDoctors = [...doctorsRevenue];
         let totalTestOrderRevenue = 0;
         let totalTestOrders = 0;
         
@@ -82,7 +85,7 @@ const Doctor_Revenue = () => {
         const totalDoctorRevenue = 
           (appointmentResponse.data.summary.totalDoctorRevenue || 0) + totalTestOrderRevenue;
         const totalAppointments = 
-          (appointmentResponse.data.summary.totalAppointments || 0) + totalTestOrders;
+          doctorsRevenue.reduce((sum, doctor) => sum + doctor.appointments, 0)
         
         setRevenueData({
           doctors: combinedDoctors,
