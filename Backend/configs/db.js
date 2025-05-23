@@ -1,6 +1,9 @@
-const mongoose = require("mongoose");
 require("dotenv").config();
-
-const connection = mongoose.connect(process.env.dbURL);
+const mongoose = require("mongoose");
+mongoose.set('strictQuery', true);
+const connection = mongoose.connect(process.env.dbURL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
 module.exports = { connection };
