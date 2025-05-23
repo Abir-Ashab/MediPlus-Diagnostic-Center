@@ -6,6 +6,8 @@ const nodemailer = require("nodemailer");
 const { NurseModel } = require("../models/Nurse.model");
 const { DoctorModel } = require("../models/Doctor.model");
 const { PatientModel } = require("../models/Patient.model");
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const router = express.Router();
 
@@ -87,34 +89,35 @@ router.delete("/:adminId", async (req, res) => {
 
 router.post("/password", async (req, res) => {
   const { email, userId, password } = req.body;
-
+  console.log("email", email);
+  console.log("userId", userId);
+  
   try {
     if (!email || !userId || !password) {
       return res.status(400).send({ message: "Missing required fields" });
     }
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL || "abiir.ashhab@gmail.com",
-        pass: process.env.EMAIL_PASS || "zfik mxqh ueqq fgvj",
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL || "abiir.ashhab@gmail.com",
+    // Fixed: Create the message object correctly for SendGrid
+    const msg = {
       to: email,
+      from: 'abiir.ashhab@gmail.com', // Must be verified in SendGrid
       subject: "Account ID and Password",
       text: `Your User ID: ${userId}\nPassword: ${password}`,
     };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending email:", error);
-        return res.status(500).send({ message: "Failed to send email" });
-      }
-      res.send({ message: "Password email sent successfully", info });
-    });
+    
+    console.log(msg);
+    
+    // Fixed: Pass the message object directly, not wrapped in another object
+    sgMail
+      .send(msg)
+      .then(() => {
+        console.log('Email sent');
+        res.send({ message: "Password email sent successfully" });
+      })
+      .catch((error) => {
+        console.error('Email error:', error);
+        res.status(500).send({ message: "Failed to send email" });
+      });
 
   } catch (error) {
     console.error("Internal error in /password route:", error);
