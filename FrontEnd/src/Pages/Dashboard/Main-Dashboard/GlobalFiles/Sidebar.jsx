@@ -23,6 +23,8 @@ import { FaMoneyBillWave } from "react-icons/fa"; // Kept for revenue
 import { FaUserNurse } from "react-icons/fa"; // Better nurse icon
 import { FaHandshake } from "react-icons/fa"; // For broker
 import { useDispatch, useSelector } from "react-redux";
+import ControlUsers from "../AllPages/Admin/ControlUsers";
+import { UserDeleteOutlined } from '@ant-design/icons';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,6 +54,9 @@ const Sidebar = () => {
             </div>
           </div>
           <div className="bottomSection">
+          
+            {
+            user?.userType === "nurse" ? (
             <Link className="link" activeclassname="active" to={"/dashboard"}>
               <div className="icon">
                 <MdDashboard className="mainIcon" />
@@ -62,8 +67,21 @@ const Sidebar = () => {
               >
                 DashBoard
               </div>
-            </Link>
-
+            </Link>) : null }
+            {
+            user?.userType === "admin" ?(
+            <Link className="link" activeclassname="active" to={"/controlUser"}>
+              <div className="icon">
+                <MdDashboard className="mainIcon" />
+              </div>
+              <div
+                style={{ display: isOpen ? "block" : "none" }}
+                className="link_text"
+              >
+                Admin DashBoard
+              </div>
+            </Link>) : null
+            }
             {user?.userType === "nurse" ? (
               <Link
                 className="link"

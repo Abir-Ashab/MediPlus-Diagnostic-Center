@@ -23,12 +23,14 @@ import Broker_Revenue from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Bro
 import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Add_Broker";
 import Test_Order from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/Test_Order";
 import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Nurse/TestOrdersList";
+import ControlUsers from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/ControlUsers";
 
 const AllRoutes = () => {
   return (
     <>
       <Routes>
         <Route path="/" element={<DLogin />} />
+        <Route path="/controlUser" element={<ControlUsers/>}/>
         <Route path="/booktest" element={<Test_Order />} />
         <Route path="/testorders" element={<TestOrdersList />} />
         <Route path="/dashboard" element={<FrontPage />} />

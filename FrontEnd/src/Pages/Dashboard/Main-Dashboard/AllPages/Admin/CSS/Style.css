@@ -1,0 +1,17 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 10px; /* Adjust based on your sidebar width */
+  overflow-x: auto;
+}
+
+/* Adjust sidebar positioning if needed */
+.sidebar {
+  position: relative;
+  height: 100vh;
+  z-index: 100;
+}

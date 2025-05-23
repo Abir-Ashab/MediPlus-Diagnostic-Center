@@ -62,22 +62,22 @@ const FrontPage = () => {
       fetchNurses(),
       fetchAdmins(),
       fetchAppointments(),
-      fetchPatients()
+      // fetchPatients()
     ]);
     setLoading(false);
   };
 
   // Fetch patients data
-  const fetchPatients = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/patients");
-      setPatientsList(response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching patients:", error);
-      return [];
-    }
-  };
+  // const fetchPatients = async () => {
+  //   try {
+  //     const response = await axios.get("http://localhost:5000/patients");
+  //     setPatientsList(response.data);
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error("Error fetching patients:", error);
+  //     return [];
+  //   }
+  // };
 
   // Fetch brokers data
   const fetchBrokers = async () => {
