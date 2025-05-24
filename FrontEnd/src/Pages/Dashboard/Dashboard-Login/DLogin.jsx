@@ -100,7 +100,7 @@ const DLogin = () => {
             notify("Login Successful");
             setLoading(false);
 
-            return navigate("/dashboard");
+            return navigate("/controlUser");
           }
           if (res.message === "Wrong credentials") {
             setLoading(false);
