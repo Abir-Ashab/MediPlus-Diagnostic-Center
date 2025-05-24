@@ -13,6 +13,125 @@ import RevenueDistribution from "./RevenueDistribution";
 
 const notify = (text) => toast(text);
 
+// Searchable Test Selection Component
+const SearchableTestSelection = ({ selectedTests, handleTestSelect, addMoreTest, removeTest, TestsList }) => {
+  const [searchTerms, setSearchTerms] = useState({});
+  const [showDropdowns, setShowDropdowns] = useState({});
+
+  const handleSearchChange = (testId, value) => {
+    setSearchTerms(prev => ({ ...prev, [testId]: value }));
+    setShowDropdowns(prev => ({ ...prev, [testId]: true }));
+  };
+
+  const handleTestSelection = (testId, selectedTestId, selectedTest) => {
+    handleTestSelect(testId, selectedTestId);
+    setSearchTerms(prev => ({ ...prev, [testId]: selectedTest.title }));
+    setShowDropdowns(prev => ({ ...prev, [testId]: false }));
+  };
+
+  const getFilteredTests = (testId) => {
+    const searchTerm = searchTerms[testId] || '';
+    const selectedTestIds = selectedTests.map(test => test.testId).filter(id => id !== '');
+    
+    return TestsList.filter(test => 
+      test.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !selectedTestIds.includes(test.id.toString())
+    );
+  };
+
+  const handleInputFocus = (testId) => {
+    setShowDropdowns(prev => ({ ...prev, [testId]: true }));
+  };
+
+  const handleInputBlur = (testId) => {
+    // Delay hiding dropdown to allow for selection
+    setTimeout(() => {
+      setShowDropdowns(prev => ({ ...prev, [testId]: false }));
+    }, 200);
+  };
+
+  useEffect(() => {
+    // Initialize search terms for existing selected tests
+    selectedTests.forEach(test => {
+      if (test.testId && !searchTerms[test.id]) {
+        const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
+        if (selectedTest) {
+          setSearchTerms(prev => ({ ...prev, [test.id]: selectedTest.title }));
+        }
+      }
+    });
+  }, [selectedTests, TestsList]);
+
+  return (
+    <div className="form-section">
+      <h3 className="section-title">Test Selection</h3>
+      <div className="test-selection-container">
+        {selectedTests.map((test, index) => (
+          <div key={test.id} className="test-selection-item">
+            <div className="test-input-group">
+              <label>Test </label>
+              <div className="searchable-dropdown">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerms[test.id] || ''}
+                  onChange={(e) => handleSearchChange(test.id, e.target.value)}
+                  onFocus={() => handleInputFocus(test.id)}
+                  onBlur={() => handleInputBlur(test.id)}
+                  className="form-input search-input"
+                />
+                
+                {showDropdowns[test.id] && (
+                  <div className="dropdown-options">
+                    {getFilteredTests(test.id).length > 0 ? (
+                      getFilteredTests(test.id).map((testOption) => (
+                        <div
+                          key={testOption.id}
+                          className="dropdown-option"
+                          onMouseDown={() => handleTestSelection(test.id, testOption.id.toString(), testOption)}
+                        >
+                          <div className="test-option-content">
+                            <span className="test-name">{testOption.title}</span>
+                            <span className="test-price">{testOption.price} Taka</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="dropdown-option no-results">
+                        No tests found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="test-actions">
+              {selectedTests.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeTest(test.id)}
+                  className="remove-test-btn"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addMoreTest}
+          className="add-test-btn"
+        >
+          + Add Another Test
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Test_Order = () => {
   const dispatch = useDispatch();
   const [Loading, setLoading] = useState(false);
@@ -192,18 +311,127 @@ const Test_Order = () => {
       <div className="container">
         <Sidebar />
         <div className="AfterSideBar">
-          <div className="Main_Add_Doctor_div">
-            <h1>Create Test Order</h1>
-            <form onSubmit={HandleOnsubmitTestOrder}>
-              {/* Patient Information Form */}
-              <PatientInfoForm 
-                formData={TestOrder} 
-                handleChange={handleChange} 
-                CommonProblem={CommonProblem}
-              />
+          <div className="enhanced-form">
+            <div className="form-header">
+              <h1>Create Test Order</h1>
+              <p>Schedule laboratory tests for patients</p>
+            </div>
+            
+            <form onSubmit={HandleOnsubmitTestOrder} className="appointment-form">
+              {/* Patient Information Section */}
+              <div className="form-section">
+                <h3 className="section-title">Patient Information</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Patient Name *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter patient's full name"
+                      name="patientName"
+                      value={TestOrder.patientName}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                    />
+                  </div>
 
-              {/* TESTS SECTION */}
-              <TestSelection
+                  <div className="form-group">
+                    <label>Age *</label>
+                    <input
+                      type="number"
+                      placeholder="Enter age"
+                      name="age"
+                      value={TestOrder.age}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                      min="0"
+                      max="150"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Gender *</label>
+                    <select
+                      name="gender"
+                      value={TestOrder.gender}
+                      onChange={handleChange}
+                      required
+                      className="form-select"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contact Number *</label>
+                    <input
+                      type="tel"
+                      placeholder="Enter phone number"
+                      name="mobile"
+                      value={TestOrder.mobile}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Email *</label>
+                    <input
+                      type="email"
+                      placeholder="Enter email address"
+                      name="email"
+                      value={TestOrder.email}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Address *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter complete address"
+                      name="address"
+                      value={TestOrder.address}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Medical Information Section */}
+              <div className="form-section">
+                <h3 className="section-title">Medical Information</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Type of Disease *</label>
+                    <select
+                      name="disease"
+                      value={TestOrder.disease}
+                      onChange={handleChange}
+                      required
+                      className="form-select"
+                    >
+                      <option value="">Select Disease</option>
+                      {CommonProblem.map((ele, i) => (
+                        <option key={i} value={ele.title}>
+                          {ele.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Searchable Test Selection */}
+              <SearchableTestSelection
                 selectedTests={selectedTests}
                 handleTestSelect={handleTestSelect}
                 addMoreTest={addMoreTest}
@@ -211,85 +439,118 @@ const Test_Order = () => {
                 TestsList={TestsList}
               />
 
-              {/* DISPLAY TOTAL AMOUNT */}
-              <div>
-                <label>Total Amount</label>
-                <div className="inputdiv">
-                  <input
-                    type="text"
-                    value={`${totalAmount} Taka`}
-                    readOnly
-                    style={{ 
-                      backgroundColor: "#f9f9f9", 
-                      fontWeight: "bold",
-                      fontSize: "16px",
-                      color: "#2c3e50",
-                      textAlign: "right",
-                      padding: "10px"
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* REVENUE DISTRIBUTION PREVIEW */}
-              <RevenueDistribution
-                totalAmount={totalAmount}
-                hospitalRevenue={hospitalRevenue}
-                doctorRevenue={doctorRevenue}
-                hospitalPercentage="95%"
-                doctorPercentage="5%"
-                showBroker={false}
-              />
-
-              {/* DOCTOR SECTION */}
-              <div>
-                <label>Referring Doctor (Optional)</label>
-                <div className="inputdiv">
-                  <select
-                    name="doctorName"
-                    value={TestOrder.doctorName}
-                    onChange={handleChange}
-                    style={{ width: "100%", padding: "10px" }}
-                    disabled={loadingDoctors}
-                  >
-                    <option value="">
-                      {loadingDoctors ? "Loading doctors..." : "Select Doctor"}
-                    </option>
-                    {doctors.map((doctor) => (
-                      <option key={doctor._id} value={doctor.name || doctor.docName}>
-                        {doctor.name || doctor.docName} - {doctor.specialization}
+              {/* Doctor Assignment Section */}
+              <div className="form-section">
+                <h3 className="section-title">Doctor Assignment</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Referring Doctor (Optional)</label>
+                    <select
+                      name="doctorName"
+                      value={TestOrder.doctorName}
+                      onChange={handleChange}
+                      className="form-select"
+                      disabled={loadingDoctors}
+                    >
+                      <option value="">
+                        {loadingDoctors ? "Loading doctors..." : "Select Doctor (Optional)"}
                       </option>
-                    ))}
-                  </select>
+                      {doctors.map((doctor) => (
+                        <option key={doctor._id} value={doctor.name || doctor.docName}>
+                          {doctor.name || doctor.docName} - {doctor.specialization}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* TEST ORDER DATE  */}
-              <div className="dateofAppointment">
-                <p>Date and Time for Test Collection</p>
-                <div className="inputdiv">
-                  <input
-                    type={"date"}
-                    placeholder="Choose Date"
-                    name="date"
-                    value={TestOrder.date}
-                    onChange={handleChange}
-                    required
-                  />
-                  <input
-                    type={"time"}
-                    placeholder="Choose Time"
-                    name="time"
-                    value={TestOrder.time}
-                    onChange={handleChange}
-                    required
-                  />
+              {/* Test Schedule Section */}
+              <div className="form-section">
+                <h3 className="section-title">Test Schedule</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Collection Date *</label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={TestOrder.date}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Collection Time *</label>
+                    <input
+                      type="time"
+                      name="time"
+                      value={TestOrder.time}
+                      onChange={handleChange}
+                      required
+                      className="form-input"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <button type="submit" className="book_formsubmitbutton">
-                {Loading ? "Loading..." : "Create Test Order"}
-              </button>
+              {/* Fee Information Section */}
+              <div className="form-section">
+                <h3 className="section-title">Fee Information</h3>
+                
+                {/* Total Amount */}
+                <div className="total-amount">
+                  <span>Total Amount:</span>
+                  <span className="total-value">{totalAmount} Taka</span>
+                </div>
+              </div>
+
+              {/* Revenue Distribution */}
+              {totalAmount > 0 && (
+                <div className="form-section">
+                  <h3 className="section-title">Revenue Distribution</h3>
+                  <div className="revenue-cards">
+                    <div className="revenue-card hospital">
+                      <div className="revenue-label">Hospital</div>
+                      <div className="revenue-amount">{hospitalRevenue.toFixed(0)} Taka</div>
+                      <div className="revenue-percentage">95%</div>
+                    </div>
+                    
+                    <div className="revenue-card doctor">
+                      <div className="revenue-label">Doctor</div>
+                      <div className="revenue-amount">{doctorRevenue.toFixed(0)} Taka</div>
+                      <div className="revenue-percentage">
+                        {TestOrder.doctorName ? "5%" : "0%"}
+                      </div>
+                    </div>
+                    
+                    <div className="revenue-card broker" style={{ opacity: 0.5 }}>
+                      <div className="revenue-label">Broker</div>
+                      <div className="revenue-amount">0 Taka</div>
+                      <div className="revenue-percentage">N/A</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button 
+                  type="submit" 
+                  className="submit-btn"
+                  disabled={Loading}
+                >
+                  {Loading ? (
+                    <>
+                      <span className="loading-spinner"></span>
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Test Order"
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>
