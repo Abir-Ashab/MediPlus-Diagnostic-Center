@@ -12,7 +12,7 @@ const Add_Admin = () => {
   const { data } = useSelector((store) => store.auth);
 
   const [loading, setloading] = useState(false);
-
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const InitData = {
     adminName: "",
     age: "",
@@ -67,17 +67,19 @@ const Add_Admin = () => {
 
   return (
     <>
-      <ToastContainer />
-      <div className="container">
-        <Sidebar />
-        <div className="AfterSideBar">
-          <div className="Main_Add_Doctor_div">
-            <h1>Add Admin</h1>
-            <img src={admin} alt="doctor" className="avatarimg" />
-            <form onSubmit={HandleDoctorSubmit}>
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar onCollapse={setSidebarCollapsed} />
+        <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`}>
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
+            <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Add Admin</h1>
+            <div className="flex justify-center mb-8">
+              <img src={admin} alt="doctor" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
+            </div>
+            <form onSubmit={HandleDoctorSubmit} className="space-y-6">
               <div>
-                <label>Name</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Full Name"
@@ -85,12 +87,13 @@ const Add_Admin = () => {
                     value={AdminValue.adminName}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Age</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <div>
                   <input
                     type="number"
                     placeholder="Age"
@@ -98,12 +101,13 @@ const Add_Admin = () => {
                     value={AdminValue.age}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Contact Number</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                <div>
                   <input
                     type="number"
                     placeholder="Emergency Number"
@@ -111,12 +115,13 @@ const Add_Admin = () => {
                     value={AdminValue.mobile}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Email</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <div>
                   <input
                     type="email"
                     placeholder="abc@abc.com"
@@ -124,17 +129,19 @@ const Add_Admin = () => {
                     value={AdminValue.email}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Gender</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <div>
                   <select
                     name="gender"
                     value={AdminValue.gender}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="Choose Gender">Choose Gender</option>
                     <option value="Male">Male</option>
@@ -144,8 +151,8 @@ const Add_Admin = () => {
                 </div>
               </div>
               <div>
-                <label>Birthdate</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate</label>
+                <div>
                   <input
                     type="date"
                     placeholder="dd-mm-yy"
@@ -153,12 +160,13 @@ const Add_Admin = () => {
                     value={AdminValue.DOB}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Address</label>
-                <div className="inputdiv adressdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Address"
@@ -166,12 +174,13 @@ const Add_Admin = () => {
                     value={AdminValue.address}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Education</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
+                <div>
                   <input
                     type="text"
                     placeholder="eg.MBBS"
@@ -179,12 +188,13 @@ const Add_Admin = () => {
                     value={AdminValue.education}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Password</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Password"
@@ -192,11 +202,16 @@ const Add_Admin = () => {
                     value={AdminValue.password}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
 
-              <button type="submit" className="formsubmitbutton">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
                 {loading ? "Loading..." : "Submit"}
               </button>
             </form>

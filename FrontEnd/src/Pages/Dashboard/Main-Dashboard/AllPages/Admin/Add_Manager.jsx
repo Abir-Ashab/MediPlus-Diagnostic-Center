@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import "./CSS/Add_Doctor.css";
 import nurse from "../../../../../img/nurseavatar.png";
-import { message, Upload } from "antd";
-import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { NurseRegister, SendPassword } from "../../../../../Redux/auth/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
@@ -11,12 +8,13 @@ import "react-toastify/dist/ReactToastify.css";
 import { Navigate } from "react-router-dom";
 const notify = (text) => toast(text);
 
-const Add_Nurse = () => {
+const Add_Manager = () => {
   const { data } = useSelector((store) => store.auth);
 
   const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const InitData = {
     nurseName: "",
@@ -75,17 +73,19 @@ const Add_Nurse = () => {
 
   return (
     <>
-      <ToastContainer />
-      <div className="container">
-        <Sidebar />
-        <div className="AfterSideBar">
-          <div className="Main_Add_Doctor_div">
-            <h1>Add Manager</h1>
-            <img src={nurse} alt="doctor" className="avatarimg" />
-            <form onSubmit={HandleDoctorSubmit}>
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar onCollapse={setSidebarCollapsed} />
+        <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`}>
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
+            <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Add Manager</h1>
+            <div className="flex justify-center mb-8">
+              <img src={nurse} alt="manager" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
+            </div>
+            <form onSubmit={HandleDoctorSubmit} className="space-y-6">
               <div>
-                <label> Name</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Full Name"
@@ -93,12 +93,13 @@ const Add_Nurse = () => {
                     value={NurseValue.nurseName}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Age</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <div>
                   <input
                     type="number"
                     placeholder="Age"
@@ -106,12 +107,13 @@ const Add_Nurse = () => {
                     value={NurseValue.age}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Contact Number</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                <div>
                   <input
                     type="number"
                     placeholder="Emergency Number"
@@ -119,12 +121,13 @@ const Add_Nurse = () => {
                     value={NurseValue.mobile}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Email</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <div>
                   <input
                     type="email"
                     placeholder="abc@abc.com"
@@ -132,17 +135,19 @@ const Add_Nurse = () => {
                     value={NurseValue.email}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Gender</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <div>
                   <select
                     name="gender"
                     value={NurseValue.gender}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="Choose Gender">Choose Gender</option>
                     <option value="Male">Male</option>
@@ -152,8 +157,8 @@ const Add_Nurse = () => {
                 </div>
               </div>
               <div>
-                <label>Birthdate</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate</label>
+                <div>
                   <input
                     type="date"
                     placeholder="dd-mm-yy"
@@ -161,12 +166,13 @@ const Add_Nurse = () => {
                     value={NurseValue.DOB}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Address</label>
-                <div className="inputdiv adressdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Address"
@@ -174,12 +180,13 @@ const Add_Nurse = () => {
                     value={NurseValue.address}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Education</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
+                <div>
                   <input
                     type="text"
                     placeholder="eg.MBBS"
@@ -187,18 +194,33 @@ const Add_Nurse = () => {
                     value={NurseValue.education}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
-
               <div>
-                <label>Blood Group</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Department"
+                    name="department"
+                    value={NurseValue.department}
+                    onChange={HandleDoctorChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Blood Group</label>
+                <div>
                   <select
                     name="bloodGroup"
                     value={NurseValue.bloodGroup}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="Choose Blood Group">Select</option>
                     <option value="A+">A+</option>
@@ -212,10 +234,9 @@ const Add_Nurse = () => {
                   </select>
                 </div>
               </div>
-
               <div>
-                <label>Password</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div>
                   <input
                     type="text"
                     placeholder="Password"
@@ -223,12 +244,13 @@ const Add_Nurse = () => {
                     value={NurseValue.password}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label>Other Info</label>
-                <div className="inputdiv">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Other Info</label>
+                <div>
                   <textarea
                     type="text"
                     placeholder="Extra Info"
@@ -238,10 +260,15 @@ const Add_Nurse = () => {
                     value={NurseValue.details}
                     onChange={HandleDoctorChange}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
                   />
                 </div>
               </div>
-              <button type="submit" className="formsubmitbutton">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
                 {loading ? "Loading..." : "Submit"}
               </button>
             </form>
@@ -252,4 +279,4 @@ const Add_Nurse = () => {
   );
 };
 
-export default Add_Nurse;
+export default Add_Manager;

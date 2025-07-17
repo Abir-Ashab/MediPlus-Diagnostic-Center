@@ -1,72 +1,68 @@
 import React, { useState } from "react";
-import doctor from "../../../../../img/doctoravatar.png";
-import { useDispatch, useSelector } from "react-redux";
-import { DoctorRegister, SendPassword } from "../../../../../Redux/auth/action";
-import Sidebar from "../../GlobalFiles/Sidebar";
+import { User, Phone, Mail, Calendar, MapPin, Lock, Info, Percent, Activity, UserPlus } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Navigate } from "react-router-dom";
-import { User, Phone, Mail, Calendar, MapPin, Book, Stethoscope, Lock, Info } from 'lucide-react';
+import Sidebar from "../../GlobalFiles/Sidebar";
 
 const notify = (text) => toast(text);
 
-const AddDoctor = () => {
-  const { data } = useSelector((store) => store.auth);
-  const dispatch = useDispatch();
+const AddBroker = () => {
   const [loading, setLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const initData = {
-    docName: "",
+    name: "",
     age: "",
     mobile: "",
     email: "",
-    bloodGroup: "",
     gender: "",
-    DOB: "",
     address: "",
-    education: "",
-    department: "",
-    docID: Date.now(),
-    password: "password123",
-    details: "",
+    brokerID: Date.now(),
+    password: "password123", // Default password
+    commissionRate: 5,
+    status: "active",
+    notes: "",
   };
-  const [DoctorValue, setDoctorValue] = useState(initData);
+  const [BrokerValue, setBrokerValue] = useState(initData);
 
-  const HandleDoctorChange = (e) => {
-    setDoctorValue({ ...DoctorValue, [e.target.name]: e.target.value });
+  const HandleBrokerChange = (e) => {
+    setBrokerValue({ ...BrokerValue, [e.target.name]: e.target.value });
   };
 
-  const HandleDoctorSubmit = (e) => {
+  const HandleBrokerSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    dispatch(DoctorRegister(DoctorValue)).then((res) => {
-      if (res.message === "Doctor already exists") {
-        setLoading(false);
-        return notify("Doctor Already Exist");
+    
+    try {
+      const response = await fetch("http://localhost:5000/brokers/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(BrokerValue),
+      });
+      
+      const data = await response.json();
+      
+      if (data.message === "Broker already exists") {
+        notify("Broker Already Exists");
+      } else {
+        notify("Broker Added Successfully");
+        console.log("BROKER REGISTERED:", data);
+        // Reset form after successful submission
+        setBrokerValue(initData);
       }
-      if (res.message === "error") {
-        setLoading(false);
-        return notify("Something went wrong, Please try Again");
-      }
-      let data = {
-        email: res.data.email,
-        password: res.data.password,
-        userId: res.data.docID,
-      };
-      console.log(data, "DOCTOR REGISTER SUCCESSFULLY");
-      dispatch(SendPassword(data)).then((res) => notify("Account Detais Sent"));
+    } catch (error) {
+      console.error("Error adding broker:", error);
+      notify("Something went wrong, Please try Again");
+    } finally {
       setLoading(false);
-      setDoctorValue(initData);
-    });
+    }
   };
 
-  if (data?.isAuthticated === false) {
-    return <Navigate to="/" />;
-  }
 
   return (
-    <>
+    <div>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar onCollapse={setSidebarCollapsed} />
@@ -75,30 +71,32 @@ const AddDoctor = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <User className="w-6 h-6 text-blue-600" />
+                  <UserPlus className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Add Doctor</h1>
-                  <p className="text-gray-600">Register a new doctor to the system</p>
+                  <h1 className="text-2xl font-bold text-gray-900">Add Broker</h1>
+                  <p className="text-gray-600">Register a new broker to the system</p>
                 </div>
               </div>
-              <img src={doctor} alt="doctor" className="w-32 h-32 mx-auto mt-4 rounded-full border-2 border-blue-200" />
+              <div className="w-32 h-32 mx-auto mt-4 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                <UserPlus className="w-16 h-16 text-blue-600" />
+              </div>
             </div>
 
-            <form onSubmit={HandleDoctorSubmit} className="space-y-6">
+            <form onSubmit={HandleBrokerSubmit} className="space-y-6">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name *</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Full Name"
-                        name="docName"
-                        value={DoctorValue.docName}
-                        onChange={HandleDoctorChange}
+                        name="name"
+                        value={BrokerValue.name}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -112,8 +110,8 @@ const AddDoctor = () => {
                         type="number"
                         placeholder="Age"
                         name="age"
-                        value={DoctorValue.age}
-                        onChange={HandleDoctorChange}
+                        value={BrokerValue.age}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="0"
@@ -122,15 +120,15 @@ const AddDoctor = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="number"
-                        placeholder="Emergency Number"
+                        placeholder="Mobile Number"
                         name="mobile"
-                        value={DoctorValue.mobile}
-                        onChange={HandleDoctorChange}
+                        value={BrokerValue.mobile}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -144,8 +142,8 @@ const AddDoctor = () => {
                         type="email"
                         placeholder="abc@abc.com"
                         name="email"
-                        value={DoctorValue.email}
-                        onChange={HandleDoctorChange}
+                        value={BrokerValue.email}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -155,50 +153,16 @@ const AddDoctor = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                     <select
                       name="gender"
-                      value={DoctorValue.gender}
-                      onChange={HandleDoctorChange}
+                      value={BrokerValue.gender}
+                      onChange={HandleBrokerChange}
                       required
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="Choose Gender">Choose Gender</option>
+                      <option value="">Choose Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Others">Others</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Blood Group *</label>
-                    <select
-                      name="bloodGroup"
-                      value={DoctorValue.bloodGroup}
-                      onChange={HandleDoctorChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Choose Blood Group">Select</option>
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="AB+">AB+</option>
-                      <option value="AB-">AB-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate *</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="date"
-                        name="DOB"
-                        value={DoctorValue.DOB}
-                        onChange={HandleDoctorChange}
-                        required
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
@@ -208,8 +172,8 @@ const AddDoctor = () => {
                         type="text"
                         placeholder="Address"
                         name="address"
-                        value={DoctorValue.address}
-                        onChange={HandleDoctorChange}
+                        value={BrokerValue.address}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -222,39 +186,37 @@ const AddDoctor = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Education *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Commission Rate (%) *</label>
                     <div className="relative">
-                      <Book className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
-                        type="text"
-                        placeholder="e.g. MBBS"
-                        name="education"
-                        value={DoctorValue.education}
-                        onChange={HandleDoctorChange}
+                        type="number"
+                        placeholder="Commission Rate"
+                        name="commissionRate"
+                        value={BrokerValue.commissionRate}
+                        onChange={HandleBrokerChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="0"
+                        max="100"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
-                    <select
-                      name="department"
-                      value={DoctorValue.department}
-                      onChange={HandleDoctorChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="General">Select</option>
-                      <option value="Cardiology">Cardiology</option>
-                      <option value="Neurology">Neurology</option>
-                      <option value="ENT">ENT</option>
-                      <option value="Ophthalmologist">Ophthalmologist</option>
-                      <option value="Anesthesiologist">Anesthesiologist</option>
-                      <option value="Dermatologist">Dermatologist</option>
-                      <option value="Oncologist">Oncologist</option>
-                      <option value="Psychiatrist">Psychiatrist</option>
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                    <div className="relative">
+                      <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <select
+                        name="status"
+                        value={BrokerValue.status}
+                        onChange={HandleBrokerChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -276,8 +238,8 @@ const AddDoctor = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default AddDoctor;
+export default AddBroker;

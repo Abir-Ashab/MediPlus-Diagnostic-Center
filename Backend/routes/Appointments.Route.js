@@ -3,7 +3,6 @@ const { AppointmentModel } = require("../models/Appointment.model");
 
 const router = express.Router();
 
-// Get all appointments (with optional query)
 router.get("/", async (req, res) => {
   let query = req.query;
   try {

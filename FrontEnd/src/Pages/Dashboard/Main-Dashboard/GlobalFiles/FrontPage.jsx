@@ -1,50 +1,34 @@
 import { Table, Modal, Button, Spin, Avatar, Tag, Descriptions } from "antd";
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-import { MdPersonAdd } from "react-icons/md";
-import { FaUserNurse } from "react-icons/fa";
+import { MdPersonAdd, MdPayment, MdOutlineBedroomParent } from "react-icons/md";
+import { FaUserNurse, FaBed, FaAmbulance } from "react-icons/fa";
 import { RiEmpathizeLine, RiAdminLine } from "react-icons/ri";
-import { FaBed } from "react-icons/fa";
-import { MdOutlineBedroomParent } from "react-icons/md";
-import { FaAmbulance } from "react-icons/fa";
 import { BsFillBookmarkCheckFill } from "react-icons/bs";
-import { MdPayment } from "react-icons/md";
 import Sidebar from "./Sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { GetAllData, GetPatients } from "../../../../Redux/Datas/action";
 
 const FrontPage = () => {
   const [loading, setLoading] = useState(false);
-  const [doctors, setDoctors] = useState([]); // State to store doctors from API
-  const [brokers, setBrokers] = useState([]); // State to store brokers from API
-  const [nurses, setNurses] = useState([]); // State to store nurses (managers) from API
-  const [admins, setAdmins] = useState([]); // State to store admins from API
-  const [appointments, setAppointments] = useState([]); // State to store appointments from API
-  const [patients, setPatientsList] = useState([]); // State to store patients from API
+  const [doctors, setDoctors] = useState([]);
+  const [brokers, setBrokers] = useState([]);
+  const [nurses, setNurses] = useState([]);
+  const [admins, setAdmins] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [patients, setPatientsList] = useState([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Modal states
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalColumns, setModalColumns] = useState([]);
-  const [currentView, setCurrentView] = useState("table"); // "table" or "details"
+  const [currentView, setCurrentView] = useState("table");
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const columns = [
-    { title: "Name", dataIndex: "patientName", key: "patientName" },
-    { title: "Age", dataIndex: "age", key: "age" },
-    { title: "Disease", dataIndex: "disease", key: "disease" },
-    { title: "Blood Group", dataIndex: "bloodGroup", key: "bloodGroup" },
-    { title: "Department", dataIndex: "department", key: "department" },
-    { title: "Email", dataIndex: "email", key: "email" },
-  ];
-
   const { patients: patientsFromRedux } = useSelector((store) => store.data.patients);
-  const {
-    dashboard: { data },
-  } = useSelector((store) => store.data);
-
+  const { dashboard: { data } } = useSelector((store) => store.data);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -53,7 +37,6 @@ const FrontPage = () => {
     fetchAllData();
   }, [dispatch]);
 
-  // Fetch all data at once
   const fetchAllData = async () => {
     setLoading(true);
     await Promise.all([
@@ -62,24 +45,10 @@ const FrontPage = () => {
       fetchNurses(),
       fetchAdmins(),
       fetchAppointments(),
-      // fetchPatients()
     ]);
     setLoading(false);
   };
 
-  // Fetch patients data
-  // const fetchPatients = async () => {
-  //   try {
-  //     const response = await axios.get("http://localhost:5000/patients");
-  //     setPatientsList(response.data);
-  //     return response.data;
-  //   } catch (error) {
-  //     console.error("Error fetching patients:", error);
-  //     return [];
-  //   }
-  // };
-
-  // Fetch brokers data
   const fetchBrokers = async () => {
     try {
       const response = await axios.get("http://localhost:5000/brokers");
@@ -91,7 +60,6 @@ const FrontPage = () => {
     }
   };
 
-  // Fetch doctors data
   const fetchDoctors = async () => {
     try {
       const response = await axios.get("http://localhost:5000/doctors");
@@ -103,12 +71,10 @@ const FrontPage = () => {
     }
   };
 
-  // Fetch admins data
   const fetchAdmins = async () => {
     try {
       const response = await axios.get("http://localhost:5000/admin");
       setAdmins(response.data);
-      console.log("admin data:", admins);
       return response.data;
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -116,7 +82,6 @@ const FrontPage = () => {
     }
   };
 
-  // Fetch nurses data (managers)
   const fetchNurses = async () => {
     try {
       const response = await axios.get("http://localhost:5000/nurses");
@@ -128,7 +93,6 @@ const FrontPage = () => {
     }
   };
 
-  // Fetch appointments data
   const fetchAppointments = async () => {
     try {
       const response = await axios.get("http://localhost:5000/appointments");
@@ -174,7 +138,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = doctors; // Use already fetched data
+        data = doctors;
         break;
       case "manager":
         columns = [
@@ -199,7 +163,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = nurses; // Use already fetched data
+        data = nurses;
         break;
       case "broker":
         columns = [
@@ -234,7 +198,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = brokers; // Already fetched in useEffect
+        data = brokers;
         break;
       case "admin":
         columns = [
@@ -259,7 +223,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = admins; // Use already fetched data
+        data = admins;
         break;
       case "appointment":
         columns = [
@@ -281,7 +245,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = appointments; // Use already fetched data
+        data = appointments; 
         break;
       case "patient":
         columns = [
@@ -307,7 +271,7 @@ const FrontPage = () => {
             )
           },
         ];
-        data = patients; // Use already fetched data
+        data = patients;
         break;
       default:
         columns = [];
@@ -319,27 +283,22 @@ const FrontPage = () => {
     setModalLoading(false);
   };
 
-  // Function to view details of a specific record
   const viewDetails = (record, type) => {
-    console.log(`Viewing details for ${type}:`, record);
     setSelectedRecord(record);
     setCurrentView("details");
   };
 
-  // Function to cancel modal
   const handleCancel = () => {
     setIsModalVisible(false);
     setCurrentView("table");
     setSelectedRecord(null);
   };
 
-  // Function to go back to table view from details view
   const backToTable = () => {
     setCurrentView("table");
     setSelectedRecord(null);
   };
 
-  // Render the details view based on record type
   const renderDetailsView = (record, type) => {
     if (!record) return null;
     
@@ -512,126 +471,155 @@ const FrontPage = () => {
         return <div>No details available</div>;
     }
   };
+
+  const dashboardCards = [
+    {
+      title: "Doctor",
+      count: doctors.length || data?.doctor || 0,
+      icon: <MdPersonAdd className="text-4xl" />,
+      bgColor: "bg-gradient-to-br from-blue-500 to-blue-600",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      onClick: () => showModal("Doctor Details", "doctor")
+    },
+    {
+      title: "Manager",
+      count: nurses.length || data?.nurse || 0,
+      icon: <FaUserNurse className="text-4xl" />,
+      bgColor: "bg-gradient-to-br from-green-500 to-green-600",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      onClick: () => showModal("Manager Details", "manager")
+    },
+    {
+      title: "Broker",
+      count: brokers.length || 0,
+      icon: <RiEmpathizeLine className="text-4xl" />,
+      bgColor: "bg-gradient-to-br from-purple-500 to-purple-600",
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+      onClick: () => showModal("Broker Details", "broker")
+    },
+    {
+      title: "Admin",
+      count: admins.length || data?.admin || 0,
+      icon: <RiAdminLine className="text-4xl" />,
+      bgColor: "bg-gradient-to-br from-orange-500 to-orange-600",
+      iconBg: "bg-orange-100",
+      iconColor: "text-orange-600",
+      onClick: () => showModal("Admin Details", "admin")
+    },
+    {
+      title: "Appointment",
+      count: appointments.length || data?.appointment || 0,
+      icon: <BsFillBookmarkCheckFill className="text-4xl" />,
+      bgColor: "bg-gradient-to-br from-teal-500 to-teal-600",
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-600",
+      onClick: () => showModal("Appointment Details", "appointment")
+    }
+  ];
   
   return (
-    <div className="container">
-      <Sidebar />
-      <div className="AfterSideBar">
-        <h1 style={{ color: "rgb(184 191 234)" }}>Overview</h1>
+    <div className="flex min-h-screen bg-gray-50">
+          <Sidebar onCollapse={setSidebarCollapsed} />
+    <div className={` flex-1 p-6 transition-all duration-300 ${
+      sidebarCollapsed ? 'ml-20' : 'ml-0'
+    }`}>
+      <div className="flex-1 p-6 ml-40">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard Overview</h1>
+          <p className="text-gray-600">Monitor your healthcare management system</p>
+        </div>
+
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" />
-            <p>Loading dashboard data...</p>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Spin size="large" />
+              <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+            </div>
           </div>
         ) : (
-          <div className="maindiv">
-            <div 
-              className="one commondiv" 
-              onClick={() => showModal("Doctor Details", "doctor")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{doctors.length || data?.doctor || 0}</h1>
-                <p>Doctor</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            {dashboardCards.map((card, index) => (
+              <div
+                key={index}
+                onClick={card.onClick}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer transform hover:-translate-y-1"
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-800 mb-1">
+                        {card.count}
+                      </h3>
+                      <p className="text-gray-600 text-sm font-medium">
+                        {card.title}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-full ${card.iconBg}`}>
+                      <div className={card.iconColor}>
+                        {card.icon}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className={`h-1 rounded-full ${card.bgColor}`}></div>
+                  </div>
+                </div>
               </div>
-              <MdPersonAdd className="overviewIcon" />
-            </div>
-            <div 
-              className="two commondiv" 
-              onClick={() => showModal("Manager Details", "manager")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{nurses.length || data?.nurse || 0}</h1>
-                <p>Manager</p>
-              </div>
-              <FaUserNurse className="overviewIcon" />
-            </div>
-            <div 
-              className="three commondiv" 
-              onClick={() => showModal("Broker Details", "broker")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{brokers.length || 0}</h1>
-                <p>Broker</p>
-              </div>
-              <RiEmpathizeLine className="overviewIcon" />
-            </div>
-            <div 
-              className="six commondiv" 
-              onClick={() => showModal("Admin Details", "admin")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{admins.length || data?.admin || 0}</h1>
-                <p>Admin</p>
-              </div>
-              <RiAdminLine className="overviewIcon" />
-            </div>
-            <div 
-              className="six commondiv" 
-              onClick={() => showModal("Appointment Details", "appointment")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{appointments.length || data?.appointment || 0}</h1>
-                <p>Appointment</p>
-              </div>
-              <BsFillBookmarkCheckFill className="overviewIcon" />
-            </div>
-            {/* <div 
-              className="four commondiv" 
-              onClick={() => showModal("Patient Details", "patient")}
-              style={{ cursor: "pointer" }}
-            >
-              <div>
-                <h1>{patients.length || patientsFromRedux?.length || 0}</h1>
-                <p>Patient</p>
-              </div>
-              <FaBed className="overviewIcon" />
-            </div> */}
+            ))}
           </div>
         )}
 
-        {/* Modal for displaying detailed information */}
         <Modal
-          title={modalTitle}
+          title={
+            <div className="text-lg font-semibold text-gray-800">
+              {modalTitle}
+            </div>
+          }
           open={isModalVisible}
           onCancel={handleCancel}
           footer={
             currentView === "table" 
               ? [
-                  <Button key="back" onClick={handleCancel}>
+                  <Button key="back" onClick={handleCancel} className="bg-gray-500 hover:bg-gray-600">
                     Close
                   </Button>
                 ]
               : [
-                  <Button key="back" onClick={backToTable}>
+                  <Button key="back" onClick={backToTable} className="bg-blue-500 hover:bg-blue-600">
                     Back to List
                   </Button>,
-                  <Button key="close" onClick={handleCancel}>
+                  <Button key="close" onClick={handleCancel} className="bg-gray-500 hover:bg-gray-600">
                     Close
                   </Button>
                 ]
           }
           width={currentView === "details" ? 800 : 1000}
+          className="custom-modal"
         >
           {modalLoading ? (
-            <div style={{ textAlign: 'center', padding: '20px' }}>
-              <Spin size="large" />
-              <p>Loading data...</p>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <Spin size="large" />
+                <p className="mt-4 text-gray-600">Loading data...</p>
+              </div>
             </div>
           ) : currentView === "table" ? (
             <Table 
               columns={modalColumns} 
               dataSource={modalData.map((item, index) => ({ ...item, key: index }))} 
               pagination={{ pageSize: 5 }}
+              className="custom-table"
             />
           ) : (
-            renderDetailsView(selectedRecord, modalTitle.split(" ")[0].toLowerCase())
+            <div className="bg-white rounded-lg">
+              {renderDetailsView(selectedRecord, modalTitle.split(" ")[0].toLowerCase())}
+            </div>
           )}
         </Modal>
+      </div>
       </div>
     </div>
   );

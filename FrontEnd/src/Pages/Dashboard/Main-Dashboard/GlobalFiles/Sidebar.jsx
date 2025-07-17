@@ -1,32 +1,14 @@
-import React, { useState } from "react";
-// Updated imports with more meaningful icons
-import { RiUserAddLine } from "react-icons/ri"; // For adding users
-import { FaAmbulance } from "react-icons/fa"; // Kept for emergency
-import { FaUserMd } from "react-icons/fa"; // Kept for doctor
-import { FaNotesMedical } from "react-icons/fa"; // For reports/medical notes
-import { MdPayment } from "react-icons/md"; // For payment
-import { MdOutlinePersonPin } from "react-icons/md"; // For user profile/follow
-import { BsCalendarPlus } from "react-icons/bs"; // For booking appointments
-import { BsCalendarCheck } from "react-icons/bs"; // For appointment confirmations
-import { FaFileMedical } from "react-icons/fa"; // For medical details/files
-import { CgProfile } from "react-icons/cg"; // Kept for profile
-import { FaHospitalUser } from "react-icons/fa"; // Kept for hospital user
-import { FaClipboardList } from "react-icons/fa"; // For medical reports
-import { MdChildCare } from "react-icons/md"; // Kept for children
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { GiHamburgerMenu } from "react-icons/gi"; // Better hamburger menu icon
-import { BiLogOut } from "react-icons/bi"; // For logout
-import { MdAdminPanelSettings } from "react-icons/md"; // For admin panel
-import { GiMedicines } from "react-icons/gi"; // For medical tests
-import { MdDashboard } from "react-icons/md"; // For dashboard
-import { FaMoneyBillWave } from "react-icons/fa"; // Kept for revenue
-import { FaUserNurse } from "react-icons/fa"; // Better nurse icon
-import { FaHandshake } from "react-icons/fa"; // For broker
 import { useDispatch, useSelector } from "react-redux";
-import ControlUsers from "../AllPages/Admin/ControlUsers";
-import { UserDeleteOutlined } from '@ant-design/icons';
+import { GiHamburgerMenu, GiMedicines } from "react-icons/gi";
+import { CgProfile } from "react-icons/cg";
+import { FaUserMd, FaUserNurse, FaHandshake, FaNotesMedical, FaClipboardList, FaMoneyBillWave } from "react-icons/fa";
+import { MdDashboard, MdAdminPanelSettings, MdPayment } from "react-icons/md";
+import { BsCalendarPlus, BsCalendarCheck } from "react-icons/bs";
+import { BiLogOut } from "react-icons/bi";
 
-const Sidebar = () => {
+const Sidebar = ({ onCollapse }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useDispatch();
 
@@ -36,332 +18,278 @@ const Sidebar = () => {
 
   function toggle() {
     setIsOpen(!isOpen);
+    if (onCollapse) {
+      onCollapse(!isOpen);
+    }
   }
 
   return (
-    <>
-      <div>
-        <div style={{ width: isOpen ? "230px" : "80px" }} className={`sidebar`}>
-          <div className="top_section">
-            <h1 style={{ display: isOpen ? "block" : "none" }} className="logo">
-              Mediplus 
-            </h1>
-            <div
-              style={{ marginLeft: isOpen ? "50px" : "0px" }}
-              className="bars"
-            >
-              <GiHamburgerMenu onClick={toggle} style={{ cursor: "pointer" }} />
-            </div>
-          </div>
-          <div className="bottomSection">
-          
-            {
-            user?.userType === "nurse" ? (
-            <Link className="link" activeclassname="active" to={"/dashboard"}>
-              <div className="icon">
-                <MdDashboard className="mainIcon" />
-              </div>
-              <div
-                style={{ display: isOpen ? "block" : "none" }}
-                className="link_text"
-              >
-                DashBoard
-              </div>
-            </Link>) : null }
-            {
-            user?.userType === "admin" ?(
-            <Link className="link" activeclassname="active" to={"/controlUser"}>
-              <div className="icon">
-                <MdDashboard className="mainIcon" />
-              </div>
-              <div
-                style={{ display: isOpen ? "block" : "none" }}
-                className="link_text"
-              >
-                Admin DashBoard
-              </div>
-            </Link>) : null
-            }
-            {user?.userType === "nurse" ? (
+    <div className="relative">
+      <div 
+        className={`
+          fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-800 to-slate-900 
+          text-white transition-all duration-300 ease-in-out z-50 shadow-2xl
+          ${isOpen ? 'w-64' : 'w-20'}
+        `}
+      >
+      <div className="flex items-center p-5 border-b border-slate-700">
+          <button
+            onClick={toggle}
+            className="p-2 rounded-full hover:bg-slate-700 transition-colors duration-200"
+          >
+            <GiHamburgerMenu className="text-xl" />
+          </button>
+          <img 
+            src="mediplus.png" 
+            alt="MediPlus" 
+            className={`
+              h-20 md:h-24 object-contain
+              ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}
+              transition-opacity duration-200
+            `}
+          />
+        </div>
+
+        <div className="flex flex-col h-full overflow-y-auto">
+          <nav className="flex-1 py-4">
+            
+            {user?.userType === "nurse" && (
               <Link
-                className="link"
-                activeclassname="active"
-                to={"/nurseprofile"}
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/manager-profile"
               >
-                <div className="icon">
-                  <CgProfile className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <CgProfile className="text-xl text-blue-400 group-hover:text-blue-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
                   Profile
-                </div>
+                </span>
               </Link>
-            ) : null}
-            {user?.userType === "nurse" ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/addbroker"}
-              >
-                <div className="icon">
-                  <FaHandshake className="mainIcon" />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Add Broker
-                </div>
-              </Link>
-            ) : null}
+            )}
 
-            {user?.userType === "nurse" ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/bookappointment"}
+            {/* Dashboard Section */}
+            {user?.userType === "nurse" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/dashboard"
               >
-                <div className="icon">
-                  <BsCalendarPlus className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <MdDashboard className="text-xl text-green-400 group-hover:text-green-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
-                   Book Appointments
-                </div>
+                  Dashboard
+                </span>
               </Link>
-            ) : null}
+            )}
 
-             {user?.userType === "nurse" ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/booktest"}
+            {user?.userType === "admin" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/admin-dashboard"
               >
-                <div className="icon">
-                  <FaFileMedical className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <MdDashboard className="text-xl text-purple-400 group-hover:text-purple-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
-                   Book Test
-                </div>
+                  Admin Dashboard
+                </span>
               </Link>
-            ) : null}
+            )}
 
-            {user?.userType === "admin" ? (
-              <Link className="link" activeclassname="active" to={"/addManager"}>
-                <div className="icon">
-                  <FaUserNurse className="mainIcon" />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Add Manager
-                </div>
-              </Link>
-            ) : null}
-            {user?.userType === "admin" ? (
-              <Link className="link" activeclassname="active" to={"/admin"}>
-                <div className="icon">
-                  <MdAdminPanelSettings
-                    className="mainIcon"
-                    style={{ color: "white" }}
-                  />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Add Admin
-                </div>
-              </Link>
-            ) : null}
-            {user?.userType === "doctor" ? (
+            {/* Appointments Section */}
+            {user?.userType === "nurse" && (
               <Link
-                className="link"
-                activeclassname="active"
-                to={"/doctorprofile"}
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/bookappointment"
               >
-                <div className="icon">
-                  <MdOutlinePersonPin className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <BsCalendarPlus className="text-xl text-indigo-400 group-hover:text-indigo-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
-                  Profile
-                </div>
+                  Book Appointments
+                </span>
               </Link>
-            ) : null}
-          
-            {user?.userType === "doctor" ? (
-              <Link className="link" activeclassname="active" to={"/reports"}>
-                <div className="icon">
-                  <FaClipboardList className="mainIcon" />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Reports
-                </div>
-              </Link>
-            ) : null}
+            )}
 
-            {user?.userType === "nurse" ? (
+            {user?.userType === "nurse" && (
               <Link
-                className="link"
-                activeclassname="active"
-                to={"/appointments"}
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/appointments"
               >
-                <div className="icon">
-                  <BsCalendarCheck className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <BsCalendarCheck className="text-xl text-teal-400 group-hover:text-teal-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
                   Appointments
-                </div>
+                </span>
               </Link>
-            ) : null}
-
-             {user?.userType === "nurse" ? (
+            )}
+            
+            {user?.userType === "nurse" && (
               <Link
-                className="link"
-                activeclassname="active"
-                to={"/testorders"}
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/testorders"
               >
-                <div className="icon">
-                  <GiMedicines className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <GiMedicines className="text-xl text-emerald-400 group-hover:text-emerald-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
                   Test Orders
-                </div>
+                </span>
               </Link>
-            ) : null}
+            )}
 
-            {user?.userType === "doctor" ? (
+                        {/* User Management Section */}
+            {(user?.userType === "nurse" || user?.userType === "admin") && (
               <Link
-                className="link"
-                activeclassname="active"
-                to={"/createslip"}
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/adddoctor"
               >
-                <div className="icon">
-                  <FaNotesMedical className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaUserMd className="text-xl text-cyan-400 group-hover:text-cyan-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Create Report
-                </div>
-              </Link>
-            ) : null}
-
-            {/* Revenue links - added for nurse and admin users */}
-            {(user?.userType === "nurse" || user?.userType === "admin") ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/hospital-revenue"}
-              >
-                <div className="icon">
-                  <FaMoneyBillWave className="mainIcon" />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
-                >
-                  Hospital Revenue
-                </div>
-              </Link>
-            ) : null}
-
-            {(user?.userType === "nurse" || user?.userType === "admin") ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/adddoctor"}
-              >
-                <div className="icon">
-                  <FaUserMd className="mainIcon" />
-                </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
                   Add Doctor
-                </div>
+                </span>
               </Link>
-            ) : null}
+            )}
 
-            {(user?.userType === "nurse" || user?.userType === "admin") ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/doctor-revenue"}
+            {user?.userType === "admin" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/addManager"
               >
-                <div className="icon">
-                  <MdPayment className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaUserNurse className="text-xl text-pink-400 group-hover:text-pink-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
-                  Doctor Revenue
-                </div>
+                  Add Manager
+                </span>
               </Link>
-            ) : null}
+            )}
 
-            {(user?.userType === "nurse" || user?.userType === "admin") ? (
-              <Link
-                className="link"
-                activeclassname="active"
-                to={"/broker-revenue"}
+            {user?.userType === "admin" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/admin"
               >
-                <div className="icon">
-                  <FaMoneyBillWave className="mainIcon" />
+                <div className="flex items-center justify-center w-8 h-8">
+                  <MdAdminPanelSettings className="text-xl text-orange-400 group-hover:text-orange-300" />
                 </div>
-                <div
-                  style={{ display: isOpen ? "block" : "none" }}
-                  className="link_text"
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
                 >
-                  Broker Revenue
-                </div>
+                  Add Admin
+                </span>
               </Link>
-            ) : null}
+            )}
 
-            <Link
-              className="LogOutPath link"
+            {user?.userType === "nurse" && (
+              <Link
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/addbroker"
+              >
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaHandshake className="text-xl text-yellow-400 group-hover:text-yellow-300" />
+                </div>
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
+                >
+                  Add Broker
+                </span>
+              </Link>
+            )}
+
+            {(user?.userType === "nurse" || user?.userType === "admin") && (
+              <Link
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/revenue"
+              >
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaMoneyBillWave className="text-xl text-green-500 group-hover:text-green-400" />
+                </div>
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
+                >
+                  Revenue
+                </span>
+              </Link>
+            )}
+          
+          <div className="border-t border-slate-700 pt-4">
+            <button
+              className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-red-600/20 transition-colors duration-200 group text-red-400 w-full text-left"
               onClick={() => {
                 dispatch({ type: "AUTH_LOGOUT" });
+                window.location.href = "/";
               }}
-              to={"/"}
             >
-              <div className="icon">
-                <BiLogOut />
+              <div className="flex items-center justify-center w-8 h-8">
+                <BiLogOut className="text-xl group-hover:text-red-300" />
               </div>
-              <div
-                style={{ display: isOpen ? "block" : "none" }}
-                className="link_text"
+              <span 
+                className={`
+                  ml-3 font-medium transition-all duration-300
+                  ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                `}
               >
                 Logout
-              </div>
-            </Link>
+              </span>
+            </button>
           </div>
+          </nav>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
