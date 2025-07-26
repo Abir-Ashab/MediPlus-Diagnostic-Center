@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRemove }) => {
+const CategorizedTestSelection = ({ selectedTests, onTestSelect, onSelectTestDirectly, onAddMore, onRemove }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState('sections'); 
   const [selectedCategory, setSelectedCategory] = useState(''); // Track which category is selected
@@ -22,10 +22,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
         setTestsList(testsResponse.data);
         setCategories(categoriesResponse.data);
         
-        // Set first category as default
-        if (categoriesResponse.data.length > 0) {
-          setSelectedCategory(categoriesResponse.data[0].categoryId);
-        }
+        // Don't set any default category - let user choose
         setLoading(false);
       } catch (error) {
         console.error('Error fetching tests and categories:', error);
@@ -52,25 +49,9 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
 
   // Auto-add test directly when clicked
   const selectTest = (testId) => {
-    // Check if test is already selected
-    const isAlreadySelected = selectedTests.some(test => test.testId === testId.toString());
-    if (isAlreadySelected) return;
-
-    // Find empty slot or create new one
-    const emptySlot = selectedTests.find(slot => slot.testId === '' || !slot.testId);
-    if (emptySlot) {
-      onTestSelect(emptySlot.id, testId.toString());
-    } else {
-      // Auto-create new slot first
-      onAddMore();
-      // Use a longer timeout to ensure the new slot is created before selecting
-      setTimeout(() => {
-        // Find the newly created empty slot
-        const newEmptySlot = selectedTests.find(slot => slot.testId === '' || !slot.testId);
-        if (newEmptySlot) {
-          onTestSelect(newEmptySlot.id, testId.toString());
-        }
-      }, 100);
+    // Use the direct selection function passed from parent
+    if (onSelectTestDirectly) {
+      onSelectTestDirectly(testId);
     }
   };
 
@@ -82,9 +63,8 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
           <p className="text-gray-600">Loading tests...</p>
         </div>
       ) : (
-        <>
-          {/* Search and View Toggle */}
-          <div className="p-4 border-b border-gray-200">
+        <>      {/* Search and View Toggle */}
+      <div className="p-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div className="flex-1 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -128,66 +108,6 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
         </div>
       </div>
 
-      {/* Selected Tests Panel */}
-      <div className="p-4 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">Selected Tests</h3>
-          <span className="text-sm text-gray-500">
-            {selectedTests.filter(test => test.testId).length} selected
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          {selectedTests.map((test, index) => {
-            const selectedTestInfo = testsList.find(t => t.testId === parseInt(test.testId));
-            return (
-              <div key={test.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
-                <div className="flex-shrink-0">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                    {index + 1}
-                  </span>
-                </div>
-                <select
-                  value={test.testId}
-                  onChange={(e) => onTestSelect(test.id, e.target.value)}
-                  className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-sm"
-                >
-                  <option value="">Select a test...</option>
-                  {Object.entries(groupedTests).map(([category, tests]) => {
-                    const categoryName = categories.find(cat => cat.categoryId === category)?.categoryName || category;
-                    return (
-                      <optgroup key={category} label={categoryName}>
-                        {tests.map((testItem) => (
-                          <option key={testItem.testId} value={testItem.testId}>
-                            {testItem.title} - ৳{testItem.price}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
-                </select>
-                {selectedTestInfo && (
-                  <div className="text-sm font-semibold text-green-600">
-                    ৳{selectedTestInfo.price}
-                  </div>
-                )}
-                {selectedTests.length > 1 && (
-                  <button
-                    onClick={() => onRemove(test.id)}
-                    className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition duration-200"
-                    title="Remove test"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Content Area */}
       <div className="p-4">
         {activeView === 'sections' ? (
@@ -223,7 +143,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
             </div>
 
             {/* Selected Category Tests */}
-            {selectedCategory && groupedTests[selectedCategory] && (
+            {selectedCategory && groupedTests[selectedCategory] ? (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -277,6 +197,16 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
                     );
                   })}
                 </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Test Category</h3>
+                <p className="text-gray-500">Choose from the categories above to browse available tests</p>
               </div>
             )}
           </div>

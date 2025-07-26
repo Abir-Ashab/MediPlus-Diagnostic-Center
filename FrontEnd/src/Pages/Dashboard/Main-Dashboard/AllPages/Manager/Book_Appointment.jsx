@@ -10,7 +10,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Input, Select, Button, Spin, Card, Divider } from "antd";
-import { User, Calendar, Clock, Heart, Phone, MapPin, DollarSign, Mail, FileText } from 'lucide-react';
+import { User, Calendar, Clock, Heart, Phone, MapPin, DollarSign, Mail, FileText, Settings, Edit } from 'lucide-react';
 import CategorizedTestSelection from "./CategorizedTestSelection";
 
 const { Option } = Select;
@@ -53,12 +53,33 @@ const Book_Appointment = () => {
     time: "",
   });
 
-  const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "" }]);
+  const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "", customPrice: null }]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [hospitalRevenue, setHospitalRevenue] = useState(0);
   const [doctorRevenue, setDoctorRevenue] = useState(0);
   const [brokerRevenue, setBrokerRevenue] = useState(0);
   const [doctorsList, setDoctorsList] = useState([]);
+
+  // Custom commission/fee state
+  const [customDoctorCommission, setCustomDoctorCommission] = useState(null);
+  const [customDoctorFee, setCustomDoctorFee] = useState(null);
+  const [customBrokerCommission, setCustomBrokerCommission] = useState(null);
+  const [showCommissionEdit, setShowCommissionEdit] = useState(false);
+
+  const [testsList, setTestsList] = useState([]);
+
+  // Fetch tests from API
+  useEffect(() => {
+    const fetchTests = async () => {
+      try {
+        const response = await axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true');
+        setTestsList(response.data);
+      } catch (error) {
+        console.error('Error fetching tests:', error);
+      }
+    };
+    fetchTests();
+  }, []);
 
   // Fetch doctors with commission settings
   useEffect(() => {
@@ -180,29 +201,47 @@ const Book_Appointment = () => {
       }
     } else {
       total = selectedTests.reduce((sum, test) => {
-        const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
-        return sum + (selectedTest && test.testId ? selectedTest.price : 0);
+        if (!test.testId) return sum;
+        
+        // Use custom price if available, otherwise use the original test price
+        if (test.customPrice !== null && test.customPrice !== undefined) {
+          return sum + test.customPrice;
+        }
+        
+        // Try to find test in API data first, then fallback to static TestsList
+        const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
+                           TestsList.find(t => t.id === parseInt(test.testId));
+        return sum + (selectedTest ? selectedTest.price : 0);
       }, 0);
     }
     setTotalAmount(total);
     calculateRevenueDistribution(total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, bookingType, doctorsList]);
+  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, bookingType, doctorsList, testsList, customDoctorCommission, customBrokerCommission]);
 
   const calculateRevenueDistribution = (amount, doctorName, broker) => {
     if (bookingType === 'appointment') {
+      const brokerCommissionRate = customBrokerCommission !== null ? customBrokerCommission / 100 : 0.05; // Default 5%
+      
       if (broker) {
-        setHospitalRevenue(amount * 0.05);
-        setDoctorRevenue(doctorName ? amount * 0.9 : 0);
-        setBrokerRevenue(amount * 0.05);
+        const doctorCommissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : 0.9; // Default 90%
+        const hospitalCommissionRate = 1 - doctorCommissionRate - brokerCommissionRate;
+        
+        setHospitalRevenue(amount * hospitalCommissionRate);
+        setDoctorRevenue(doctorName ? amount * doctorCommissionRate : 0);
+        setBrokerRevenue(amount * brokerCommissionRate);
       } else {
-        setHospitalRevenue(amount * 0.05);
-        setDoctorRevenue(doctorName ? amount * 0.95 : 0);
+        const doctorCommissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : 0.95; // Default 95%
+        const hospitalCommissionRate = 1 - doctorCommissionRate;
+        
+        setHospitalRevenue(amount * hospitalCommissionRate);
+        setDoctorRevenue(doctorName ? amount * doctorCommissionRate : 0);
         setBrokerRevenue(0);
       }
     } else {
       // For test orders, use dynamic doctor commission
       const doctor = doctorsList.find(doc => doc.docName === doctorName);
-      const commissionRate = doctor ? doctor.testReferralCommission / 100 : 0.05; // Default to 5% if doctor not found
+      const defaultCommissionRate = doctor ? doctor.testReferralCommission / 100 : 0.05; // Default to 5% if doctor not found
+      const commissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : defaultCommissionRate;
       
       const doctorCommission = doctorName ? amount * commissionRate : 0;
       const hospitalShare = amount - doctorCommission;
@@ -221,6 +260,30 @@ const Book_Appointment = () => {
     }
   };
 
+  const handleDoctorChange = (value) => {
+    setCommonData(prev => ({ ...prev, doctorName: value }));
+    
+    // Reset custom commissions when doctor changes
+    setCustomDoctorCommission(null);
+    setCustomDoctorFee(null);
+    
+    // Set default doctor fee for appointments
+    if (bookingType === 'appointment') {
+      const selectedDoctor = doctorsList.find(d => d.docName === value);
+      if (selectedDoctor) {
+        const fee = selectedDoctor.remuneration || 500;
+        setAppointmentData(prev => ({ ...prev, time: "", doctorFee: fee }));
+        setCustomDoctorFee(fee);
+      }
+    }
+  };
+
+  const handleBrokerChange = (value) => {
+    setCommonData(prev => ({ ...prev, brokerName: value }));
+    // Reset custom broker commission when broker changes
+    setCustomBrokerCommission(null);
+  };
+
   const handleModeSpecificChange = (e) => {
     const { name, value } = e.target;
     if (bookingType === 'appointment') {
@@ -235,13 +298,130 @@ const Book_Appointment = () => {
 
   const handleTestSelect = (id, value) => {
     const updatedTests = selectedTests.map(test =>
-      test.id === id ? { ...test, testId: value } : test
+      test.id === id ? { ...test, testId: value, customPrice: null } : test
     );
     setSelectedTests(updatedTests);
   };
 
+  const handleTestPriceChange = (id, customPrice) => {
+    const updatedTests = selectedTests.map(test => {
+      if (test.id === id) {
+        const newPrice = customPrice === '' || customPrice === null ? null : parseFloat(customPrice);
+        return { ...test, customPrice: newPrice };
+      }
+      return test;
+    });
+    setSelectedTests(updatedTests);
+  };
+
+  // Update test price in database using PUT API
+  const updateTestPrice = async (testId, newPrice) => {
+    try {
+      const test = testsList.find(t => t.testId === parseInt(testId));
+      if (!test) return;
+
+      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/${test._id}`, {
+        ...test,
+        price: Number(newPrice)
+      });
+
+      toast.success("Test price updated successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      // Refresh tests list
+      const response = await axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true');
+      setTestsList(response.data);
+    } catch (error) {
+      console.error('Error updating test price:', error);
+      toast.error("Failed to update test price. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const updateDoctorCommissionFee = async (doctorName, commission, fee) => {
+    try {
+      const doctor = doctorsList.find(d => d.docName === doctorName);
+      if (!doctor) return;
+
+      const updateData = {};
+      if (commission !== null && commission !== undefined) {
+        updateData.testReferralCommission = commission;
+      }
+      if (fee !== null && fee !== undefined) {
+        updateData.remuneration = fee;
+      }
+
+      // Use existing doctor PATCH route
+      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors/${doctor._id}`, updateData);
+
+      toast.success("Doctor commission/fee updated successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      // Refresh doctors list
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
+      setDoctorsList(response.data);
+    } catch (error) {
+      console.error('Error updating doctor commission/fee:', error);
+      toast.error("Failed to update doctor commission/fee. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const updateBrokerCommission = async (brokerName, commission) => {
+    try {
+      const broker = brokers.find(b => (b.name || b.docName) === brokerName);
+      if (!broker) return;
+
+      // Use existing broker PATCH route
+      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers/${broker._id}`, {
+        commissionRate: commission
+      });
+
+      toast.success("Broker commission updated successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      // Refresh brokers list
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
+      setBrokers(response.data);
+    } catch (error) {
+      console.error('Error updating broker commission:', error);
+      toast.error("Failed to update broker commission. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
   const addMoreTest = () => {
-    setSelectedTests([...selectedTests, { id: Date.now(), testId: "" }]);
+    const newTest = { id: Date.now(), testId: "", customPrice: null };
+    setSelectedTests(prev => [...prev, newTest]);
+  };
+
+  const selectTestDirectly = (testId) => {
+    // Check if test is already selected
+    const isAlreadySelected = selectedTests.some(test => test.testId === testId.toString());
+    if (isAlreadySelected) return;
+
+    // Find empty slot first
+    const emptySlot = selectedTests.find(slot => !slot.testId || slot.testId === '');
+    if (emptySlot) {
+      // Use existing empty slot
+      handleTestSelect(emptySlot.id, testId.toString());
+    } else {
+      // Create new slot and select test immediately
+      const newTest = { id: Date.now(), testId: testId.toString(), customPrice: null };
+      setSelectedTests(prev => [...prev, newTest]);
+    }
   };
 
   const removeTest = (id) => {
@@ -258,7 +438,7 @@ const Book_Appointment = () => {
 
   const HandleBookingTypeChange = (type) => {
     setBookingType(type);
-    setSelectedTests([{ id: Date.now(), testId: "" }]);
+    setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
   };
 
   const clearFormAfterSubmit = () => {
@@ -275,7 +455,7 @@ const Book_Appointment = () => {
         autoClose: 5000,
       });
     }
-    setSelectedTests([{ id: Date.now(), testId: "" }]);
+    setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
   };
 
   const HandleOnsubmitAppointment = async (e) => {
@@ -315,10 +495,19 @@ const Book_Appointment = () => {
       testsWithPrices = selectedTests
         .filter(test => test.testId !== "")
         .map(test => {
-          const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
+          // Try to find test in API data first, then fallback to static TestsList
+          const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
+                             TestsList.find(t => t.id === parseInt(test.testId));
+          
+          const finalPrice = test.customPrice !== null && test.customPrice !== undefined 
+            ? test.customPrice 
+            : selectedTest.price;
+          
           return { 
             testName: selectedTest.title, 
-            testPrice: selectedTest.price,
+            testPrice: finalPrice,
+            originalPrice: selectedTest.price,
+            isCustomPrice: test.customPrice !== null && test.customPrice !== undefined,
             category: selectedTest.category
           };
         });
@@ -555,7 +744,7 @@ const Book_Appointment = () => {
                       <Select
                         name="doctorName"
                         value={commonData.doctorName}
-                        onChange={(value) => setCommonData(prev => ({ ...prev, doctorName: value }))}
+                        onChange={handleDoctorChange}
                         disabled={loadingDoctors}
                         required={bookingType === 'appointment'}
                         className="w-full"
@@ -575,7 +764,7 @@ const Book_Appointment = () => {
                         <Select
                           name="brokerName"
                           value={commonData.brokerName}
-                          onChange={(value) => setCommonData(prev => ({ ...prev, brokerName: value }))}
+                          onChange={handleBrokerChange}
                           disabled={loadingBrokers}
                           className="w-full"
                           placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}
@@ -610,11 +799,81 @@ const Book_Appointment = () => {
                     <CategorizedTestSelection
                       selectedTests={selectedTests}
                       onTestSelect={handleTestSelect}
+                      onSelectTestDirectly={selectTestDirectly}
                       onAddMore={addMoreTest}
                       onRemove={removeTest}
                     />
                   )}
                 </Card>
+
+                {/* Selected Tests with Editable Prices */}
+                {bookingType === 'test' && selectedTests.some(test => test.testId !== "") && (
+                  <Card className="mb-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <FileText className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">Selected Tests & Prices</h3>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {selectedTests.filter(test => test.testId !== "").map((test) => {
+                        const selectedTest = testsList.find(t => t.testId === parseInt(test.testId));
+                        if (!selectedTest) return null;
+                        
+                        const currentPrice = test.customPrice !== null && test.customPrice !== undefined 
+                          ? test.customPrice 
+                          : selectedTest.price;
+                        
+                        return (
+                          <div key={test.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">{selectedTest.title}</h4>
+                              <p className="text-sm text-gray-600">Test ID: {selectedTest.testId}</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="flex flex-col items-end">
+                                <label className="text-xs text-gray-500 mb-1">Price (৳)</label>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={currentPrice}
+                                    onChange={(e) => handleTestPriceChange(test.id, e.target.value)}
+                                    className="w-24 text-center"
+                                    size="small"
+                                    min="0"
+                                    step="10"
+                                  />
+                                  {test.customPrice !== null && test.customPrice !== undefined && test.customPrice !== selectedTest.price && (
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      onClick={() => updateTestPrice(test.testId, test.customPrice)}
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                      title="Update price in database"
+                                    >
+                                      Save
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {test.customPrice !== null && test.customPrice !== undefined && selectedTest.price !== currentPrice && (
+                                <div className="text-right">
+                                  <div className="text-xs text-gray-500">Original: ৳{selectedTest.price}</div>
+                                  <div className="text-xs text-orange-600 font-medium">
+                                    {currentPrice > selectedTest.price ? '+' : ''}৳{(currentPrice - selectedTest.price).toFixed(2)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
 
                 <Card className="mb-6 shadow-sm border border-gray-200">
                   <div className="flex items-center gap-2 mb-4">
@@ -670,6 +929,215 @@ const Book_Appointment = () => {
                     </div>
                   </div>
                 </Card>
+
+                {/* Commission/Fee Customization Section */}
+                {(commonData.doctorName || commonData.brokerName) && (
+                  <Card className="mb-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-indigo-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">Commission & Fee Settings</h3>
+                      </div>
+                      <Button
+                        type="default"
+                        size="small"
+                        onClick={() => setShowCommissionEdit(!showCommissionEdit)}
+                        className="flex items-center gap-1"
+                      >
+                        <Edit className="w-4 h-4" />
+                        {showCommissionEdit ? 'Hide' : 'Edit'}
+                      </Button>
+                    </div>
+                    
+                    {showCommissionEdit && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                        {commonData.doctorName && (
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-700">Doctor Settings</h4>
+                            {bookingType === 'appointment' ? (
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="block text-sm text-gray-600 mb-1">
+                                    Commission (%) - Default: {commonData.brokerName ? '90%' : '95%'}
+                                  </label>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      type="number"
+                                      placeholder={commonData.brokerName ? "90" : "95"}
+                                      value={customDoctorCommission || ''}
+                                      onChange={(e) => setCustomDoctorCommission(e.target.value ? parseFloat(e.target.value) : null)}
+                                      min="0"
+                                      max="100"
+                                      step="0.1"
+                                      className="flex-1"
+                                    />
+                                    {customDoctorCommission !== null && (
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={() => updateDoctorCommissionFee(commonData.doctorName, customDoctorCommission, null)}
+                                        className="bg-blue-600 hover:bg-blue-700"
+                                      >
+                                        Save
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-sm text-gray-600 mb-1">
+                                    Doctor Fee (Taka) - Default: {(() => {
+                                      const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
+                                      return selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
+                                    })()}
+                                  </label>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      type="number"
+                                      placeholder={(() => {
+                                        const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
+                                        return (selectedDoctor ? selectedDoctor.remuneration || 500 : 500).toString();
+                                      })()}
+                                      value={customDoctorFee || ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value ? parseFloat(e.target.value) : null;
+                                        setCustomDoctorFee(value);
+                                        if (value !== null) {
+                                          setAppointmentData(prev => ({ ...prev, doctorFee: value }));
+                                        }
+                                      }}
+                                      min="0"
+                                      step="0.01"
+                                      className="flex-1"
+                                    />
+                                    {customDoctorFee !== null && (() => {
+                                      const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
+                                      const defaultFee = selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
+                                      return customDoctorFee !== defaultFee;
+                                    })() && (
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={() => updateDoctorCommissionFee(commonData.doctorName, null, customDoctorFee)}
+                                        className="bg-blue-600 hover:bg-blue-700"
+                                      >
+                                        Save
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-1">
+                                  Test Referral Commission (%) - Default: {(() => {
+                                    const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                    return doctor ? doctor.testReferralCommission || 5 : 5;
+                                  })()}%
+                                </label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="number"
+                                    placeholder={(() => {
+                                      const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                      return (doctor ? doctor.testReferralCommission || 5 : 5).toString();
+                                    })()}
+                                    value={customDoctorCommission || ''}
+                                    onChange={(e) => setCustomDoctorCommission(e.target.value ? parseFloat(e.target.value) : null)}
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    className="flex-1"
+                                  />
+                                  {customDoctorCommission !== null && (() => {
+                                    const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                    const defaultCommission = doctor ? doctor.testReferralCommission || 5 : 5;
+                                    return customDoctorCommission !== defaultCommission;
+                                  })() && (
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      onClick={() => updateDoctorCommissionFee(commonData.doctorName, customDoctorCommission, null)}
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      Save
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {commonData.brokerName && bookingType === 'appointment' && (
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-700">Broker Settings</h4>
+                            <div>
+                              <label className="block text-sm text-gray-600 mb-1">
+                                Commission (%) - Default: 5%
+                              </label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="5"
+                                  value={customBrokerCommission || ''}
+                                  onChange={(e) => setCustomBrokerCommission(e.target.value ? parseFloat(e.target.value) : null)}
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  className="flex-1"
+                                />
+                                {customBrokerCommission !== null && customBrokerCommission !== 5 && (
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    onClick={() => updateBrokerCommission(commonData.brokerName, customBrokerCommission)}
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    Save
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Display current settings */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      {commonData.doctorName && (
+                        <div className="bg-blue-50 p-3 rounded">
+                          <div className="font-medium text-blue-800">Doctor: {commonData.doctorName}</div>
+                          {bookingType === 'appointment' ? (
+                            <div className="text-blue-600">
+                              <div>Commission: {customDoctorCommission !== null ? `${customDoctorCommission}%` : (commonData.brokerName ? '90%' : '95%')} (Custom: {customDoctorCommission !== null ? 'Yes' : 'No'})</div>
+                              <div>Fee: ৳{customDoctorFee !== null ? customDoctorFee : (() => {
+                                const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
+                                return selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
+                              })()} (Custom: {customDoctorFee !== null ? 'Yes' : 'No'})</div>
+                            </div>
+                          ) : (
+                            <div className="text-blue-600">
+                              Commission: {customDoctorCommission !== null ? `${customDoctorCommission}%` : (() => {
+                                const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                return `${doctor ? doctor.testReferralCommission || 5 : 5}%`;
+                              })()} (Custom: {customDoctorCommission !== null ? 'Yes' : 'No'})
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {commonData.brokerName && bookingType === 'appointment' && (
+                        <div className="bg-orange-50 p-3 rounded">
+                          <div className="font-medium text-orange-800">Broker: {commonData.brokerName}</div>
+                          <div className="text-orange-600">
+                            Commission: {customBrokerCommission !== null ? `${customBrokerCommission}%` : '5%'} (Custom: {customBrokerCommission !== null ? 'Yes' : 'No'})
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
 
                 <Card className="mb-6 shadow-sm border border-gray-200">
                   <div className="flex items-center gap-2 mb-4">
