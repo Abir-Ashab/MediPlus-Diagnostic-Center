@@ -15,11 +15,13 @@ const Manager_Profile = () => {
     data: { user },
   } = useSelector((state) => state.auth);
 
+  console.log("user", user);
+  
   const dispatch = useDispatch();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [formData, setFormData] = useState({
-    managerName: user.managerName,
+    nurseName: user.nurseName,
     age: user.age,
     gender: user.gender,
     bloodGroup: user.bloodGroup,
@@ -118,7 +120,7 @@ const Manager_Profile = () => {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-slate-500 font-medium">Full Name</p>
-                        <p className="font-bold text-slate-800 text-lg">{user?.managerName || "N/A"}</p>
+                        <p className="font-bold text-slate-800 text-lg">{user?.nurseName || "N/A"}</p>
                       </div>
                     </div>
 
@@ -269,8 +271,8 @@ const Manager_Profile = () => {
                   Full Name
                 </label>
                 <input
-                  name="managerName"
-                  value={formData.managerName}
+                  name="nurseName"
+                  value={formData.nurseName}
                   onChange={handleFormChange}
                   type="text"
                   placeholder="Enter full name"

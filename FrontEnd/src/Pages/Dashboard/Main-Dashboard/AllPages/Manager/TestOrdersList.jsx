@@ -3,10 +3,22 @@ import axios from "axios";
 import { Modal, Button, Input, Spin } from "antd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useSelector } from "react-redux";
+import { usePrintReport } from "../../../../../Components/PrintReport";
 import Sidebar from "../../GlobalFiles/Sidebar";
+import { TestCategories, TestsList } from "./MixedObjectData";
 import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building } from 'lucide-react';
 
 const TestOrdersList = () => {
+  // Get current user from Redux store with safe destructuring
+  const { data: { user } = {} } = useSelector((state) => state.auth || {});
+  
+  const { printReport } = usePrintReport();
+  const getCurrentUserName = () => {
+    if (!user) return 'System';
+    return user.nurseName || user.doctorName || user.adminName || user.name || 'Unknown User';
+  };
+  
   const [testOrders, setTestOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -66,68 +78,7 @@ const TestOrdersList = () => {
   };
 
   const handlePrintReport = (order) => {
-    const printWindow = window.open('', '_blank', 'height=600,width=800');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Test Order - ${order.patientName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
-            h1 { color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
-            .details { margin-bottom: 20px; }
-            .detail-row { display: flex; margin-bottom: 5px; }
-            .label { font-weight: bold; width: 150px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background-color: #f2f2f2; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #7f8c8d; }
-          </style>
-        </head>
-        <body>
-          <h1>Test Order Receipt</h1>
-          <div class="details">
-            <div class="detail-row"><span class="label">Patient:</span> ${order.patientName} (${order.gender}, ${order.age} yrs)</div>
-            <div class="detail-row"><span class="label">Mobile:</span> ${order.mobile}</div>
-            <div class="detail-row"><span class="label">Email:</span> ${order.email || 'N/A'}</div>
-            <div class="detail-row"><span class="label">Doctor:</span> ${order.doctorName || 'N/A'}</div>
-            <div class="detail-row"><span class="label">Date & Time:</span> ${new Date(order.date).toLocaleDateString()}, ${order.time}</div>
-            <div class="detail-row"><span class="label">Status:</span> ${order.status || 'Pending'}</div>
-          </div>
-          <h2>Ordered Tests</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Test Name</th>
-                <th>Price (Taka)</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.tests && order.tests.map((test, i) => `
-                <tr>
-                  <td>${i+1}</td>
-                  <td>${test.testName}</td>
-                  <td>${test.testPrice}</td>
-                </tr>
-              `).join('')}
-              <tr>
-                <td colspan="2" style="text-align: right; font-weight: bold;">Total:</td>
-                <td style="font-weight: bold;">${order.totalAmount} Taka</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="footer">
-            <p>This is a computer generated receipt and does not require physical signature.</p>
-            <p>Order ID: ${order._id}</p>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    printReport(order);
   };
 
   const filteredOrders = testOrders?.filter((order) =>

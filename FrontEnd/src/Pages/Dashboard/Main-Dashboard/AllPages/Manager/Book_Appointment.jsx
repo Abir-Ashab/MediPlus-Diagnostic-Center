@@ -2,20 +2,22 @@ import React, { useState, useEffect } from "react";
 import { CommonProblem, TestsList } from "./MixedObjectData";
 import { useDispatch } from "react-redux";
 import { AddPatients, CreateBooking } from "../../../../../Redux/Datas/action";
+import { usePrintReport } from "../../../../../Components/PrintReport";
+import PrintSuccessModal from "../../../../../Components/PrintSuccessModal";
+import AddressAutocomplete from "../../../../../Components/AddressAutocomplete";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Input, Select, Button, Spin, Card, Divider } from "antd";
 import { User, Calendar, Clock, Heart, Phone, MapPin, DollarSign, Mail, FileText } from 'lucide-react';
-import SearchableTestSelection from "./searchable_test";
+import CategorizedTestSelection from "./CategorizedTestSelection";
 
 const { Option } = Select;
 
-const notify = (text) => toast(text);
-
 const Book_Appointment = () => {
   const dispatch = useDispatch();
+  const { printReport } = usePrintReport();
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [brokers, setBrokers] = useState([]);
@@ -25,6 +27,8 @@ const Book_Appointment = () => {
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [bookingType, setBookingType] = useState('appointment');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [lastCreatedOrder, setLastCreatedOrder] = useState(null);
 
   const [commonData, setCommonData] = useState({
     patientName: "",
@@ -112,7 +116,10 @@ const Book_Appointment = () => {
         setLoadingDoctors(false);
       } catch (error) {
         console.error("Error fetching doctors:", error);
-        notify("Failed to load doctors. Please try again later.");
+        toast.error("⚠️ Failed to load doctors. Please refresh the page and try again.", {
+          position: "top-right",
+          autoClose: 4000,
+        });
         setLoadingDoctors(false);
       }
     };
@@ -128,7 +135,10 @@ const Book_Appointment = () => {
         setLoadingBrokers(false);
       } catch (error) {
         console.error("Error fetching brokers:", error);
-        notify("Failed to load brokers. Please try again later.");
+        toast.error("⚠️ Failed to load brokers. Please refresh the page and try again.", {
+          position: "top-right",
+          autoClose: 4000,
+        });
         setLoadingBrokers(false);
       }
     };
@@ -218,7 +228,10 @@ const Book_Appointment = () => {
       const updatedTests = selectedTests.filter(test => test.id !== id);
       setSelectedTests(updatedTests);
     } else {
-      notify("At least one test is required");
+      toast.warning("⚠️ At least one test is required", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -230,37 +243,47 @@ const Book_Appointment = () => {
   const clearFormAfterSubmit = () => {
     if (bookingType === 'appointment') {
       setAppointmentData({ date: "", time: "", doctorFee: 0 });
+      toast.success("Appointment booked successfully! Patient information has been preserved for your next booking.", {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } else {
       setTestData({ date: "", time: "" });
+      toast.success("Test order created successfully! Patient information has been preserved for your next booking.", {
+        position: "top-right",
+        autoClose: 5000,
+      });
     }
     setSelectedTests([{ id: Date.now(), testId: "" }]);
-    const startFresh = window.confirm(
-      `${bookingType === 'appointment' ? 'Appointment' : 'Test order'} created successfully!\n\n` +
-      "Patient information has been preserved for your next booking.\n" +
-      "Click 'OK' to clear all data and start fresh, or 'Cancel' to keep patient info."
-    );
-    if (startFresh) {
-      setCommonData({
-        patientName: "", age: "", gender: "", mobile: "", disease: "", address: "", email: "", doctorName: "", brokerName: ""
-      });
-      setAppointmentData({ date: "", time: "", doctorFee: 0 });
-      setTestData({ date: "", time: "" });
-    }
   };
 
   const HandleOnsubmitAppointment = async (e) => {
     e.preventDefault();
     const currentData = getCurrentModeData();
+    
+    // Validation
     if (commonData.gender === "") {
-      return notify("Please fill all the required fields");
+      return toast.error(" Please fill all the required fields", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
+    
     if (bookingType === 'appointment' && !currentData.time) {
-      return notify("Please select an appointment time");
+      return toast.error("Please select an appointment time", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
+    
     const hasSelectedTest = selectedTests.some(test => test.testId !== "");
     if (!hasSelectedTest) {
-      return notify("Please select at least one test");
+      return toast.error("Please select at least one test", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
+
     let testsWithPrices;
     if (bookingType === 'appointment') {
       testsWithPrices = selectedTests
@@ -272,9 +295,14 @@ const Book_Appointment = () => {
         .filter(test => test.testId !== "")
         .map(test => {
           const selectedTest = TestsList.find(t => t.id === parseInt(test.testId));
-          return { testName: selectedTest.title, testPrice: selectedTest.price };
+          return { 
+            testName: selectedTest.title, 
+            testPrice: selectedTest.price,
+            category: selectedTest.category
+          };
         });
     }
+
     setLoading(true);
     try {
       const patientData = {
@@ -287,20 +315,42 @@ const Book_Appointment = () => {
         brokerRevenue,
         orderType: bookingType,
       };
+
       const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
+
       if (bookingType === 'appointment') {
         const bookingData = { ...patientData, patientID: patientResponse.id };
         await dispatch(CreateBooking(bookingData));
         fetchBookedAppointments(commonData.doctorName, appointmentData.date);
+        setLoading(false);
+        clearFormAfterSubmit();
       } else {
+        // Test order creation
         const testOrderData = { ...patientData, patientID: patientResponse.id };
-        await axios.post("http://localhost:5000/testorders", testOrderData);
+        const response = await axios.post("http://localhost:5000/testorders", testOrderData);
+        
+        setLoading(false);
+        
+        // Store the created order for printing
+        setLastCreatedOrder({
+          ...testOrderData,
+          _id: response.data._id || Date.now().toString()
+        });
+        
+        // Show print modal for test orders
+        setShowPrintModal(true);
+        
+        // Clear form
+        clearFormAfterSubmit();
       }
-      setLoading(false);
-      clearFormAfterSubmit();
     } catch (error) {
-      notify("Error: " + (error.response?.data?.message || error.message || "Unknown error"));
       setLoading(false);
+      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+      toast.error(`❌ Error: ${errorMessage}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      console.error("Error:", error);
     }
   };
 
@@ -444,14 +494,11 @@ const Book_Appointment = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                      <Input
-                        prefix={<MapPin className="w-4 h-4 text-gray-400" />}
-                        placeholder="Address"
-                        name="address"
+                      <AddressAutocomplete
                         value={commonData.address}
-                        onChange={handleCommonDataChange}
+                        onChange={(value) => setCommonData(prev => ({ ...prev, address: value }))}
+                        placeholder="Start typing your address in Bangladesh..."
                         required
-                        className="border-gray-200 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -538,12 +585,11 @@ const Book_Appointment = () => {
                       </div>
                     )
                   ) : (
-                    <SearchableTestSelection
+                    <CategorizedTestSelection
                       selectedTests={selectedTests}
-                      handleTestSelect={handleTestSelect}
-                      addMoreTest={addMoreTest}
-                      removeTest={removeTest}
-                      TestsList={TestsList}
+                      onTestSelect={handleTestSelect}
+                      onAddMore={addMoreTest}
+                      onRemove={removeTest}
                     />
                   )}
                 </Card>
@@ -644,6 +690,17 @@ const Book_Appointment = () => {
           </div>
         </div>
       </div>
+      
+      {/* Print Success Modal */}
+      <PrintSuccessModal
+        isVisible={showPrintModal}
+        onClose={() => {
+          setShowPrintModal(false);
+          setLastCreatedOrder(null);
+        }}
+        orderData={lastCreatedOrder}
+        onPrint={printReport}
+      />
     </div>
   );
 };

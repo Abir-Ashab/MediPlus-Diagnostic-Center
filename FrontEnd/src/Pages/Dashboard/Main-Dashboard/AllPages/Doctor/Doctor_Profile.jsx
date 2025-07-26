@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import "../Doctor/CSS/Doctor_Profile.css";
 import { BiTime } from "react-icons/bi";
 import { GiMeditation } from "react-icons/gi";
 import { AiFillCalendar, AiFillEdit } from "react-icons/ai";
@@ -14,9 +13,7 @@ import { Button, message, Modal } from "antd";
 import { UpdateDoctor, UpdateNurse } from "../../../../../Redux/auth/action";
 import { GetDoctorDetails } from "../../../../../Redux/Datas/action";
 import { Navigate } from "react-router-dom";
-import "./CSS/Doctor_Profile.css";
 
-// *********************************************************
 const Doctor_Profile = () => {
   const { data } = useSelector((store) => store.auth);
 

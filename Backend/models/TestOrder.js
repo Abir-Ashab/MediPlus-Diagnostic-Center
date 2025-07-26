@@ -1,4 +1,3 @@
-// Backend - models/TestOrder.js
 const mongoose = require("mongoose");
 
 const testOrderSchema = new mongoose.Schema(
