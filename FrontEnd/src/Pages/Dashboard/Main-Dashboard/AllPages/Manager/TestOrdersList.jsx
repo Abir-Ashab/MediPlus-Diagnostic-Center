@@ -33,7 +33,7 @@ const TestOrdersList = () => {
   const fetchTestOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/testorders");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
       setTestOrders(response.data);
       setLoading(false);
     } catch (error) {
@@ -53,7 +53,7 @@ const TestOrdersList = () => {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await axios.patch(`http://localhost:5000/testorders/${orderId}/status`, {
+      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}/status`, {
         status: newStatus,
       });
       toast.success(`Order status updated to ${newStatus}`);
@@ -66,7 +66,7 @@ const TestOrdersList = () => {
 
   const deleteTestOrder = async (orderId) => {
     try {
-      await axios.delete(`http://localhost:5000/testorders/${orderId}`);
+      await axios.delete(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}`);
       toast.success("Test order deleted successfully");
       setIsConfirmDeleteOpen(false);
       setOrderToDelete(null);

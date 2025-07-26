@@ -37,7 +37,7 @@ const AllRoutes = () => {
         <Route path="/appointments" element={<Check_Appointment />} />
         <Route path="/test-management" element={<TestManagement />} />
         <Route path="/revenue-management" element={<RevenueManagement />} />
-        <Route path="/database-seeder" element={<DatabaseSeeder />} />
+        {/* <Route path="/database-seeder" element={<DatabaseSeeder />} /> */}
       </Routes>
     </>
   );

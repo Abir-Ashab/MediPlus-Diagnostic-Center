@@ -43,9 +43,9 @@ const RevenueDashboard = () => {
 
         // Fetch hospital revenue data
         const [appointmentResponse, testOrderResponse, appointmentsRes] = await Promise.all([
-          axios.get("http://localhost:5000/appointments/revenue/hospital").catch(() => ({ data: { brokers: [], summary: {} } })),
-          axios.get("http://localhost:5000/testorders").catch(() => ({ data: [] })),
-          axios.get("http://localhost:5000/appointments").catch(() => ({ data: [] }))
+          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/hospital").catch(() => ({ data: { brokers: [], summary: {} } })),
+          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders").catch(() => ({ data: [] })),
+          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments").catch(() => ({ data: [] }))
         ]);
 
         // Process hospital data
@@ -121,7 +121,7 @@ const RevenueDashboard = () => {
         });
 
         // Fetch doctor revenue data
-        const doctorResponse = await axios.get("http://localhost:5000/appointments/revenue/doctor").catch(() => ({ data: { doctors: [], summary: {} } }));
+        const doctorResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/doctor").catch(() => ({ data: { doctors: [], summary: {} } }));
         const doctorsRevenue = (doctorResponse.data.doctors || []).filter(doctor => doctor._id !== null);
         const testOrdersByDoctor = {};
         testOrderResponse.data.forEach(order => {
@@ -167,7 +167,7 @@ const RevenueDashboard = () => {
         });
 
         // Fetch broker revenue data
-        const brokerResponse = await axios.get("http://localhost:5000/appointments/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
+        const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
         const filteredBrokers = (brokerResponse.data.brokers || []).filter(broker => broker._id !== null);
         setBrokerData({
           brokers: filteredBrokers,
@@ -233,8 +233,8 @@ const RevenueDashboard = () => {
     setSelectedDoctor(doctorName);
     try {
       const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-        axios.get(`http://localhost:5000/appointments?doctorName=${doctorName}`),
-        axios.get(`http://localhost:5000/testorders`)
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`)
       ]);
 
       const doctorTestOrders = testOrdersResponse.data.filter(order => order.doctorName === doctorName);
@@ -266,7 +266,7 @@ const RevenueDashboard = () => {
   const handleBrokerSelect = async (brokerName) => {
     setSelectedBroker(brokerName);
     try {
-      const response = await axios.get(`http://localhost:5000/appointments?brokerName=${brokerName}`);
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?brokerName=${brokerName}`);
       setBrokerData({ ...brokerData, brokerAppointments: response.data });
       toast.success(`Loaded ${response.data.length} appointments for broker ${brokerName}`);
     } catch (error) {

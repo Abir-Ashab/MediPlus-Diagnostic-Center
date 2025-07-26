@@ -16,7 +16,7 @@ const DatabaseSeeder = () => {
   const checkSeedStatus = async () => {
     try {
       setChecking(true);
-      const response = await axios.get("http://localhost:5000/seeder/status");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/seeder/status");
       setSeedStatus(response.data);
       setChecking(false);
     } catch (error) {
@@ -37,7 +37,7 @@ const DatabaseSeeder = () => {
   const handleSeed = async () => {
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:5000/seeder/seed");
+      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/seeder/seed");
       
       toast.success(response.data.message, {
         position: "top-right",
@@ -65,7 +65,7 @@ const DatabaseSeeder = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:5000/seeder/reseed");
+      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/seeder/reseed");
       
       toast.success(response.data.message, {
         position: "top-right",

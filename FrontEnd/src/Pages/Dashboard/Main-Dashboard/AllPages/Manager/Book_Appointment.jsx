@@ -64,7 +64,7 @@ const Book_Appointment = () => {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/testorders/doctors/commission");
+        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
         setDoctorsList(response.data);
       } catch (error) {
         console.error("Error fetching doctors:", error);
@@ -92,7 +92,7 @@ const Book_Appointment = () => {
   const fetchBookedAppointments = async (doctorName, date) => {
     if (!doctorName || !date) return;
     try {
-      const response = await axios.get(`http://localhost:5000/appointments?doctor=${doctorName}&date=${date}`);
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctor=${doctorName}&date=${date}`);
       setBookedAppointments(response.data);
     } catch (error) {
       console.error("Error fetching booked appointments:", error);
@@ -125,7 +125,7 @@ const Book_Appointment = () => {
     const fetchDoctors = async () => {
       try {
         setLoadingDoctors(true);
-        const response = await axios.get("http://localhost:5000/doctors");
+        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
         setDoctors(response.data);
         setLoadingDoctors(false);
       } catch (error) {
@@ -144,7 +144,7 @@ const Book_Appointment = () => {
     const fetchBrokers = async () => {
       try {
         setLoadingBrokers(true);
-        const response = await axios.get("http://localhost:5000/brokers");
+        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
         setBrokers(response.data);
         setLoadingBrokers(false);
       } catch (error) {
@@ -348,7 +348,7 @@ const Book_Appointment = () => {
       } else {
         // Test order creation
         const testOrderData = { ...patientData, patientID: patientResponse.id };
-        const response = await axios.post("http://localhost:5000/testorders", testOrderData);
+        const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
         
         setLoading(false);
         

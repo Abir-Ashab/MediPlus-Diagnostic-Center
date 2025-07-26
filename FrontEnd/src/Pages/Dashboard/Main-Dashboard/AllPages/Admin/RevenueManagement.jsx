@@ -21,7 +21,7 @@ const RevenueManagement = () => {
   // Fetch doctors
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/testorders/doctors/commission");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
       setDoctors(response.data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -47,7 +47,7 @@ const RevenueManagement = () => {
         params.doctorName = selectedDoctor;
       }
       
-      const response = await axios.get("http://localhost:5000/testorders/reports/revenue", { params });
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/reports/revenue", { params });
       setRevenueData(response.data);
       setLoading(false);
     } catch (error) {

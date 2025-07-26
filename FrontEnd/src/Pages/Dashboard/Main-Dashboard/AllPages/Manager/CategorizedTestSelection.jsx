@@ -15,8 +15,8 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
       try {
         setLoading(true);
         const [testsResponse, categoriesResponse] = await Promise.all([
-          axios.get('http://localhost:5000/tests?isActive=true'),
-          axios.get('http://localhost:5000/tests/categories')
+          axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true'),
+          axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/categories')
         ]);
         
         setTestsList(testsResponse.data);

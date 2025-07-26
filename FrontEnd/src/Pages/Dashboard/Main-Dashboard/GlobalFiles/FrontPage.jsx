@@ -51,7 +51,7 @@ const FrontPage = () => {
 
   const fetchBrokers = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/brokers");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
       setBrokers(response.data);
       return response.data;
     } catch (error) {
@@ -62,7 +62,7 @@ const FrontPage = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/doctors");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
       setDoctors(response.data);
       return response.data;
     } catch (error) {
@@ -73,7 +73,7 @@ const FrontPage = () => {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/admin");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/admin");
       setAdmins(response.data);
       return response.data;
     } catch (error) {
@@ -84,7 +84,7 @@ const FrontPage = () => {
 
   const fetchNurses = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/nurses");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
       setNurses(response.data);
       return response.data;
     } catch (error) {
@@ -95,7 +95,7 @@ const FrontPage = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/appointments");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments");
       setAppointments(response.data);
       return response.data;
     } catch (error) {

@@ -34,7 +34,7 @@ const AddBroker = () => {
     setLoading(true);
     
     try {
-      const response = await fetch("http://localhost:5000/brokers/register", {
+      const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

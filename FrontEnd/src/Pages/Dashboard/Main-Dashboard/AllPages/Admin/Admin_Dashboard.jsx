@@ -51,7 +51,7 @@ const AdminDashboard = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/doctors");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
       setDoctors(response.data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
 
   const fetchBrokers = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/brokers");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
       setBrokers(response.data);
     } catch (error) {
       console.error("Error fetching brokers:", error);
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
 
   const fetchNurses = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/nurses");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
       setNurses(response.data);
     } catch (error) {
       console.error("Error fetching nurses:", error);
@@ -78,7 +78,7 @@ const AdminDashboard = () => {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/admin");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/admin");
       setAdmins(response.data);
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/appointments");
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments");
       setAppointments(response.data);
     } catch (error) {
       console.error("Error fetching appointments:", error);
@@ -124,7 +124,7 @@ const AdminDashboard = () => {
           return;
       }
 
-      await axios.delete(`http://localhost:5000/${endpoint}/${idField}`);
+      await axios.delete(`https://medi-plus-diagnostic-center-bdbv.vercel.app/${endpoint}/${idField}`);
       toast.success(`${userType} deleted successfully`);
       fetchAllData();
     } catch (error) {
@@ -165,7 +165,7 @@ const AdminDashboard = () => {
         formattedData.DOB = moment(formattedData.DOB, 'YYYY-MM-DD').format('YYYY-MM-DD');
       }
 
-      await axios.put(`http://localhost:5000/${endpoint}/${idField}`, formattedData);
+      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/${endpoint}/${idField}`, formattedData);
       toast.success(`${selectedUserType} updated successfully`);
       setIsModalOpen(false);
       setSelectedRecord(null);
