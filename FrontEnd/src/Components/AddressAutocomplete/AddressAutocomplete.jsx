@@ -6,7 +6,7 @@ import { debounce } from 'lodash';
 const AddressAutocomplete = ({ 
   value, 
   onChange, 
-  placeholder = "Start typing your address...", 
+  placeholder = "", 
   className = "",
   required = false 
 }) => {
@@ -125,7 +125,6 @@ const AddressAutocomplete = ({
       options={options}
       onSearch={handleSearch}
       onSelect={handleSelect}
-      placeholder={placeholder}
       className={`w-full ${className}`}
       filterOption={false}
       notFoundContent={loading ? (
