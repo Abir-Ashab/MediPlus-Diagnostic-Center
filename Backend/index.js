@@ -15,6 +15,7 @@ const reportRouter = require("./routes/Reports.Route");
 const brokerRoutes = require("./routes/Brokers.Route")
 const testOrder = require("./routes/testOrderRoutes")
 const testsRouter = require("./routes/Tests.Route")
+const seederRouter = require("./routes/Seeder.Route")
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/prescriptions", prescriptionRouter);
 app.use("/reports", reportRouter);
 app.use("/brokers", brokerRoutes);
 app.use("/tests", testsRouter);
+app.use("/seeder", seederRouter);
 
 app.listen(process.env.port, async () => {
   try {
