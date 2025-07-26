@@ -25,7 +25,7 @@ const testOrderSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false,
     },
     disease: {
       type: String,

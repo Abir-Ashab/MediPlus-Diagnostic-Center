@@ -346,7 +346,7 @@ const Book_Appointment = () => {
     } catch (error) {
       setLoading(false);
       const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
-      toast.error(`❌ Error: ${errorMessage}`, {
+      toast.error(`Error: ${errorMessage}`, {
         position: "top-right",
         autoClose: 5000,
       });
@@ -482,23 +482,24 @@ const Book_Appointment = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                      <Input
-                        prefix={<Mail className="w-4 h-4 text-gray-400" />}
-                        placeholder="Email address"
-                        name="email"
-                        value={commonData.email}
-                        onChange={handleCommonDataChange}
-                        className="border-gray-200 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                       <AddressAutocomplete
                         value={commonData.address}
                         onChange={(value) => setCommonData(prev => ({ ...prev, address: value }))}
                         placeholder="Start typing your address in Bangladesh..."
                         required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email (Optional)</label>
+                      <Input
+                        prefix={<Mail className="w-4 h-4 text-gray-400" />}
+                        type="email"
+                        placeholder="abc@abc.com (optional)"
+                        name="email"
+                        value={commonData.email}
+                        onChange={handleCommonDataChange}
+                        className="border-gray-200 focus:ring-blue-500"
                       />
                     </div>
                   </div>
