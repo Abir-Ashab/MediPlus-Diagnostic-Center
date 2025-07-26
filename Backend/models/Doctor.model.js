@@ -65,6 +65,19 @@ const doctorSchema = mongoose.Schema({
   details: {
     type: String,
   },
+
+  remuneration: {
+    type: Number,
+    default: 500, // Default doctor consultation fee
+    min: 0,
+  },
+
+  testReferralCommission: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100, // Percentage value, max 100%
+  },
 });
 
 const DoctorModel = mongoose.model("doctor", doctorSchema);

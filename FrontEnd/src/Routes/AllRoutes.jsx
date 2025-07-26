@@ -14,6 +14,7 @@ import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Add_Br
 import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/TestOrdersList";
 import AdminDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Admin_Dashboard";
 import TestManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/TestManagement";
+import RevenueManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/RevenueManagement";
 
 const AllRoutes = () => {
   return (
@@ -34,6 +35,7 @@ const AllRoutes = () => {
         <Route path="/revenue" element={<RevenueDashboard />} />
         <Route path="/appointments" element={<Check_Appointment />} />
         <Route path="/test-management" element={<TestManagement />} />
+        <Route path="/revenue-management" element={<RevenueManagement />} />
       </Routes>
     </>
   );

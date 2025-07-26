@@ -3,11 +3,45 @@ const express = require("express");
 const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
 const PatientModel = require("../models/Patient.model"); // Assuming you have a Patient model
+const { DoctorModel } = require("../models/Doctor.model");
 
-// Create a new test order
+// Create a new test order with dynamic revenue calculation
 router.post("/", async (req, res) => {
   try {
-    const newTestOrder = new TestOrderModel(req.body);
+    const { doctorName, totalAmount, orderType, ...otherData } = req.body;
+    
+    let doctorRevenue = 0;
+    let hospitalRevenue = totalAmount;
+    
+    // If doctor is specified, calculate commission based on order type
+    if (doctorName && doctorName !== "") {
+      const doctor = await DoctorModel.findOne({ docName: doctorName });
+      if (doctor) {
+        if (orderType === 'appointment') {
+          // For appointments, doctor gets their consultation fee (remuneration)
+          // The consultation fee should already be included in totalAmount
+          doctorRevenue = doctor.remuneration || 0;
+          hospitalRevenue = totalAmount - doctorRevenue;
+        } else {
+          // For test orders, use the test referral commission percentage
+          if (doctor.testReferralCommission > 0) {
+            doctorRevenue = (totalAmount * doctor.testReferralCommission) / 100;
+            hospitalRevenue = totalAmount - doctorRevenue;
+          }
+        }
+      }
+    }
+    
+    const testOrderData = {
+      ...otherData,
+      doctorName,
+      totalAmount,
+      doctorRevenue,
+      hospitalRevenue,
+      orderType: orderType || 'test'
+    };
+    
+    const newTestOrder = new TestOrderModel(testOrderData);
     const savedTestOrder = await newTestOrder.save();
     res.status(201).json(savedTestOrder);
   } catch (error) {
@@ -132,6 +166,84 @@ router.delete("/:id", async (req, res) => {
     }
 
     res.status(200).json({ message: "Test order deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get revenue distribution report
+router.get("/reports/revenue", async (req, res) => {
+  try {
+    const { startDate, endDate, doctorName } = req.query;
+    
+    let query = {};
+    
+    // Date range filter
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    // Doctor filter
+    if (doctorName && doctorName !== "") {
+      query.doctorName = doctorName;
+    }
+    
+    const testOrders = await TestOrderModel.find(query);
+    
+    // Calculate totals
+    const summary = testOrders.reduce((acc, order) => {
+      acc.totalRevenue += order.totalAmount || 0;
+      acc.hospitalRevenue += order.hospitalRevenue || 0;
+      acc.doctorRevenue += order.doctorRevenue || 0;
+      acc.totalOrders += 1;
+      return acc;
+    }, {
+      totalRevenue: 0,
+      hospitalRevenue: 0,
+      doctorRevenue: 0,
+      totalOrders: 0
+    });
+    
+    // Group by doctor
+    const doctorBreakdown = {};
+    testOrders.forEach(order => {
+      if (order.doctorName && order.doctorName !== "") {
+        if (!doctorBreakdown[order.doctorName]) {
+          doctorBreakdown[order.doctorName] = {
+            totalRevenue: 0,
+            commission: 0,
+            orders: 0
+          };
+        }
+        doctorBreakdown[order.doctorName].totalRevenue += order.totalAmount || 0;
+        doctorBreakdown[order.doctorName].commission += order.doctorRevenue || 0;
+        doctorBreakdown[order.doctorName].orders += 1;
+      }
+    });
+    
+    res.status(200).json({
+      summary,
+      doctorBreakdown,
+      orders: testOrders
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get doctor commission settings
+router.get("/doctors/commission", async (req, res) => {
+  try {
+    const doctors = await DoctorModel.find({}, {
+      docName: 1,
+      department: 1,
+      remuneration: 1,
+      testReferralCommission: 1
+    });
+    res.status(200).json(doctors);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -30,6 +30,8 @@ const AddDoctor = () => {
     docID: Date.now(),
     password: "password123",
     details: "",
+    remuneration: "",
+    testReferralCommission: "",
   };
   const [DoctorValue, setDoctorValue] = useState(initData);
 
@@ -255,6 +257,41 @@ const AddDoctor = () => {
                       <option value="Oncologist">Oncologist</option>
                       <option value="Psychiatrist">Psychiatrist</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Fee per Consultation (৳) *</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="number"
+                        placeholder="e.g. 500"
+                        name="remuneration"
+                        value={DoctorValue.remuneration}
+                        onChange={HandleDoctorChange}
+                        required
+                        min="0"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">Fee charged per patient consultation</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Test Referral Commission (%) *</label>
+                    <div className="relative">
+                      <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="number"
+                        placeholder="e.g. 10"
+                        name="testReferralCommission"
+                        value={DoctorValue.testReferralCommission}
+                        onChange={HandleDoctorChange}
+                        required
+                        min="0"
+                        max="100"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">Commission percentage for test referrals (0-100%)</p>
                   </div>
                 </div>
               </div>

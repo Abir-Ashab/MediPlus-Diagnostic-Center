@@ -58,6 +58,20 @@ const Book_Appointment = () => {
   const [hospitalRevenue, setHospitalRevenue] = useState(0);
   const [doctorRevenue, setDoctorRevenue] = useState(0);
   const [brokerRevenue, setBrokerRevenue] = useState(0);
+  const [doctorsList, setDoctorsList] = useState([]);
+
+  // Fetch doctors with commission settings
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/testorders/doctors/commission");
+        setDoctorsList(response.data);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      }
+    };
+    fetchDoctors();
+  }, []);
 
   const getCurrentModeData = () => {
     return bookingType === 'appointment' ? { ...commonData, ...appointmentData } : { ...commonData, ...testData };
@@ -147,16 +161,16 @@ const Book_Appointment = () => {
 
   useEffect(() => {
     if (commonData.doctorName && bookingType === 'appointment') {
-      const selectedDoctor = doctors.find(
-        d => d.name === commonData.doctorName || d.docName === commonData.doctorName
+      const selectedDoctor = doctorsList.find(
+        d => d.docName === commonData.doctorName
       );
       if (selectedDoctor) {
-        const fee = selectedDoctor.consultationFee || 500;
+        const fee = selectedDoctor.remuneration || 500; // Use remuneration field as doctor consultation fee
         setAppointmentData(prev => ({ ...prev, doctorFee: fee }));
         setSelectedTests([{ id: Date.now(), testId: "doctor-fee", customName: "Doctor Fee", customPrice: fee }]);
       }
     }
-  }, [commonData.doctorName, doctors, bookingType]);
+  }, [commonData.doctorName, doctorsList, bookingType]);
 
   useEffect(() => {
     let total = 0;
@@ -172,22 +186,29 @@ const Book_Appointment = () => {
     }
     setTotalAmount(total);
     calculateRevenueDistribution(total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, bookingType]);
+  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, bookingType, doctorsList]);
 
-  const calculateRevenueDistribution = (amount, doctor, broker) => {
+  const calculateRevenueDistribution = (amount, doctorName, broker) => {
     if (bookingType === 'appointment') {
       if (broker) {
         setHospitalRevenue(amount * 0.05);
-        setDoctorRevenue(doctor ? amount * 0.9 : 0);
+        setDoctorRevenue(doctorName ? amount * 0.9 : 0);
         setBrokerRevenue(amount * 0.05);
       } else {
         setHospitalRevenue(amount * 0.05);
-        setDoctorRevenue(doctor ? amount * 0.95 : 0);
+        setDoctorRevenue(doctorName ? amount * 0.95 : 0);
         setBrokerRevenue(0);
       }
     } else {
-      setHospitalRevenue(amount * 0.95);
-      setDoctorRevenue(doctor ? amount * 0.05 : 0);
+      // For test orders, use dynamic doctor commission
+      const doctor = doctorsList.find(doc => doc.docName === doctorName);
+      const commissionRate = doctor ? doctor.testReferralCommission / 100 : 0.05; // Default to 5% if doctor not found
+      
+      const doctorCommission = doctorName ? amount * commissionRate : 0;
+      const hospitalShare = amount - doctorCommission;
+      
+      setHospitalRevenue(hospitalShare);
+      setDoctorRevenue(doctorCommission);
       setBrokerRevenue(0);
     }
   };

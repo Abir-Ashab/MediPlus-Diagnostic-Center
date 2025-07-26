@@ -22,7 +22,6 @@ const TestManagement = () => {
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [selectedTests, setSelectedTests] = useState([]);
 
-  // Fetch tests from API
   const fetchTests = async () => {
     try {
       setLoading(true);
@@ -77,7 +76,6 @@ const TestManagement = () => {
     setFilteredTests(filtered);
   }, [tests, searchTerm, selectedCategory]);
 
-  // Handle form submission
   const handleSubmit = async (values) => {
     try {
       setLoading(true);

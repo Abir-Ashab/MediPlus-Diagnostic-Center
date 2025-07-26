@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GiHamburgerMenu, GiMedicines } from "react-icons/gi";
 import { CgProfile } from "react-icons/cg";
-import { FaUserMd, FaUserNurse, FaHandshake, FaNotesMedical, FaClipboardList, FaMoneyBillWave } from "react-icons/fa";
+import { FaUserMd, FaUserNurse, FaHandshake, FaNotesMedical, FaClipboardList, FaMoneyBillWave, FaDollarSign } from "react-icons/fa";
 import { MdDashboard, MdAdminPanelSettings, MdPayment } from "react-icons/md";
 import { BsCalendarPlus, BsCalendarCheck } from "react-icons/bs";
 import { BiLogOut } from "react-icons/bi";
@@ -242,6 +242,25 @@ const Sidebar = ({ onCollapse }) => {
                   `}
                 >
                   Test Management
+                </span>
+              </Link>
+            )}
+
+            {user?.userType === "admin" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/revenue-management"
+              >
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaDollarSign className="text-xl text-green-400 group-hover:text-green-300" />
+                </div>
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
+                >
+                  Revenue Management
                 </span>
               </Link>
             )}

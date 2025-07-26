@@ -84,4 +84,48 @@ router.delete("/:doctorId", async (req, res) => {
   }
 });
 
+// Update doctor commission settings
+router.patch("/:doctorId/commission", async (req, res) => {
+  const id = req.params.doctorId;
+  const { remuneration, testReferralCommission } = req.body;
+  
+  try {
+    // Validate commission percentage
+    if (testReferralCommission < 0 || testReferralCommission > 100) {
+      return res.status(400).send({ 
+        error: "Test referral commission must be between 0 and 100" 
+      });
+    }
+    
+    // Validate remuneration
+    if (remuneration < 0) {
+      return res.status(400).send({ 
+        error: "Remuneration cannot be negative" 
+      });
+    }
+    
+    const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+      id, 
+      { remuneration, testReferralCommission },
+      { new: true }
+    );
+    
+    if (!updatedDoctor) {
+      return res.status(404).send({ 
+        message: `Doctor with id ${id} not found` 
+      });
+    }
+    
+    res.status(200).send({ 
+      message: "Commission settings updated successfully", 
+      user: updatedDoctor 
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({ 
+      error: "Something went wrong, unable to update commission settings." 
+    });
+  }
+});
+
 module.exports = router;
