@@ -1,21 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { TestsList, TestCategories } from './MixedObjectData';
+import axios from 'axios';
 
 const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRemove }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState('sections'); 
   const [selectedCategory, setSelectedCategory] = useState(''); // Track which category is selected
- 
+  const [testsList, setTestsList] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch tests and categories from API
   useEffect(() => {
-    // Set first category as default when component loads
-    const categories = Object.keys(groupedTests);
-    if (categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0]);
-    }
-  }, [selectedCategory]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [testsResponse, categoriesResponse] = await Promise.all([
+          axios.get('http://localhost:5000/tests?isActive=true'),
+          axios.get('http://localhost:5000/tests/categories')
+        ]);
+        
+        setTestsList(testsResponse.data);
+        setCategories(categoriesResponse.data);
+        
+        // Set first category as default
+        if (categoriesResponse.data.length > 0) {
+          setSelectedCategory(categoriesResponse.data[0].categoryId);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching tests and categories:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Group tests by category
-  const groupedTests = TestsList.reduce((acc, test) => {
+  const groupedTests = testsList.reduce((acc, test) => {
     if (!acc[test.category]) {
       acc[test.category] = [];
     }
@@ -24,7 +46,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
   }, {});
 
   // Filter tests based on search term
-  const filteredTests = TestsList.filter(test =>
+  const filteredTests = testsList.filter(test =>
     test.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -54,10 +76,15 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-
-
-      {/* Search and View Toggle */}
-      <div className="p-4 border-b border-gray-200">
+      {loading ? (
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading tests...</p>
+        </div>
+      ) : (
+        <>
+          {/* Search and View Toggle */}
+          <div className="p-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div className="flex-1 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -112,7 +139,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
 
         <div className="space-y-2">
           {selectedTests.map((test, index) => {
-            const selectedTestInfo = TestsList.find(t => t.id === parseInt(test.testId));
+            const selectedTestInfo = testsList.find(t => t.testId === parseInt(test.testId));
             return (
               <div key={test.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
                 <div className="flex-shrink-0">
@@ -126,15 +153,18 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
                   className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-sm"
                 >
                   <option value="">Select a test...</option>
-                  {Object.entries(groupedTests).map(([category, tests]) => (
-                    <optgroup key={category} label={category}>
-                      {tests.map((testItem) => (
-                        <option key={testItem.id} value={testItem.id}>
-                          {testItem.title} - ৳{testItem.price}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
+                  {Object.entries(groupedTests).map(([category, tests]) => {
+                    const categoryName = categories.find(cat => cat.categoryId === category)?.categoryName || category;
+                    return (
+                      <optgroup key={category} label={categoryName}>
+                        {tests.map((testItem) => (
+                          <option key={testItem.testId} value={testItem.testId}>
+                            {testItem.title} - ৳{testItem.price}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
                 </select>
                 {selectedTestInfo && (
                   <div className="text-sm font-semibold text-green-600">
@@ -166,26 +196,29 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
             {/* Category Navigation Bar */}
             <div className="border-b border-gray-200 bg-white">
               <div className="flex flex-wrap gap-2 p-2">
-                {Object.entries(groupedTests).map(([category, tests]) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                      selectedCategory === category
-                        ? 'bg-green-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
-                    }`}
-                  >
-                    {category}
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                      selectedCategory === category 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gray-300 text-gray-600'
-                    }`}>
-                      {tests.length}
-                    </span>
-                  </button>
-                ))}
+                {Object.entries(groupedTests).map(([category, tests]) => {
+                  const categoryName = categories.find(cat => cat.categoryId === category)?.categoryName || category;
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                        selectedCategory === category
+                          ? 'bg-green-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+                      }`}
+                    >
+                      {categoryName}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                        selectedCategory === category 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-300 text-gray-600'
+                      }`}>
+                        {tests.length}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -194,7 +227,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {selectedCategory} Tests
+                    {categories.find(cat => cat.categoryId === selectedCategory)?.categoryName || selectedCategory} Tests
                   </h3>
                   <span className="text-sm text-gray-500">
                     {groupedTests[selectedCategory].length} tests available
@@ -203,11 +236,11 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {groupedTests[selectedCategory].map((test) => {
-                    const isSelected = selectedTests.some(selected => selected.testId === test.id.toString());
+                    const isSelected = selectedTests.some(selected => selected.testId === test.testId.toString());
                     return (
                       <div
-                        key={test.id}
-                        onClick={() => !isSelected && selectTest(test.id)}
+                        key={test.testId}
+                        onClick={() => !isSelected && selectTest(test.testId)}
                         className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
                           isSelected
                             ? 'border-green-500 bg-green-50 cursor-not-allowed'
@@ -256,11 +289,12 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
             {filteredTests.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filteredTests.map((test) => {
-                  const isSelected = selectedTests.some(selected => selected.testId === test.id.toString());
+                  const isSelected = selectedTests.some(selected => selected.testId === test.testId.toString());
+                  const categoryName = categories.find(cat => cat.categoryId === test.category)?.categoryName || test.category;
                   return (
                     <div
-                      key={test.id}
-                      onClick={() => !isSelected && selectTest(test.id)}
+                      key={test.testId}
+                      onClick={() => !isSelected && selectTest(test.testId)}
                       className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
                         isSelected
                           ? 'border-green-500 bg-green-50 cursor-not-allowed'
@@ -275,7 +309,7 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
                                 ? 'bg-green-200 text-green-800' 
                                 : 'bg-gray-100 text-gray-600'
                             }`}>
-                              {test.category}
+                              {categoryName}
                             </span>
                           </div>
                           <h5 className="font-medium text-sm text-gray-900 mb-1">
@@ -320,6 +354,8 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onAddMore, onRe
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

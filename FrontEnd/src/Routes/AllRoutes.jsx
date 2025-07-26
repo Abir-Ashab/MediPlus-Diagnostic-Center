@@ -13,6 +13,7 @@ import RevenueDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager
 import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Add_Broker";
 import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/TestOrdersList";
 import AdminDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Admin_Dashboard";
+import TestManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/TestManagement";
 
 const AllRoutes = () => {
   return (
@@ -32,6 +33,7 @@ const AllRoutes = () => {
         <Route path="/manager-profile" element={<Manager_Profile />} />
         <Route path="/revenue" element={<RevenueDashboard />} />
         <Route path="/appointments" element={<Check_Appointment />} />
+        <Route path="/test-management" element={<TestManagement />} />
       </Routes>
     </>
   );

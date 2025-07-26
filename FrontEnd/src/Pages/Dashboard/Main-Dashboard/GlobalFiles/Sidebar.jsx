@@ -227,6 +227,25 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
+            {user?.userType === "admin" && (
+              <Link 
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/test-management"
+              >
+                <div className="flex items-center justify-center w-8 h-8">
+                  <GiMedicines className="text-xl text-purple-400 group-hover:text-purple-300" />
+                </div>
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
+                >
+                  Test Management
+                </span>
+              </Link>
+            )}
+
             {user?.userType === "nurse" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
