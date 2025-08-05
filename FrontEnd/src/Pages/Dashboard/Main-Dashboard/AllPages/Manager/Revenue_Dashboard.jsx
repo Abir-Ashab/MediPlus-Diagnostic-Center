@@ -3,16 +3,133 @@ import Sidebar from "../../GlobalFiles/Sidebar";
 import axios from "axios";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ToastContainer, toast } from "react-toastify";
+import { Calendar } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 
 const RevenueDashboard = () => {
   const [activeTab, setActiveTab] = useState("hospital");
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [doctorDateFilter, setDoctorDateFilter] = useState("all"); // "all", "week", "month", "year", "custom"
+  const [doctorCustomDateRange, setDoctorCustomDateRange] = useState({ start: "", end: "" });
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedBroker, setSelectedBroker] = useState("");
   
+  // Date filter helper functions
+  const getDateRangeForFilter = (filterType) => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
+    switch (filterType) {
+      case "week":
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        const weekEnd = new Date(today);
+        weekEnd.setDate(today.getDate() + (6 - today.getDay())); // End of week (Saturday)
+        return { start: weekStart, end: weekEnd };
+        
+      case "month":
+        const monthStart = new Date(currentYear, currentMonth, 1);
+        const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+        return { start: monthStart, end: monthEnd };
+        
+      case "year":
+        const yearStart = new Date(currentYear, 0, 1);
+        const yearEnd = new Date(currentYear, 11, 31);
+        return { start: yearStart, end: yearEnd };
+        
+      case "custom":
+        return {
+          start: doctorCustomDateRange.start ? new Date(doctorCustomDateRange.start) : null,
+          end: doctorCustomDateRange.end ? new Date(doctorCustomDateRange.end) : null
+        };
+        
+      default:
+        return { start: null, end: null };
+    }
+  };
+
+  const filterRecordsByDateRange = (records, filterType) => {
+    if (filterType === "all") return records;
+    
+    const dateRange = getDateRangeForFilter(filterType);
+    if (!dateRange.start || !dateRange.end) return records;
+    
+    return records.filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate >= dateRange.start && recordDate <= dateRange.end;
+    });
+  };
+
+  // Reset filters for doctors
+  const resetDoctorFilters = () => {
+    setDoctorDateFilter("all");
+    setDoctorCustomDateRange({ start: "", end: "" });
+    setSelectedDoctor("");
+    
+    // Only apply "all" filter if we have data to reset
+    if (doctorData.doctorRecords && doctorData.doctorRecords.length > 0) {
+      applyFilterForType("all");
+    } else {
+      // Reset the filtered records to empty when clearing doctor selection
+      setDoctorData(prev => ({
+        ...prev,
+        filteredDoctorRecords: []
+      }));
+    }
+  };
+
+  // Handle doctor date filter change
+  const handleDoctorDateFilterChange = (filterType) => {
+    setDoctorDateFilter(filterType);
+    if (filterType !== "custom") {
+      setDoctorCustomDateRange({ start: "", end: "" });
+      // Only apply filter automatically for non-custom filters and when we have data
+      if (doctorData.doctorRecords && doctorData.doctorRecords.length > 0) {
+        applyFilterForType(filterType);
+      }
+    }
+  };
+
+  // Helper function to apply filter for a specific type
+  const applyFilterForType = (filterType) => {
+    // Don't filter if there are no records
+    if (!doctorData.doctorRecords || doctorData.doctorRecords.length === 0) {
+      toast.info("No doctor records to filter. Please select a doctor first.");
+      return;
+    }
+
+    const filteredRecords = filterRecordsByDateRange(doctorData.doctorRecords, filterType);
+    
+    // Update doctor data with filtered records
+    setDoctorData(prev => ({
+      ...prev,
+      filteredDoctorRecords: filteredRecords
+    }));
+
+    const filterLabels = {
+      week: "this week",
+      month: "this month", 
+      year: "this year",
+      custom: "selected date range",
+      all: "all time"
+    };
+
+    toast.success(`Showing ${filteredRecords.length} records for ${filterLabels[filterType]}`);
+  };
+
+  // Apply doctor date filter
+  const applyDoctorDateFilter = () => {
+    if (doctorDateFilter === "custom" && (!doctorCustomDateRange.start || !doctorCustomDateRange.end)) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    applyFilterForType(doctorDateFilter);
+  };
+
   const [hospitalData, setHospitalData] = useState({
     totalRevenue: 0,
     appointments: 0,
@@ -25,7 +142,8 @@ const RevenueDashboard = () => {
     doctors: [],
     totalDoctorRevenue: 0,
     totalAppointments: 0,
-    doctorRecords: []
+    doctorRecords: [],
+    filteredDoctorRecords: [] // Initialize with empty array
   });
   
   const [brokerData, setBrokerData] = useState({
@@ -254,8 +372,25 @@ const RevenueDashboard = () => {
       }));
 
       const combinedRecords = [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
-      setDoctorData({ ...doctorData, doctorRecords: combinedRecords });
-      toast.success(`Loaded ${combinedRecords.length} records for Dr. ${doctorName}`);
+      
+      // Apply current filter to the new data
+      const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter);
+      
+      setDoctorData({ 
+        ...doctorData, 
+        doctorRecords: combinedRecords,
+        filteredDoctorRecords: filteredRecords
+      });
+      
+      const filterLabels = {
+        week: "this week",
+        month: "this month", 
+        year: "this year",
+        custom: "selected date range",
+        all: "all time"
+      };
+      
+      toast.success(`Loaded ${combinedRecords.length} records for Dr. ${doctorName}. Showing ${filteredRecords.length} records for ${filterLabels[doctorDateFilter]}`);
     } catch (error) {
       console.error("Error fetching doctor records:", error);
       toast.error("Failed to load doctor records");
@@ -419,6 +554,82 @@ const RevenueDashboard = () => {
               </div>
             )}
 
+            {/* Date Filter for Doctor Tab */}
+            {activeTab === 'doctor' && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Doctor Revenue</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
+                    <select
+                      value={doctorDateFilter}
+                      onChange={(e) => handleDoctorDateFilterChange(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="year">This Year</option>
+                      <option value="custom">Custom Range</option>
+                    </select>
+                  </div>
+                  
+                  {doctorDateFilter === "custom" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                        <input
+                          type="date"
+                          value={doctorCustomDateRange.start}
+                          onChange={(e) => setDoctorCustomDateRange({ ...doctorCustomDateRange, start: e.target.value })}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                        <input
+                          type="date"
+                          value={doctorCustomDateRange.end}
+                          onChange={(e) => setDoctorCustomDateRange({ ...doctorCustomDateRange, end: e.target.value })}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={applyDoctorDateFilter}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Apply Filter
+                    </button>
+                    <button
+                      onClick={resetDoctorFilters}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                
+                {doctorDateFilter !== "all" && (
+                  <div className="mt-4 p-3 bg-purple-50 rounded-md">
+                    <p className="text-sm text-purple-700">
+                      Showing records for: <strong>
+                        {doctorDateFilter === "week" && "This Week"}
+                        {doctorDateFilter === "month" && "This Month"}
+                        {doctorDateFilter === "year" && "This Year"}
+                        {doctorDateFilter === "custom" && doctorCustomDateRange.start && doctorCustomDateRange.end && 
+                          `${doctorCustomDateRange.start} to ${doctorCustomDateRange.end}`}
+                      </strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Charts */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -550,7 +761,7 @@ const RevenueDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments)
+                      {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || []))
                         .slice(0, 10)
                         .map((record, index) => (
                           <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -573,10 +784,10 @@ const RevenueDashboard = () => {
                     <tfoot>
                       <tr className="bg-gray-100">
                         <td colSpan="5" className="p-3 text-right font-bold">
-                          Total ({(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments).length > 10 ? `showing 10 of ${(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments).length}` : (activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments).length}):
+                          Total ({(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length > 10 ? `showing 10 of ${(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length}` : (activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length}):
                         </td>
                         <td className="p-3 text-right font-bold" style={{ color: activeTab === 'hospital' ? '#3b82f6' : activeTab === 'doctor' ? '#8b5cf6' : '#f59e0b' }}>
-                          {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments)
+                          {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || []))
                             .slice(0, 10)
                             .reduce((sum, record) => sum + (activeTab === 'hospital' ? record.hospitalRevenue : activeTab === 'doctor' ? record.doctorRevenue : record.brokerRevenue || (record.totalAmount * 0.05) || 0), 0)
                             .toFixed(0)} Taka
@@ -584,9 +795,9 @@ const RevenueDashboard = () => {
                       </tr>
                     </tfoot>
                   </table>
-                  {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments).length > 10 && (
+                  {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length > 10 && (
                     <p className="text-center text-gray-600 mt-4">
-                      Showing 10 of {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? doctorData.doctorRecords : brokerData.brokerAppointments).length} records
+                      Showing 10 of {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length} records
                     </p>
                   )}
                 </div>
