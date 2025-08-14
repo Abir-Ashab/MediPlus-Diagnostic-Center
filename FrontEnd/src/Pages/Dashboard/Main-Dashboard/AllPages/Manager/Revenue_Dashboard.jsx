@@ -5,6 +5,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { ToastContainer, toast } from "react-toastify";
 import { Calendar } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
+import * as XLSX from "xlsx";
 
 const RevenueDashboard = () => {
   const [activeTab, setActiveTab] = useState("hospital");
@@ -12,12 +13,14 @@ const RevenueDashboard = () => {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [doctorDateFilter, setDoctorDateFilter] = useState("all"); // "all", "week", "month", "year", "custom"
   const [doctorCustomDateRange, setDoctorCustomDateRange] = useState({ start: "", end: "" });
+  const [brokerDateFilter, setBrokerDateFilter] = useState("all"); // "all", "week", "month", "year", "custom"
+  const [brokerCustomDateRange, setBrokerCustomDateRange] = useState({ start: "", end: "" });
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedBroker, setSelectedBroker] = useState("");
   
   // Date filter helper functions
-  const getDateRangeForFilter = (filterType) => {
+  const getDateRangeForFilter = (filterType, customRange) => {
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
@@ -42,8 +45,8 @@ const RevenueDashboard = () => {
         
       case "custom":
         return {
-          start: doctorCustomDateRange.start ? new Date(doctorCustomDateRange.start) : null,
-          end: doctorCustomDateRange.end ? new Date(doctorCustomDateRange.end) : null
+          start: customRange.start ? new Date(customRange.start) : null,
+          end: customRange.end ? new Date(customRange.end) : null
         };
         
       default:
@@ -51,10 +54,10 @@ const RevenueDashboard = () => {
     }
   };
 
-  const filterRecordsByDateRange = (records, filterType) => {
+  const filterRecordsByDateRange = (records, filterType, customRange) => {
     if (filterType === "all") return records;
     
-    const dateRange = getDateRangeForFilter(filterType);
+    const dateRange = getDateRangeForFilter(filterType, customRange);
     if (!dateRange.start || !dateRange.end) return records;
     
     return records.filter(record => {
@@ -71,12 +74,28 @@ const RevenueDashboard = () => {
     
     // Only apply "all" filter if we have data to reset
     if (doctorData.doctorRecords && doctorData.doctorRecords.length > 0) {
-      applyFilterForType("all");
+      applyFilterForType("all", setDoctorData, doctorData, "doctor");
     } else {
       // Reset the filtered records to empty when clearing doctor selection
       setDoctorData(prev => ({
         ...prev,
         filteredDoctorRecords: []
+      }));
+    }
+  };
+
+  // Reset filters for brokers
+  const resetBrokerFilters = () => {
+    setBrokerDateFilter("all");
+    setBrokerCustomDateRange({ start: "", end: "" });
+    setSelectedBroker("");
+    
+    if (brokerData.brokerAppointments && brokerData.brokerAppointments.length > 0) {
+      applyFilterForType("all", setBrokerData, brokerData, "broker");
+    } else {
+      setBrokerData(prev => ({
+        ...prev,
+        filteredBrokerAppointments: []
       }));
     }
   };
@@ -88,25 +107,40 @@ const RevenueDashboard = () => {
       setDoctorCustomDateRange({ start: "", end: "" });
       // Only apply filter automatically for non-custom filters and when we have data
       if (doctorData.doctorRecords && doctorData.doctorRecords.length > 0) {
-        applyFilterForType(filterType);
+        applyFilterForType(filterType, setDoctorData, doctorData, "doctor");
+      }
+    }
+  };
+
+  // Handle broker date filter change
+  const handleBrokerDateFilterChange = (filterType) => {
+    setBrokerDateFilter(filterType);
+    if (filterType !== "custom") {
+      setBrokerCustomDateRange({ start: "", end: "" });
+      if (brokerData.brokerAppointments && brokerData.brokerAppointments.length > 0) {
+        applyFilterForType(filterType, setBrokerData, brokerData, "broker");
       }
     }
   };
 
   // Helper function to apply filter for a specific type
-  const applyFilterForType = (filterType) => {
+  const applyFilterForType = (filterType, setDataFunc, data, dataType) => {
     // Don't filter if there are no records
-    if (!doctorData.doctorRecords || doctorData.doctorRecords.length === 0) {
-      toast.info("No doctor records to filter. Please select a doctor first.");
+    let recordsKey = dataType === "doctor" ? "doctorRecords" : "brokerAppointments";
+    let filteredKey = dataType === "doctor" ? "filteredDoctorRecords" : "filteredBrokerAppointments";
+    let customRange = dataType === "doctor" ? doctorCustomDateRange : brokerCustomDateRange;
+
+    if (!data[recordsKey] || data[recordsKey].length === 0) {
+      toast.info(`No ${dataType} records to filter. Please select a ${dataType} first.`);
       return;
     }
 
-    const filteredRecords = filterRecordsByDateRange(doctorData.doctorRecords, filterType);
+    const filteredRecords = filterRecordsByDateRange(data[recordsKey], filterType, customRange);
     
-    // Update doctor data with filtered records
-    setDoctorData(prev => ({
+    // Update data with filtered records
+    setDataFunc(prev => ({
       ...prev,
-      filteredDoctorRecords: filteredRecords
+      [filteredKey]: filteredRecords
     }));
 
     const filterLabels = {
@@ -117,7 +151,7 @@ const RevenueDashboard = () => {
       all: "all time"
     };
 
-    toast.success(`Showing ${filteredRecords.length} records for ${filterLabels[filterType]}`);
+    // toast.success(`Showing ${filteredRecords.length} records for ${filterLabels[filterType]}`);
   };
 
   // Apply doctor date filter
@@ -127,7 +161,17 @@ const RevenueDashboard = () => {
       return;
     }
 
-    applyFilterForType(doctorDateFilter);
+    applyFilterForType(doctorDateFilter, setDoctorData, doctorData, "doctor");
+  };
+
+  // Apply broker date filter
+  const applyBrokerDateFilter = () => {
+    if (brokerDateFilter === "custom" && (!brokerCustomDateRange.start || !brokerCustomDateRange.end)) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    applyFilterForType(brokerDateFilter, setBrokerData, brokerData, "broker");
   };
 
   const [hospitalData, setHospitalData] = useState({
@@ -150,7 +194,8 @@ const RevenueDashboard = () => {
     brokers: [],
     totalBrokerRevenue: 0,
     totalAppointments: 0,
-    brokerAppointments: []
+    brokerAppointments: [],
+    filteredBrokerAppointments: []
   });
 
   // Fetch all revenue data
@@ -374,7 +419,7 @@ const RevenueDashboard = () => {
       const combinedRecords = [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
       
       // Apply current filter to the new data
-      const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter);
+      const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
       
       setDoctorData({ 
         ...doctorData, 
@@ -390,7 +435,7 @@ const RevenueDashboard = () => {
         all: "all time"
       };
       
-      toast.success(`Loaded ${combinedRecords.length} records for Dr. ${doctorName}. Showing ${filteredRecords.length} records for ${filterLabels[doctorDateFilter]}`);
+      // toast.success(`Loaded ${combinedRecords.length} records for Dr. ${doctorName}. Showing ${filteredRecords.length} records for ${filterLabels[doctorDateFilter]}`);
     } catch (error) {
       console.error("Error fetching doctor records:", error);
       toast.error("Failed to load doctor records");
@@ -402,11 +447,199 @@ const RevenueDashboard = () => {
     setSelectedBroker(brokerName);
     try {
       const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?brokerName=${brokerName}`);
-      setBrokerData({ ...brokerData, brokerAppointments: response.data });
-      toast.success(`Loaded ${response.data.length} appointments for broker ${brokerName}`);
+      const appointments = response.data;
+      const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
+      setBrokerData({ 
+        ...brokerData, 
+        brokerAppointments: appointments,
+        filteredBrokerAppointments: filteredAppointments 
+      });
+      const filterLabels = {
+        week: "this week",
+        month: "this month", 
+        year: "this year",
+        custom: "selected date range",
+        all: "all time"
+      };
+      // toast.success(`Loaded ${appointments.length} appointments for broker ${brokerName}. Showing ${filteredAppointments.length} records for ${filterLabels[brokerDateFilter]}`);
     } catch (error) {
       console.error("Error fetching broker appointments:", error);
       toast.error("Failed to load broker appointments");
+    }
+  };
+
+  // Export functions for hospital
+  // Export all filtered hospital records with all details
+  const exportHospitalTotal = () => {
+    const data = hospitalData.filteredRecords.map(record => ({
+      PatientName: record.patientName,
+      Date: record.date,
+      Type: record.recordType,
+      Details: record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A",
+      TotalAmount: Number(record.totalAmount) || 0,
+      Revenue: Number(record.hospitalRevenue) || 0
+    }));
+    // Add summary row
+    const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+    const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+    data.push({ PatientName: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Hospital Total");
+    XLSX.writeFile(wb, "hospital_total_revenue.xlsx");
+  };
+
+  const exportHospitalMonthly = () => {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const data = hospitalData.filteredRecords.map(record => {
+      let month;
+      if (record.date) {
+        const dateParts = record.date.includes('-') ? record.date.split('-') : record.date.split('/');
+        month = dateParts[0].length === 4 ? dateParts[1] : dateParts[0];
+        month = monthNames[parseInt(month, 10) - 1];
+      } else {
+        month = "";
+      }
+      return {
+        Month: month,
+        PatientName: record.patientName,
+        Date: record.date,
+        Type: record.recordType,
+        Details: record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A",
+        TotalAmount: Number(record.totalAmount) || 0,
+        Revenue: Number(record.hospitalRevenue) || 0
+      };
+    });
+    const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+    const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+    data.push({ Month: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Hospital Monthly");
+    XLSX.writeFile(wb, "hospital_monthly_revenue.xlsx");
+  };
+
+  const exportHospitalWeekly = () => {
+    const data = hospitalData.filteredRecords.map(record => {
+      let weekStart = "";
+      if (record.date) {
+        const d = new Date(record.date);
+        const ws = new Date(d);
+        ws.setDate(d.getDate() - d.getDay());
+        weekStart = ws.toISOString().split('T')[0];
+      }
+      return {
+        WeekStart: weekStart,
+        PatientName: record.patientName,
+        Date: record.date,
+        Type: record.recordType,
+        Details: record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A",
+        TotalAmount: Number(record.totalAmount) || 0,
+        Revenue: Number(record.hospitalRevenue) || 0
+      };
+    });
+    const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+    const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+    data.push({ WeekStart: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Hospital Weekly");
+    XLSX.writeFile(wb, "hospital_weekly_revenue.xlsx");
+  };
+
+  const exportHospitalTimeline = () => {
+    const data = hospitalData.filteredRecords.map(record => ({
+      PatientName: record.patientName,
+      Date: record.date,
+      Type: record.recordType,
+      Details: record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A",
+      TotalAmount: Number(record.totalAmount) || 0,
+      Revenue: Number(record.hospitalRevenue) || 0
+    }));
+    const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+    const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+    data.push({ PatientName: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Hospital Timeline");
+    XLSX.writeFile(wb, "hospital_timeline_revenue.xlsx");
+  };
+
+  // Export for doctor
+  const handleExportDoctor = async (doctorName) => {
+    try {
+      const [appointmentsResponse, testOrdersResponse] = await Promise.all([
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`)
+      ]);
+
+      const doctorTestOrders = testOrdersResponse.data.filter(order => order.doctorName === doctorName);
+      const formattedTestOrders = doctorTestOrders.map(order => ({
+        patientName: order.patientName,
+        date: order.date,
+        disease: order.tests?.map(test => test.testName).join(", ") || "N/A",
+        totalAmount: order.totalAmount || 0,
+        doctorRevenue: order.doctorRevenue || 0,
+        recordType: "Test Order"
+      }));
+
+      const formattedAppointments = appointmentsResponse.data.map(appointment => ({
+        ...appointment,
+        recordType: "Appointment",
+        doctorRevenue: appointment.doctorRevenue || 0
+      }));
+
+      const combinedRecords = [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
+
+      const data = filteredRecords.map(record => ({
+        PatientName: record.patientName,
+        Date: record.date,
+        Type: record.recordType,
+        Details: record.disease || record.tests?.map(test => test.testName).join(", ") || "N/A",
+        TotalAmount: Number(record.totalAmount) || 0,
+        Revenue: Number(record.doctorRevenue) || 0
+      }));
+      const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+      const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+      data.push({ PatientName: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
+      XLSX.writeFile(wb, `doctor_${doctorName}_revenue.xlsx`);
+      // toast.success(`Exported revenue for Dr. ${doctorName}`);
+    } catch (error) {
+      console.error("Error exporting doctor revenue:", error);
+      toast.error("Failed to export doctor revenue");
+    }
+  };
+
+  // Export for broker
+  const handleExportBroker = async (brokerName) => {
+    try {
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?brokerName=${brokerName}`);
+      const appointments = response.data;
+      const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
+
+      const data = filteredAppointments.map(record => ({
+        PatientName: record.patientName,
+        Date: record.date,
+        Doctor: record.doctorName || "N/A",
+        Details: record.tests?.map(test => test.testName).join(", ") || record.disease || "N/A",
+        TotalAmount: Number(record.totalAmount) || 0,
+        Revenue: Number(record.brokerRevenue || (record.totalAmount * 0.05)) || 0
+      }));
+      const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+      const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+      data.push({ PatientName: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `Broker_${brokerName}`);
+      XLSX.writeFile(wb, `broker_${brokerName}_revenue.xlsx`);
+      // toast.success(`Exported revenue for broker ${brokerName}`);
+    } catch (error) {
+      console.error("Error exporting broker revenue:", error);
+      toast.error("Failed to export broker revenue");
     }
   };
 
@@ -573,7 +806,6 @@ const RevenueDashboard = () => {
                       <option value="custom">Custom Range</option>
                     </select>
                   </div>
-                  
                   {doctorDateFilter === "custom" && (
                     <>
                       <div>
@@ -596,7 +828,6 @@ const RevenueDashboard = () => {
                       </div>
                     </>
                   )}
-                  
                   <div className="flex gap-2">
                     <button
                       onClick={applyDoctorDateFilter}
@@ -613,16 +844,92 @@ const RevenueDashboard = () => {
                     </button>
                   </div>
                 </div>
+                {/* Time period indicator below filter, above chart */}
+                <div className="mt-4 mb-2">
+                  <span className="inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {(() => {
+                      if (doctorDateFilter === "all") return "All Time";
+                      if (doctorDateFilter === "week") return "This Week";
+                      if (doctorDateFilter === "month") return "This Month";
+                      if (doctorDateFilter === "year") return "This Year";
+                      if (doctorDateFilter === "custom" && doctorCustomDateRange.start && doctorCustomDateRange.end)
+                        return `${doctorCustomDateRange.start} to ${doctorCustomDateRange.end}`;
+                      return "";
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Date Filter for Broker Tab */}
+            {activeTab === 'broker' && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Broker Revenue</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
+                    <select
+                      value={brokerDateFilter}
+                      onChange={(e) => handleBrokerDateFilterChange(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="year">This Year</option>
+                      <option value="custom">Custom Range</option>
+                    </select>
+                  </div>
+                  
+                  {brokerDateFilter === "custom" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                        <input
+                          type="date"
+                          value={brokerCustomDateRange.start}
+                          onChange={(e) => setBrokerCustomDateRange({ ...brokerCustomDateRange, start: e.target.value })}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                        <input
+                          type="date"
+                          value={brokerCustomDateRange.end}
+                          onChange={(e) => setBrokerCustomDateRange({ ...brokerCustomDateRange, end: e.target.value })}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={applyBrokerDateFilter}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Apply Filter
+                    </button>
+                    <button
+                      onClick={resetBrokerFilters}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
                 
-                {doctorDateFilter !== "all" && (
-                  <div className="mt-4 p-3 bg-purple-50 rounded-md">
-                    <p className="text-sm text-purple-700">
+                {brokerDateFilter !== "all" && (
+                  <div className="mt-4 p-3 bg-orange-50 rounded-md">
+                    <p className="text-sm text-orange-700">
                       Showing records for: <strong>
-                        {doctorDateFilter === "week" && "This Week"}
-                        {doctorDateFilter === "month" && "This Month"}
-                        {doctorDateFilter === "year" && "This Year"}
-                        {doctorDateFilter === "custom" && doctorCustomDateRange.start && doctorCustomDateRange.end && 
-                          `${doctorCustomDateRange.start} to ${doctorCustomDateRange.end}`}
+                        {brokerDateFilter === "week" && "This Week"}
+                        {brokerDateFilter === "month" && "This Month"}
+                        {brokerDateFilter === "year" && "This Year"}
+                        {brokerDateFilter === "custom" && brokerCustomDateRange.start && brokerCustomDateRange.end && 
+                          `${brokerCustomDateRange.start} to ${brokerCustomDateRange.end}`}
                       </strong>
                     </p>
                   </div>
@@ -693,18 +1000,31 @@ const RevenueDashboard = () => {
                     doctor._id && (
                       <div
                         key={index}
-                        onClick={() => handleDoctorSelect(doctor._id)}
-                        className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-blue-50 transition-colors ${
-                          selectedDoctor === doctor._id ? 'bg-blue-100' : ''
-                        }`}
+                        className="p-4 border-b border-gray-200"
                       >
                         <div className="flex justify-between items-center">
                           <div className="font-medium text-gray-900">Dr. {doctor._id}</div>
-                          <div className="font-bold text-purple-600">{doctor.totalRevenue.toFixed(0)} Taka</div>
+                          <div className="flex gap-4">
+                            <div className="text-right">
+                              <div className="font-bold text-purple-600">{doctor.totalRevenue.toFixed(0)} Taka</div>
+                              <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
+                            </div>
+                            <button
+                              onClick={() => handleDoctorSelect(doctor._id)}
+                              className="px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                            >
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => handleExportDoctor(doctor._id)}
+                              className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                            >
+                              Export
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-sm text-gray-600 mt-2">
-                          <span>Records: {doctor.appointments}</span>
-                          <span>Avg: {doctor.appointments > 0 ? (doctor.totalRevenue / doctor.appointments).toFixed(0) : 0} Taka</span>
+                        <div className="text-sm text-gray-600 mt-2">
+                          Avg: {doctor.appointments > 0 ? (doctor.totalRevenue / doctor.appointments).toFixed(0) : 0} Taka
                         </div>
                       </div>
                     )
@@ -728,6 +1048,12 @@ const RevenueDashboard = () => {
                             >
                               View Details
                             </button>
+                            <button
+                              onClick={() => handleExportBroker(broker._id)}
+                              className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                            >
+                              Export
+                            </button>
                           </div>
                         </div>
                         <div className="text-sm text-gray-600 mt-2">
@@ -736,6 +1062,39 @@ const RevenueDashboard = () => {
                       </div>
                     )
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hospital Export Buttons */}
+            {activeTab === 'hospital' && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Hospital Revenue</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <button
+                    onClick={exportHospitalTotal}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Export Total
+                  </button>
+                  <button
+                    onClick={exportHospitalMonthly}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Export Monthly
+                  </button>
+                  <button
+                    onClick={exportHospitalWeekly}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Export Weekly
+                  </button>
+                  <button
+                    onClick={exportHospitalTimeline}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Export Timeline
+                  </button>
                 </div>
               </div>
             )}
@@ -761,7 +1120,7 @@ const RevenueDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || []))
+                      {(activeTab === 'hospital' ? hospitalData.filteredRecords : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || [])))
                         .slice(0, 10)
                         .map((record, index) => (
                           <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -784,10 +1143,10 @@ const RevenueDashboard = () => {
                     <tfoot>
                       <tr className="bg-gray-100">
                         <td colSpan="5" className="p-3 text-right font-bold">
-                          Total ({(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length > 10 ? `showing 10 of ${(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length}` : (activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length}):
+                          Total ({(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || []))).length > 10 ? `showing 10 of ${(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || []))).length}` : (activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || []))).length}):
                         </td>
                         <td className="p-3 text-right font-bold" style={{ color: activeTab === 'hospital' ? '#3b82f6' : activeTab === 'doctor' ? '#8b5cf6' : '#f59e0b' }}>
-                          {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || []))
+                          {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || [])))
                             .slice(0, 10)
                             .reduce((sum, record) => sum + (activeTab === 'hospital' ? record.hospitalRevenue : activeTab === 'doctor' ? record.doctorRevenue : record.brokerRevenue || (record.totalAmount * 0.05) || 0), 0)
                             .toFixed(0)} Taka
@@ -795,9 +1154,9 @@ const RevenueDashboard = () => {
                       </tr>
                     </tfoot>
                   </table>
-                  {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length > 10 && (
+                  {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || []))).length > 10 && (
                     <p className="text-center text-gray-600 mt-4">
-                      Showing 10 of {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : (brokerData.brokerAppointments || [])).length} records
+                      Showing 10 of {(activeTab === 'hospital' ? (hospitalData.filteredRecords || []) : activeTab === 'doctor' ? ((doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) ? doctorData.filteredDoctorRecords : (doctorData.doctorRecords || [])) : ((brokerData.filteredBrokerAppointments && brokerData.filteredBrokerAppointments.length > 0) ? brokerData.filteredBrokerAppointments : (brokerData.brokerAppointments || []))).length} records
                     </p>
                   )}
                 </div>
