@@ -7,7 +7,7 @@ import {
   GetAllAppointment,
 } from "../../../../../Redux/Datas/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
-import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building } from 'lucide-react';
+import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter } from 'lucide-react';
 import { ToastContainer } from "react-toastify";
 
 const Check_Appointment = () => {
@@ -19,6 +19,7 @@ const Check_Appointment = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState("schedule"); // "schedule" or "created"
   const itemsPerPage = 10;
   
   const AllAppointment = useSelector((state) => state.data.Appointments);
@@ -30,7 +31,14 @@ const Check_Appointment = () => {
   );
 
   const sortedAppointments = filteredAppointments?.sort((a, b) => {
-    return new Date(b.date) - new Date(a.date);
+    if (sortBy === "schedule") {
+      return new Date(a.date) - new Date(b.date);
+    } else {
+      // Sort by creation time (most recent first)
+      const dateA = new Date(a.createdAt || a._id);
+      const dateB = new Date(b.createdAt || b._id);
+      return dateB - dateA;
+    }
   });
 
   const totalPages = Math.ceil((sortedAppointments?.length || 0) / itemsPerPage);
@@ -114,6 +122,17 @@ const Check_Appointment = () => {
                       className="border-none bg-transparent focus:ring-0 focus:border-none"
                       style={{ width: 300, boxShadow: 'none' }}
                     />
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
+                    <Filter className="w-5 h-5 text-gray-400" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="border-none bg-transparent focus:ring-0 text-gray-700"
+                    >
+                      <option value="schedule">Sort by Schedule</option>
+                      <option value="created">Sort by Created</option>
+                    </select>
                   </div>
                 </div>
               </div>

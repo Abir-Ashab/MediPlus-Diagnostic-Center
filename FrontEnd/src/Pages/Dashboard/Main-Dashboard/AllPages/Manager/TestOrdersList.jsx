@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { usePrintReport } from "../../../../../Components/PrintReport";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { TestCategories, TestsList } from "./MixedObjectData";
-import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building } from 'lucide-react';
+import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter } from 'lucide-react';
 
 const TestOrdersList = () => {
   // Get current user from Redux store with safe destructuring
@@ -23,6 +23,7 @@ const TestOrdersList = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("schedule"); // "schedule" or "created"
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -89,7 +90,14 @@ const TestOrdersList = () => {
   );
 
   const sortedOrders = filteredOrders?.sort((a, b) => {
-    return new Date(b.date) - new Date(a.date);
+    if (sortBy === "schedule") {
+      return new Date(a.date) - new Date(b.date);
+    } else {
+      // Sort by creation time (most recent first)
+      const dateA = new Date(a.createdAt || a._id);
+      const dateB = new Date(b.createdAt || b._id);
+      return dateB - dateA;
+    }
   });
 
   const totalPages = Math.ceil((sortedOrders?.length || 0) / itemsPerPage);
@@ -165,6 +173,17 @@ const TestOrdersList = () => {
                         className="border-none bg-transparent focus:ring-0 focus:border-none"
                         style={{ width: 300, boxShadow: 'none' }}
                       />
+                    </div>
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
+                      <Filter className="w-5 h-5 text-gray-400" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="border-none bg-transparent focus:ring-0 text-gray-700"
+                      >
+                        <option value="schedule">Sort by Schedule</option>
+                        <option value="created">Sort by Created</option>
+                      </select>
                     </div>
                   </div>
                 </div>

@@ -10,7 +10,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Input, Select, Button, Spin, Card, Divider } from "antd";
-import { User, Calendar, Clock, Heart, Phone, MapPin, DollarSign, Mail, FileText, Settings, Edit } from 'lucide-react';
+import { User, Calendar, Clock, Heart, Phone, MapPin, DollarSign, Mail, FileText, Settings, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import CategorizedTestSelection from "./CategorizedTestSelection";
 
 const { Option } = Select;
@@ -19,13 +19,13 @@ const Book_Appointment = () => {
   const dispatch = useDispatch();
   const { printReport } = usePrintReport();
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // Step state for 3-step form
   const [doctors, setDoctors] = useState([]);
   const [brokers, setBrokers] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [loadingBrokers, setLoadingBrokers] = useState(true);
   const [bookedAppointments, setBookedAppointments] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
-  const [bookingType, setBookingType] = useState('appointment');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState(null);
@@ -61,10 +61,12 @@ const Book_Appointment = () => {
   const [doctorsList, setDoctorsList] = useState([]);
 
   // Custom commission/fee state
-  const [customDoctorCommission, setCustomDoctorCommission] = useState(null);
+  const [customDoctorCommission, setCustomDoctorCommission] = useState(null); // For test referral commission
+  const [customAppointmentCommission, setCustomAppointmentCommission] = useState(null); // For appointment fee commission
   const [customDoctorFee, setCustomDoctorFee] = useState(null);
   const [customBrokerCommission, setCustomBrokerCommission] = useState(null);
   const [showCommissionEdit, setShowCommissionEdit] = useState(false);
+  const [isFeeManuallyEdited, setIsFeeManuallyEdited] = useState(false); // Track if fee has been manually edited
 
   const [testsList, setTestsList] = useState([]);
 
@@ -95,7 +97,7 @@ const Book_Appointment = () => {
   }, []);
 
   const getCurrentModeData = () => {
-    return bookingType === 'appointment' ? { ...commonData, ...appointmentData } : { ...commonData, ...testData };
+    return { ...commonData, ...appointmentData };
   };
 
   const generateTimeSlots = () => {
@@ -137,10 +139,10 @@ const Book_Appointment = () => {
 
   useEffect(() => {
     const currentData = getCurrentModeData();
-    if (currentData.doctorName && currentData.date && bookingType === 'appointment') {
+    if (currentData.doctorName && currentData.date) {
       fetchBookedAppointments(currentData.doctorName, currentData.date);
     }
-  }, [commonData.doctorName, appointmentData.date, bookingType]);
+  }, [commonData.doctorName, appointmentData.date]);
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -181,81 +183,87 @@ const Book_Appointment = () => {
   }, []);
 
   useEffect(() => {
-    if (commonData.doctorName && bookingType === 'appointment') {
+    if (commonData.doctorName && !isFeeManuallyEdited) {
       const selectedDoctor = doctorsList.find(
         d => d.docName === commonData.doctorName
       );
       if (selectedDoctor) {
         const fee = selectedDoctor.remuneration || 500; // Use remuneration field as doctor consultation fee
         setAppointmentData(prev => ({ ...prev, doctorFee: fee }));
-        setSelectedTests([{ id: Date.now(), testId: "doctor-fee", customName: "Doctor Fee", customPrice: fee }]);
       }
     }
-  }, [commonData.doctorName, doctorsList, bookingType]);
+  }, [commonData.doctorName, doctorsList, isFeeManuallyEdited]);
 
   useEffect(() => {
     let total = 0;
-    if (bookingType === 'appointment') {
-      if (selectedTests.some(test => test.testId === "doctor-fee")) {
-        total += appointmentData.doctorFee;
-      }
-    } else {
-      total = selectedTests.reduce((sum, test) => {
-        if (!test.testId) return sum;
-        
-        // Use custom price if available, otherwise use the original test price
-        if (test.customPrice !== null && test.customPrice !== undefined) {
-          return sum + test.customPrice;
-        }
-        
-        // Try to find test in API data first, then fallback to static TestsList
-        const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
-                           TestsList.find(t => t.id === parseInt(test.testId));
-        return sum + (selectedTest ? selectedTest.price : 0);
-      }, 0);
+    // Calculate total based on selected tests and doctor fee
+    if (appointmentData.doctorFee > 0) {
+      total += appointmentData.doctorFee;
     }
+    
+    total += selectedTests.reduce((sum, test) => {
+      if (!test.testId || test.testId === "doctor-fee") return sum;
+      
+      // Use custom price if available, otherwise use the original test price
+      if (test.customPrice !== null && test.customPrice !== undefined) {
+        return sum + test.customPrice;
+      }
+      
+      // Try to find test in API data first, then fallback to static TestsList
+      const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
+                         TestsList.find(t => t.id === parseInt(test.testId));
+      return sum + (selectedTest ? selectedTest.price : 0);
+    }, 0);
+    
     setTotalAmount(total);
     calculateRevenueDistribution(total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, bookingType, doctorsList, testsList, customDoctorCommission, customBrokerCommission]);
+  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee]);
 
   const calculateRevenueDistribution = (amount, doctorName, broker) => {
-    if (bookingType === 'appointment') {
-      const brokerCommissionRate = customBrokerCommission !== null ? customBrokerCommission / 100 : 0.05; // Default 5%
-      
-      if (broker) {
-        const doctorCommissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : 0.9; // Default 90%
-        const hospitalCommissionRate = 1 - doctorCommissionRate - brokerCommissionRate;
-        
-        setHospitalRevenue(amount * hospitalCommissionRate);
-        setDoctorRevenue(doctorName ? amount * doctorCommissionRate : 0);
-        setBrokerRevenue(amount * brokerCommissionRate);
-      } else {
-        const doctorCommissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : 0.95; // Default 95%
-        const hospitalCommissionRate = 1 - doctorCommissionRate;
-        
-        setHospitalRevenue(amount * hospitalCommissionRate);
-        setDoctorRevenue(doctorName ? amount * doctorCommissionRate : 0);
-        setBrokerRevenue(0);
-      }
-    } else {
-      // For test orders, use dynamic doctor commission
-      const doctor = doctorsList.find(doc => doc.docName === doctorName);
-      const defaultCommissionRate = doctor ? doctor.testReferralCommission / 100 : 0.05; // Default to 5% if doctor not found
-      const commissionRate = customDoctorCommission !== null ? customDoctorCommission / 100 : defaultCommissionRate;
-      
-      const doctorCommission = doctorName ? amount * commissionRate : 0;
-      const hospitalShare = amount - doctorCommission;
-      
-      setHospitalRevenue(hospitalShare);
-      setDoctorRevenue(doctorCommission);
-      setBrokerRevenue(0);
+    // Check if this includes appointment fee (doctor consultation)
+    const hasAppointmentFee = appointmentData.doctorFee > 0;
+    const testAmount = amount - (hasAppointmentFee ? appointmentData.doctorFee : 0);
+    
+    let doctorCommission = 0;
+    let brokerCommission = 0;
+    let hospitalShare = 0;
+
+    // For appointment fees: Doctor gets full appointment fee from their profile
+    if (hasAppointmentFee && doctorName) {
+      doctorCommission += appointmentData.doctorFee; // Doctor gets full appointment fee
     }
+
+    // For test fees: Doctor gets commission percentage from profile (if referral), hospital gets rest
+    if (testAmount > 0 && doctorName) {
+      const doctor = doctorsList.find(doc => doc.docName === doctorName);
+      const testCommissionRate = doctor ? (customDoctorCommission !== null ? customDoctorCommission / 100 : doctor.testReferralCommission / 100) : 0;
+      const doctorTestCommission = testAmount * testCommissionRate;
+      doctorCommission += doctorTestCommission;
+      hospitalShare += testAmount - doctorTestCommission; // Hospital gets rest of test amount
+    } else if (testAmount > 0) {
+      // No doctor referral, hospital gets all test amount
+      hospitalShare += testAmount;
+    }
+
+    // Broker commission is deducted from doctor's appointment fee only (not total amount)
+    if (broker && hasAppointmentFee) {
+      const selectedBroker = brokers.find(b => (b.name || b.docName) === broker);
+      const brokerCommissionRate = customBrokerCommission !== null ? customBrokerCommission / 100 : (selectedBroker ? selectedBroker.commissionRate / 100 : 0.05);
+      brokerCommission = appointmentData.doctorFee * brokerCommissionRate; // Broker gets percentage of doctor's appointment fee only
+    }
+
+    // Final hospital share = test remainder only
+    // (Appointment fee goes to doctor, broker takes from doctor's fee, hospital gets test remainder)
+    
+    setHospitalRevenue(Math.max(0, hospitalShare));
+    setDoctorRevenue(doctorCommission);
+    setBrokerRevenue(brokerCommission);
   };
 
   const handleCommonDataChange = (e) => {
     const { name, value } = e.target;
     setCommonData(prev => ({ ...prev, [name]: value }));
-    if (name === 'doctorName' && bookingType === 'appointment') {
+    if (name === 'doctorName') {
       setAppointmentData(prev => ({ ...prev, time: "" }));
     }
   };
@@ -265,35 +273,36 @@ const Book_Appointment = () => {
     
     // Reset custom commissions when doctor changes
     setCustomDoctorCommission(null);
-    setCustomDoctorFee(null);
+    setCustomAppointmentCommission(null);
+    setIsFeeManuallyEdited(false); // Reset manual edit flag when doctor changes
     
     // Set default doctor fee for appointments
-    if (bookingType === 'appointment') {
-      const selectedDoctor = doctorsList.find(d => d.docName === value);
-      if (selectedDoctor) {
-        const fee = selectedDoctor.remuneration || 500;
-        setAppointmentData(prev => ({ ...prev, time: "", doctorFee: fee }));
-        setCustomDoctorFee(fee);
-      }
+    const selectedDoctor = doctorsList.find(d => d.docName === value);
+    if (selectedDoctor) {
+      const fee = selectedDoctor.remuneration || 500;
+      setAppointmentData(prev => ({ ...prev, time: "", doctorFee: fee }));
+      setCustomDoctorFee(fee); // Set custom fee to default fee initially so input shows value
     }
   };
 
   const handleBrokerChange = (value) => {
     setCommonData(prev => ({ ...prev, brokerName: value }));
-    // Reset custom broker commission when broker changes
+    // Reset custom broker commission and appointment commission when broker changes
     setCustomBrokerCommission(null);
+    setCustomAppointmentCommission(null);
   };
 
   const handleModeSpecificChange = (e) => {
     const { name, value } = e.target;
-    if (bookingType === 'appointment') {
-      setAppointmentData(prev => ({ ...prev, [name]: value }));
-      if (name === 'date') {
-        setAppointmentData(prev => ({ ...prev, time: "" }));
-      }
-    } else {
-      setTestData(prev => ({ ...prev, [name]: value }));
+    setAppointmentData(prev => ({ ...prev, [name]: value }));
+    if (name === 'date') {
+      setAppointmentData(prev => ({ ...prev, time: "" }));
     }
+  };
+
+  const handleTestDataChange = (e) => {
+    const { name, value } = e.target;
+    setTestData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleTestSelect = (id, value) => {
@@ -301,6 +310,30 @@ const Book_Appointment = () => {
       test.id === id ? { ...test, testId: value, customPrice: null } : test
     );
     setSelectedTests(updatedTests);
+  };
+
+  const deselectTest = (id) => {
+    // Find the test being deselected for feedback
+    const testToDeselect = selectedTests.find(test => test.id === id);
+    let testName = "Test";
+    
+    if (testToDeselect && testToDeselect.testId) {
+      const selectedTest = testsList.find(t => t.testId === parseInt(testToDeselect.testId));
+      if (selectedTest) {
+        testName = selectedTest.title;
+      }
+    }
+    
+    // Deselect test by setting testId to empty string
+    const updatedTests = selectedTests.map(test =>
+      test.id === id ? { ...test, testId: "", customPrice: null } : test
+    );
+    setSelectedTests(updatedTests);
+    
+    toast.info(`"${testName}" has been deselected.`, {
+      position: "top-right",
+      autoClose: 2000,
+    });
   };
 
   const handleTestPriceChange = (id, customPrice) => {
@@ -424,54 +457,172 @@ const Book_Appointment = () => {
     }
   };
 
+  const clearAllTests = () => {
+    // Clear all selected tests but keep at least one empty slot
+    setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
+    toast.info("All tests cleared.", {
+      position: "top-right",
+      autoClose: 2000,
+    });
+  };
+
   const removeTest = (id) => {
     if (selectedTests.length > 1) {
       const updatedTests = selectedTests.filter(test => test.id !== id);
       setSelectedTests(updatedTests);
     } else {
-      toast.warning("⚠️ At least one test is required", {
+      // If only one test slot, clear it instead of removing
+      const updatedTests = selectedTests.map(test =>
+        test.id === id ? { ...test, testId: "", customPrice: null } : test
+      );
+      setSelectedTests(updatedTests);
+      toast.info("Test deselected. You can select a new test or add more test slots.", {
         position: "top-right",
         autoClose: 3000,
       });
     }
-  };
-
-  const HandleBookingTypeChange = (type) => {
-    setBookingType(type);
-    setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
   };
 
   const clearFormAfterSubmit = () => {
-    if (bookingType === 'appointment') {
-      setAppointmentData({ date: "", time: "", doctorFee: 0 });
-      toast.success("Appointment booked successfully! Patient information has been preserved for your next booking.", {
-        position: "top-right",
-        autoClose: 5000,
-      });
-    } else {
-      setTestData({ date: "", time: "" });
-      toast.success("Test order created successfully! Patient information has been preserved for your next booking.", {
-        position: "top-right",
-        autoClose: 5000,
-      });
-    }
+    setAppointmentData({ date: "", time: "", doctorFee: 0 });
+    setTestData({ date: "", time: "" });
     setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
+    setCurrentStep(1); // Reset to first step
+    setIsFeeManuallyEdited(false); // Reset manual edit flag
+    toast.success("Order completed successfully! Patient information has been preserved for your next booking.", {
+      position: "top-right",
+      autoClose: 5000,
+    });
   };
 
-  const HandleOnsubmitAppointment = async (e) => {
+  // Step navigation functions
+  const nextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const goToStep = (step) => {
+    setCurrentStep(step);
+  };
+
+  // Step validation function
+  const canProceedToNextStep = () => {
+    if (currentStep === 1) {
+      // Step 1: Basic validation - patient info and date must be filled
+      return (
+        commonData.patientName &&
+        commonData.age &&
+        commonData.gender &&
+        commonData.mobile &&
+        commonData.disease &&
+        commonData.address &&
+        commonData.doctorName &&
+        appointmentData.date
+        // Note: time is not required here since test orders might not need specific time
+      );
+    }
+    if (currentStep === 2) {
+      // Step 2: Test selection validation - tests are optional, but if selected, test date is required
+      const hasSelectedTest = selectedTests.some(test => test.testId !== "");
+      if (hasSelectedTest && !testData.date) {
+        return false; // Test date is required when tests are selected
+      }
+      return true; // Allow proceeding even without tests (tests are optional)
+    }
+    return true;
+  };
+
+  const HandleAppointmentSubmit = async (e) => {
     e.preventDefault();
-    const currentData = getCurrentModeData();
     
     // Validation
     if (commonData.gender === "") {
-      return toast.error(" Please fill all the required fields", {
+      return toast.error("Please fill all the required fields", {
         position: "top-right",
         autoClose: 3000,
       });
     }
     
-    if (bookingType === 'appointment' && !currentData.time) {
+    if (!appointmentData.time) {
       return toast.error("Please select an appointment time", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+
+    setLoading(true);
+    try {
+      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+      const selectedBroker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+      
+      // Doctor gets full appointment fee from their profile
+      const appointmentDoctorRevenue = appointmentData.doctorFee;
+      
+      // Broker gets their percentage from doctor's appointment fee only
+      const brokerCommissionRate = customBrokerCommission !== null 
+        ? customBrokerCommission / 100 
+        : (selectedBroker ? selectedBroker.commissionRate / 100 : 0);
+      const appointmentBrokerRevenue = commonData.brokerName ? appointmentData.doctorFee * brokerCommissionRate : 0;
+      
+      // Hospital gets nothing from appointment fees (doctor gets full fee, broker gets commission from doctor's fee)
+      const appointmentHospitalRevenue = 0;
+
+      const patientData = {
+        ...commonData,
+        ...appointmentData,
+        tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
+        totalAmount: appointmentData.doctorFee,
+        hospitalRevenue: appointmentHospitalRevenue,
+        doctorRevenue: appointmentDoctorRevenue,
+        brokerRevenue: appointmentBrokerRevenue,
+        orderType: 'appointment',
+      };
+
+      const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
+      const bookingData = { ...patientData, patientID: patientResponse.id };
+      await dispatch(CreateBooking(bookingData));
+      
+      fetchBookedAppointments(commonData.doctorName, appointmentData.date);
+      setLoading(false);
+      
+      toast.success("Appointment booked successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      
+      // Clear only appointment data, keep patient info and tests
+      setAppointmentData({ date: "", time: "", doctorFee: 0 });
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+      toast.error(`Error: ${errorMessage}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      console.error("Error:", error);
+    }
+  };
+
+  const HandleTestOrderSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (commonData.gender === "") {
+      return toast.error("Please fill all the required fields", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+    
+    if (!testData.date) {
+      return toast.error("Please select a date for the test order", {
         position: "top-right",
         autoClose: 3000,
       });
@@ -485,17 +636,157 @@ const Book_Appointment = () => {
       });
     }
 
-    let testsWithPrices;
-    if (bookingType === 'appointment') {
-      testsWithPrices = selectedTests
-        .filter(test => test.testId !== "")
-        .map(test => test.testId === "doctor-fee" ? { testName: "Doctor Fee", testPrice: appointmentData.doctorFee } : null)
-        .filter(test => test);
-    } else {
-      testsWithPrices = selectedTests
+    // Test orders processing
+    const testsWithPrices = selectedTests
+      .filter(test => test.testId !== "")
+      .map(test => {
+        // Try to find test in API data first, then fallback to static TestsList
+        const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
+                           TestsList.find(t => t.id === parseInt(test.testId));
+        
+        const finalPrice = test.customPrice !== null && test.customPrice !== undefined 
+          ? test.customPrice 
+          : selectedTest.price;
+        
+        return { 
+          testName: selectedTest.title, 
+          testPrice: finalPrice,
+          originalPrice: selectedTest.price,
+          isCustomPrice: test.customPrice !== null && test.customPrice !== undefined,
+          category: selectedTest.category
+        };
+      });
+
+    const testAmount = testsWithPrices.reduce((sum, test) => sum + test.testPrice, 0);
+
+    setLoading(true);
+    try {
+      // For test fees: Doctor gets commission percentage, hospital gets rest
+      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+      const doctorTestCommissionRate = customDoctorCommission !== null 
+        ? customDoctorCommission / 100 
+        : (selectedDoctor ? selectedDoctor.testReferralCommission / 100 : 0);
+      const testDoctorRevenue = commonData.doctorName ? testAmount * doctorTestCommissionRate : 0;
+      const testHospitalRevenue = testAmount - testDoctorRevenue;
+
+      const patientData = {
+        ...commonData,
+        date: testData.date,
+        time: testData.time,
+        tests: testsWithPrices,
+        totalAmount: testAmount,
+        hospitalRevenue: testHospitalRevenue,
+        doctorRevenue: testDoctorRevenue,
+        brokerRevenue: 0,
+        orderType: 'test',
+      };
+
+      const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
+
+      // Test order creation
+      const testOrderData = { ...patientData, patientID: patientResponse.id };
+      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
+      
+      setLoading(false);
+      
+      // Store the created order for printing
+      setLastCreatedOrder({
+        ...testOrderData,
+        _id: response.data._id || Date.now().toString()
+      });
+      
+      // Show print modal for test orders
+      setShowPrintModal(true);
+      
+      toast.success("Test order created successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      
+      // Clear only test selection, keep patient info and appointment
+      setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
+      setTestData({ date: "", time: "" });
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+      toast.error(`Error: ${errorMessage}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      console.error("Error:", error);
+    }
+  };
+
+  const HandleCombinedSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (commonData.gender === "") {
+      return toast.error("Please fill all the required fields", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+    
+    if (!appointmentData.time) {
+      return toast.error("Please select an appointment time", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+
+    if (!testData.date) {
+      return toast.error("Please select a date for the test order", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+
+    const hasSelectedTest = selectedTests.some(test => test.testId !== "");
+    if (!hasSelectedTest) {
+      return toast.error("Please select at least one test", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+
+    setLoading(true);
+    try {
+      // First submit appointment
+      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+      const selectedBroker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+      
+      // Doctor gets full appointment fee from their profile
+      const appointmentDoctorRevenue = appointmentData.doctorFee;
+      
+      // Broker gets their percentage from doctor's appointment fee only
+      const brokerCommissionRate = customBrokerCommission !== null 
+        ? customBrokerCommission / 100 
+        : (selectedBroker ? selectedBroker.commissionRate / 100 : 0);
+      const appointmentBrokerRevenue = commonData.brokerName ? appointmentData.doctorFee * brokerCommissionRate : 0;
+      
+      // Hospital gets nothing from appointment fees (doctor gets full fee, broker gets commission from doctor's fee)
+      const appointmentHospitalRevenue = 0;
+      
+      const appointmentPatientData = {
+        ...commonData,
+        ...appointmentData,
+        tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
+        totalAmount: appointmentData.doctorFee,
+        hospitalRevenue: appointmentHospitalRevenue,
+        doctorRevenue: appointmentDoctorRevenue,
+        brokerRevenue: appointmentBrokerRevenue,
+        orderType: 'appointment',
+      };
+
+      const appointmentPatientResponse = await dispatch(AddPatients({ ...appointmentPatientData, patientId: Date.now() }));
+      const bookingData = { ...appointmentPatientData, patientID: appointmentPatientResponse.id };
+      await dispatch(CreateBooking(bookingData));
+
+      // Then submit test order
+      const testsWithPrices = selectedTests
         .filter(test => test.testId !== "")
         .map(test => {
-          // Try to find test in API data first, then fallback to static TestsList
           const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
                              TestsList.find(t => t.id === parseInt(test.testId));
           
@@ -511,48 +802,51 @@ const Book_Appointment = () => {
             category: selectedTest.category
           };
         });
-    }
 
-    setLoading(true);
-    try {
-      const patientData = {
+      const testAmount = testsWithPrices.reduce((sum, test) => sum + test.testPrice, 0);
+      
+      // For test fees: Doctor gets commission percentage, hospital gets rest
+      const doctorTestCommissionRate = customDoctorCommission !== null 
+        ? customDoctorCommission / 100 
+        : (selectedDoctor ? selectedDoctor.testReferralCommission / 100 : 0);
+      const testDoctorRevenue = commonData.doctorName ? testAmount * doctorTestCommissionRate : 0;
+      const testHospitalRevenue = testAmount - testDoctorRevenue;
+      
+      const testPatientData = {
         ...commonData,
-        ...currentData,
+        date: testData.date,
+        time: testData.time,
         tests: testsWithPrices,
-        totalAmount,
-        hospitalRevenue,
-        doctorRevenue,
-        brokerRevenue,
-        orderType: bookingType,
+        totalAmount: testAmount,
+        hospitalRevenue: testHospitalRevenue,
+        doctorRevenue: testDoctorRevenue,
+        brokerRevenue: 0,
+        orderType: 'test',
       };
 
-      const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
-
-      if (bookingType === 'appointment') {
-        const bookingData = { ...patientData, patientID: patientResponse.id };
-        await dispatch(CreateBooking(bookingData));
-        fetchBookedAppointments(commonData.doctorName, appointmentData.date);
-        setLoading(false);
-        clearFormAfterSubmit();
-      } else {
-        // Test order creation
-        const testOrderData = { ...patientData, patientID: patientResponse.id };
-        const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
-        
-        setLoading(false);
-        
-        // Store the created order for printing
-        setLastCreatedOrder({
-          ...testOrderData,
-          _id: response.data._id || Date.now().toString()
-        });
-        
-        // Show print modal for test orders
-        setShowPrintModal(true);
-        
-        // Clear form
-        clearFormAfterSubmit();
-      }
+      const testPatientResponse = await dispatch(AddPatients({ ...testPatientData, patientId: Date.now() + 1 }));
+      const testOrderData = { ...testPatientData, patientID: testPatientResponse.id };
+      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
+      
+      fetchBookedAppointments(commonData.doctorName, appointmentData.date);
+      setLoading(false);
+      
+      // Store the created order for printing
+      setLastCreatedOrder({
+        ...testOrderData,
+        _id: response.data._id || Date.now().toString()
+      });
+      
+      // Show print modal
+      setShowPrintModal(true);
+      
+      toast.success("Both appointment and test order created successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      
+      // Reset form after combined submission
+      clearFormAfterSubmit();
     } catch (error) {
       setLoading(false);
       const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
@@ -574,404 +868,480 @@ const Book_Appointment = () => {
         <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`}>
           <div className="flex-1 p-6 ml-40">
             <div>
-              <Card className="mb-6 shadow-sm border border-gray-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Calendar className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">
-                        {bookingType === 'appointment' ? 'Book Appointment' : 'Create Test Order'}
-                      </h1>
-                      <p className="text-gray-600">
-                        {bookingType === 'appointment' ? 'Schedule your consultation with our expert doctors' : 'Schedule laboratory tests for patients'}
-                      </p>
-                    </div>
+              {/* Header */}
+              <Card className="mb-6 shadow-lg border border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+                    <Calendar className="w-7 h-7 text-white" />
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => HandleBookingTypeChange('appointment')}
-                      className={`flex items-center gap-2 px-6 py-2 font-semibold rounded-lg shadow-md transition-all duration-200 ${
-                        bookingType === 'appointment'
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 hover:shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Doctor Appointment
-                    </Button>
-                    <Button
-                      onClick={() => HandleBookingTypeChange('test')}
-                      className={`flex items-center gap-2 px-6 py-2 font-semibold rounded-lg shadow-md transition-all duration-200 ${
-                        bookingType === 'test'
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 hover:shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
-                      }`}
-                    >
-                      <FileText className="w-4 h-4" />
-                      Test Order
-                    </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Medical Services Booking</h1>
+                    <p className="text-gray-600">Complete appointment booking and test ordering in one place</p>
                   </div>
                 </div>
               </Card>
 
-              {(commonData.patientName || commonData.mobile) && (
-                <Card className="mb-6 bg-green-50 border-green-200">
-                  <div className="flex items-center text-green-800">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm">
-                      Patient information preserved: {commonData.patientName && `${commonData.patientName}`}
-                      {commonData.patientName && commonData.mobile && ' - '}
-                      {commonData.mobile && `${commonData.mobile}`}
-                    </span>
-                  </div>
-                </Card>
-              )}
-
-              <form onSubmit={HandleOnsubmitAppointment}>
-                <Card className="mb-6 shadow-sm border border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Patient Name *</label>
-                      <Input
-                        prefix={<User className="w-4 h-4 text-gray-400" />}
-                        placeholder="Full name"
-                        name="patientName"
-                        value={commonData.patientName}
-                        onChange={handleCommonDataChange}
-                        required
-                        className="border-gray-200 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
-                      <Input
-                        type="number"
-                        placeholder="Age"
-                        name="age"
-                        value={commonData.age}
-                        onChange={handleCommonDataChange}
-                        required
-                        min="0"
-                        max="150"
-                        className="border-gray-200 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
-                      <Select
-                        name="gender"
-                        value={commonData.gender}
-                        onChange={(value) => setCommonData(prev => ({ ...prev, gender: value }))}
-                        required
-                        className="w-full"
-                        placeholder="Select Gender"
-                      >
-                        <Option value="">Select Gender</Option>
-                        <Option value="Male">Male</Option>
-                        <Option value="Female">Female</Option>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
-                      <Input
-                        prefix={<Phone className="w-4 h-4 text-gray-400" />}
-                        placeholder="Phone number"
-                        name="mobile"
-                        value={commonData.mobile}
-                        onChange={handleCommonDataChange}
-                        required
-                        className="border-gray-200 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                      <AddressAutocomplete
-                        value={commonData.address}
-                        onChange={(value) => setCommonData(prev => ({ ...prev, address: value }))}
-                        placeholder="Start typing your address in Bangladesh..."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email (Optional)</label>
-                      <Input
-                        prefix={<Mail className="w-4 h-4 text-gray-400" />}
-                        type="email"
-                        placeholder="abc@abc.com (optional)"
-                        name="email"
-                        value={commonData.email}
-                        onChange={handleCommonDataChange}
-                        className="border-gray-200 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="mb-6 shadow-sm border border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Heart className="w-5 h-5 text-green-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Medical Information</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Type of Disease *</label>
-                      <Select
-                        name="disease"
-                        value={commonData.disease}
-                        onChange={(value) => setCommonData(prev => ({ ...prev, disease: value }))}
-                        required
-                        className="w-full"
-                        placeholder="Select Disease"
-                      >
-                        <Option value="">Select Disease</Option>
-                        {CommonProblem.map((ele, i) => (
-                          <Option key={i} value={ele.title}>{ele.title}</Option>
-                        ))}
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {bookingType === 'appointment' ? 'Doctor Name *' : 'Referring Doctor (Optional)'}
-                      </label>
-                      <Select
-                        name="doctorName"
-                        value={commonData.doctorName}
-                        onChange={handleDoctorChange}
-                        disabled={loadingDoctors}
-                        required={bookingType === 'appointment'}
-                        className="w-full"
-                        placeholder={loadingDoctors ? "Loading doctors..." : "Select Doctor"}
-                      >
-                        <Option value="">{loadingDoctors ? "Loading doctors..." : "Select Doctor"}</Option>
-                        {doctors.map((doctor) => (
-                          <Option key={doctor._id} value={doctor.name || doctor.docName}>
-                            {doctor.name || doctor.docName} - {doctor.specialization}
-                          </Option>
-                        ))}
-                      </Select>
-                    </div>
-                    {bookingType === 'appointment' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name (Optional)</label>
-                        <Select
-                          name="brokerName"
-                          value={commonData.brokerName}
-                          onChange={handleBrokerChange}
-                          disabled={loadingBrokers}
-                          className="w-full"
-                          placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}
+              {/* Step Indicator */}
+              <Card className="mb-6 shadow-lg border border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6">
+                    {[1, 2, 3].map((step) => (
+                      <div key={step} className="flex items-center">
+                        <div
+                          onClick={() => goToStep(step)}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 transform shadow-md ${
+                            currentStep === step
+                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white scale-110 shadow-lg'
+                              : currentStep > step
+                              ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105'
+                              : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-gray-300 hover:scale-105'
+                          }`}
                         >
-                          <Option value="">{loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}</Option>
-                          {brokers.map((broker) => (
-                            <Option key={broker._id} value={broker.name || broker.docName}>
-                              {broker.name || broker.docName}
-                            </Option>
-                          ))}
-                        </Select>
+                          <span className="font-semibold">
+                            {currentStep > step ? '✓' : step}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <div className={`text-sm font-semibold transition-all duration-200 ${
+                            currentStep === step ? 'text-blue-700' : currentStep > step ? 'text-green-700' : 'text-gray-500'
+                          }`}>
+                            {step === 1 && 'Doctor Appointment'}
+                            {step === 2 && 'Test Selection'}
+                            {step === 3 && 'Financial Summary'}
+                          </div>
+                          <div className={`text-xs transition-all duration-200 ${
+                            currentStep === step ? 'text-blue-600' : currentStep > step ? 'text-green-600' : 'text-gray-400'
+                          }`}>
+                            {step === 1 && 'Patient & Doctor Info'}
+                            {step === 2 && 'Choose Tests'}
+                            {step === 3 && 'Review & Submit'}
+                          </div>
+                        </div>
+                        {step < 3 && (
+                          <div className={`w-20 h-1 ml-6 rounded-full transition-all duration-300 ${
+                            currentStep > step ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gray-200'
+                          }`} />
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                </Card>
+                </div>
+              </Card>
 
-                <Card className="mb-6 shadow-sm border border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Test/Service Selection</h3>
-                  </div>
-                  {bookingType === 'appointment' ? (
-                    appointmentData.doctorFee > 0 && (
-                      <div className="bg-purple-50 rounded-lg p-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">Doctor Consultation Fee:</span>
-                          <span className="font-medium text-purple-700">{appointmentData.doctorFee} Taka</span>
+              <form onSubmit={(e) => e.preventDefault()}>
+                {/* Step 1: Doctor Appointment */}
+                {currentStep === 1 && (
+                  <>
+                    <Card className="mb-6 shadow-sm border border-gray-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <User className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Patient Name *</label>
+                          <Input
+                            prefix={<User className="w-4 h-4 text-gray-400" />}
+                            placeholder="Full name"
+                            name="patientName"
+                            value={commonData.patientName}
+                            onChange={handleCommonDataChange}
+                            required
+                            className="border-gray-200 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
+                          <Input
+                            type="number"
+                            placeholder="Age"
+                            name="age"
+                            value={commonData.age}
+                            onChange={handleCommonDataChange}
+                            required
+                            min="0"
+                            max="150"
+                            className="border-gray-200 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
+                          <Select
+                            name="gender"
+                            value={commonData.gender}
+                            onChange={(value) => setCommonData(prev => ({ ...prev, gender: value }))}
+                            required
+                            className="w-full"
+                            placeholder="Select Gender"
+                          >
+                            <Option value="">Select Gender</Option>
+                            <Option value="Male">Male</Option>
+                            <Option value="Female">Female</Option>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
+                          <Input
+                            prefix={<Phone className="w-4 h-4 text-gray-400" />}
+                            placeholder="Phone number"
+                            name="mobile"
+                            value={commonData.mobile}
+                            onChange={handleCommonDataChange}
+                            required
+                            className="border-gray-200 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                          <AddressAutocomplete
+                            value={commonData.address}
+                            onChange={(value) => setCommonData(prev => ({ ...prev, address: value }))}
+                            placeholder="Start typing your address in Bangladesh..."
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email (Optional)</label>
+                          <Input
+                            prefix={<Mail className="w-4 h-4 text-gray-400" />}
+                            type="email"
+                            placeholder="abc@abc.com (optional)"
+                            name="email"
+                            value={commonData.email}
+                            onChange={handleCommonDataChange}
+                            className="border-gray-200 focus:ring-blue-500"
+                          />
                         </div>
                       </div>
-                    )
-                  ) : (
-                    <CategorizedTestSelection
-                      selectedTests={selectedTests}
-                      onTestSelect={handleTestSelect}
-                      onSelectTestDirectly={selectTestDirectly}
-                      onAddMore={addMoreTest}
-                      onRemove={removeTest}
-                    />
-                  )}
-                </Card>
+                    </Card>
 
-                {/* Selected Tests with Editable Prices */}
-                {bookingType === 'test' && selectedTests.some(test => test.testId !== "") && (
-                  <Card className="mb-6 shadow-sm border border-gray-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <FileText className="w-5 h-5 text-green-600" />
+                    <Card className="mb-6 shadow-sm border border-gray-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Heart className="w-5 h-5 text-green-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">Medical Information</h3>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-800">Selected Tests & Prices</h3>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {selectedTests.filter(test => test.testId !== "").map((test) => {
-                        const selectedTest = testsList.find(t => t.testId === parseInt(test.testId));
-                        if (!selectedTest) return null;
-                        
-                        const currentPrice = test.customPrice !== null && test.customPrice !== undefined 
-                          ? test.customPrice 
-                          : selectedTest.price;
-                        
-                        return (
-                          <div key={test.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{selectedTest.title}</h4>
-                              <p className="text-sm text-gray-600">Test ID: {selectedTest.testId}</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col items-end">
-                                <label className="text-xs text-gray-500 mb-1">Price (৳)</label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    value={currentPrice}
-                                    onChange={(e) => handleTestPriceChange(test.id, e.target.value)}
-                                    className="w-24 text-center"
-                                    size="small"
-                                    min="0"
-                                    step="10"
-                                  />
-                                  {test.customPrice !== null && test.customPrice !== undefined && test.customPrice !== selectedTest.price && (
-                                    <Button
-                                      size="small"
-                                      type="primary"
-                                      onClick={() => updateTestPrice(test.testId, test.customPrice)}
-                                      className="bg-blue-600 hover:bg-blue-700"
-                                      title="Update price in database"
-                                    >
-                                      Save
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {test.customPrice !== null && test.customPrice !== undefined && selectedTest.price !== currentPrice && (
-                                <div className="text-right">
-                                  <div className="text-xs text-gray-500">Original: ৳{selectedTest.price}</div>
-                                  <div className="text-xs text-orange-600 font-medium">
-                                    {currentPrice > selectedTest.price ? '+' : ''}৳{(currentPrice - selectedTest.price).toFixed(2)}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Type of Disease *</label>
+                          <Select
+                            name="disease"
+                            value={commonData.disease}
+                            onChange={(value) => setCommonData(prev => ({ ...prev, disease: value }))}
+                            required
+                            className="w-full"
+                            placeholder="Select Disease"
+                          >
+                            <Option value="">Select Disease</Option>
+                            {CommonProblem.map((ele, i) => (
+                              <Option key={i} value={ele.title}>{ele.title}</Option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name *</label>
+                          <Select
+                            name="doctorName"
+                            value={commonData.doctorName}
+                            onChange={handleDoctorChange}
+                            disabled={loadingDoctors}
+                            required
+                            className="w-full"
+                            placeholder={loadingDoctors ? "Loading doctors..." : "Select Doctor"}
+                          >
+                            <Option value="">{loadingDoctors ? "Loading doctors..." : "Select Doctor"}</Option>
+                            {doctors.map((doctor) => (
+                              <Option key={doctor._id} value={doctor.name || doctor.docName}>
+                                {doctor.name || doctor.docName} - {doctor.specialization}
+                              </Option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name (Optional)</label>
+                          <Select
+                            name="brokerName"
+                            value={commonData.brokerName}
+                            onChange={handleBrokerChange}
+                            disabled={loadingBrokers}
+                            className="w-full"
+                            placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}
+                          >
+                            <Option value="">{loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}</Option>
+                            {brokers.map((broker) => (
+                              <Option key={broker._id} value={broker.name || broker.docName}>
+                                {broker.name || broker.docName}
+                              </Option>
+                            ))}
+                          </Select>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="mb-6 shadow-sm border border-gray-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Clock className="w-5 h-5 text-indigo-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">Schedule Information</h3>
+                        <span className="text-sm text-gray-500 ml-2">(Date required for all services, Time required only for appointments)</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                          <Input
+                            type="date"
+                            name="date"
+                            value={appointmentData.date}
+                            onChange={handleModeSpecificChange}
+                            required
+                            className="border-gray-200 focus:ring-indigo-500"
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Time <span className="text-gray-500">(Required for appointments only)</span>
+                          </label>
+                          <Select
+                            name="time"
+                            value={appointmentData.time}
+                            onChange={(value) => setAppointmentData(prev => ({ ...prev, time: value }))}
+                            className="w-full"
+                            placeholder={!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time (optional for tests)"}
+                            disabled={!commonData.doctorName || !appointmentData.date}
+                          >
+                            <Option value="">{!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time (optional for tests)"}</Option>
+                            {availableTimeSlots.map((slot) => (
+                              <Option key={slot} value={slot}>{slot}</Option>
+                            ))}
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      {commonData.doctorName && (
+                        <div className="mt-4 bg-purple-50 rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Doctor Consultation Fee:</span>
+                            <span className="font-medium text-purple-700">৳{appointmentData.doctorFee || 0}</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
+                        </div>
+                      )}
+                    </Card>
+                  </>
                 )}
 
-                <Card className="mb-6 shadow-sm border border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Clock className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {bookingType === 'appointment' ? 'Appointment Schedule' : 'Test Schedule'}
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {bookingType === 'appointment' ? 'Date *' : 'Collection Date *'}
-                      </label>
-                      <Input
-                        type="date"
-                        name="date"
-                        value={currentData.date}
-                        onChange={handleModeSpecificChange}
-                        required
-                        className="border-gray-200 focus:ring-indigo-500"
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {bookingType === 'appointment' ? 'Time *' : 'Collection Time *'}
-                      </label>
-                      {bookingType === 'appointment' ? (
-                        <Select
-                          name="time"
-                          value={currentData.time}
-                          onChange={(value) => setAppointmentData(prev => ({ ...prev, time: value }))}
-                          required
-                          className="w-full"
-                          placeholder={!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time"}
-                          disabled={!commonData.doctorName || !appointmentData.date}
-                        >
-                          <Option value="">{!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time"}</Option>
-                          {availableTimeSlots.map((slot) => (
-                            <Option key={slot} value={slot}>{slot}</Option>
-                          ))}
-                        </Select>
-                      ) : (
-                        <Input
-                          type="time"
-                          name="time"
-                          value={currentData.time}
-                          onChange={handleModeSpecificChange}
-                          required
-                          className="border-gray-200 focus:ring-indigo-500"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Commission/Fee Customization Section */}
-                {(commonData.doctorName || commonData.brokerName) && (
-                  <Card className="mb-6 shadow-sm border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-indigo-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Commission & Fee Settings</h3>
+                {/* Step 2: Test Selection */}
+                {currentStep === 2 && (
+                  <>
+                    <Card className="mb-6 shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-purple-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Test Selection</h3>
+                        </div>
+                        {selectedTests.some(test => test.testId !== "") && (
+                          <Button
+                            size="small"
+                            onClick={clearAllTests}
+                            className="bg-red-100 text-red-600 border-red-200 hover:bg-red-200"
+                          >
+                            Clear All Tests
+                          </Button>
+                        )}
                       </div>
-                      <Button
-                        type="default"
-                        size="small"
-                        onClick={() => setShowCommissionEdit(!showCommissionEdit)}
-                        className="flex items-center gap-1"
-                      >
-                        <Edit className="w-4 h-4" />
-                        {showCommissionEdit ? 'Hide' : 'Edit'}
-                      </Button>
-                    </div>
-                    
-                    {showCommissionEdit && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                        {commonData.doctorName && (
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-700">Doctor Settings</h4>
-                            {bookingType === 'appointment' ? (
-                              <div className="space-y-2">
+                      <CategorizedTestSelection
+                        selectedTests={selectedTests}
+                        onTestSelect={handleTestSelect}
+                        onDeselectTest={deselectTest}
+                        onClearAll={clearAllTests}
+                        onSelectTestDirectly={selectTestDirectly}
+                        onAddMore={addMoreTest}
+                        onRemove={removeTest}
+                      />
+                    </Card>
+
+                    {/* Selected Tests with Editable Prices */}
+                    {selectedTests.some(test => test.testId !== "") && (
+                      <Card className="mb-6 shadow-sm border border-gray-200">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <FileText className="w-5 h-5 text-green-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-800">Selected Tests & Prices</h3>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {selectedTests.filter(test => test.testId !== "").map((test) => {
+                            const selectedTest = testsList.find(t => t.testId === parseInt(test.testId));
+                            if (!selectedTest) return null;
+                            
+                            const currentPrice = test.customPrice !== null && test.customPrice !== undefined 
+                              ? test.customPrice 
+                              : selectedTest.price;
+                            
+                            return (
+                              <div key={test.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-900">{selectedTest.title}</h4>
+                                  <p className="text-sm text-gray-600">Test ID: {selectedTest.testId}</p>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                  <div className="flex flex-col items-end">
+                                    <label className="text-xs text-gray-500 mb-1">Price (৳)</label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        value={currentPrice}
+                                        onChange={(e) => handleTestPriceChange(test.id, e.target.value)}
+                                        className="w-24 text-center"
+                                        size="small"
+                                        min="0"
+                                        step="10"
+                                      />
+                                      {test.customPrice !== null && test.customPrice !== undefined && test.customPrice !== selectedTest.price && (
+                                        <Button
+                                          size="small"
+                                          type="primary"
+                                          onClick={() => updateTestPrice(test.testId, test.customPrice)}
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                          title="Update price in database"
+                                        >
+                                          Save
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {test.customPrice !== null && test.customPrice !== undefined && selectedTest.price !== currentPrice && (
+                                    <div className="text-right">
+                                      <div className="text-xs text-gray-500">Original: ৳{selectedTest.price}</div>
+                                      <div className="text-xs text-orange-600 font-medium">
+                                        {currentPrice > selectedTest.price ? '+' : ''}৳{(currentPrice - selectedTest.price).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Deselect Button */}
+                                  <Button
+                                    size="small"
+                                    onClick={() => deselectTest(test.id)}
+                                    className="bg-red-100 text-red-600 border-red-200 hover:bg-red-200"
+                                    title="Deselect this test"
+                                  >
+                                    ✕
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Test Schedule Information - Moved to end */}
+                    {selectedTests.some(test => test.testId !== "") && (
+                      <Card className="mb-6 shadow-sm border border-gray-200">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Clock className="w-5 h-5 text-green-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Test Schedule</h3>
+                          <span className="text-sm text-gray-500 ml-2">(Separate from appointment schedule)</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Test Date *</label>
+                            <Input
+                              type="date"
+                              name="date"
+                              value={testData.date}
+                              onChange={handleTestDataChange}
+                              required
+                              className="border-gray-200 focus:ring-green-500"
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Test Time <span className="text-gray-500">(Optional)</span>
+                            </label>
+                            <Input
+                              type="time"
+                              name="time"
+                              value={testData.time}
+                              onChange={handleTestDataChange}
+                              className="border-gray-200 focus:ring-green-500"
+                              placeholder="Select preferred test time"
+                            />
+                          </div>
+                        </div>
+                        
+                        {testData.date && (
+                          <div className="mt-4 bg-green-50 rounded-lg p-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">Test scheduled for:</span>
+                              <span className="font-medium text-green-700">
+                                {testData.date}{testData.time && ` at ${testData.time}`}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    )}
+                  </>
+                )}
+
+                {/* Step 3: Financial Summary */}
+                {currentStep === 3 && (
+                  <>
+                    {/* Commission/Fee Customization Section */}
+                    {(commonData.doctorName || commonData.brokerName) && (
+                      <Card className="mb-6 shadow-sm border border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-indigo-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Commission & Fee Settings</h3>
+                          </div>
+                          <Button
+                            type="default"
+                            size="small"
+                            onClick={() => setShowCommissionEdit(!showCommissionEdit)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="w-4 h-4" />
+                            {showCommissionEdit ? 'Hide' : 'Edit'}
+                          </Button>
+                        </div>
+                        
+                        {showCommissionEdit && (
+                          <div className="p-4 bg-gray-50 rounded-lg mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Doctor Settings */}
+                              <div className="space-y-3">
+                                <h4 className="font-medium text-gray-700">Doctor Settings</h4>
                                 <div>
                                   <label className="block text-sm text-gray-600 mb-1">
-                                    Commission (%) - Default: {commonData.brokerName ? '90%' : '95%'}
+                                    Test Referral Commission (%) {(() => {
+                                      const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                      return doctor && doctor.testReferralCommission !== undefined ? `- Default: ${doctor.testReferralCommission}%` : '';
+                                    })()}
                                   </label>
                                   <div className="flex gap-2">
                                     <Input
                                       type="number"
-                                      placeholder={commonData.brokerName ? "90" : "95"}
-                                      value={customDoctorCommission || ''}
+                                      placeholder={(() => {
+                                        const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                        return doctor && doctor.testReferralCommission !== undefined ? doctor.testReferralCommission.toString() : '5';
+                                      })()}
+                                      value={customDoctorCommission !== null ? customDoctorCommission : ''}
                                       onChange={(e) => setCustomDoctorCommission(e.target.value ? parseFloat(e.target.value) : null)}
                                       min="0"
                                       max="100"
                                       step="0.1"
                                       className="flex-1"
                                     />
-                                    {customDoctorCommission !== null && (
+                                    {customDoctorCommission !== null && (() => {
+                                      const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                      const defaultCommission = doctor && doctor.testReferralCommission !== undefined ? doctor.testReferralCommission : 5;
+                                      return customDoctorCommission !== defaultCommission;
+                                    })() && (
                                       <Button
                                         size="small"
                                         type="primary"
@@ -983,197 +1353,386 @@ const Book_Appointment = () => {
                                     )}
                                   </div>
                                 </div>
-                                <div>
-                                  <label className="block text-sm text-gray-600 mb-1">
-                                    Doctor Fee (Taka) - Default: {(() => {
-                                      const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
-                                      return selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
-                                    })()}
-                                  </label>
-                                  <div className="flex gap-2">
-                                    <Input
-                                      type="number"
-                                      placeholder={(() => {
-                                        const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
-                                        return (selectedDoctor ? selectedDoctor.remuneration || 500 : 500).toString();
+                                
+                                {commonData.doctorName && (
+                                  <div>
+                                    <label className="block text-sm text-gray-600 mb-1">
+                                      Appointment Fee (₹) - Default: {(() => {
+                                        const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                        return doctor && doctor.remuneration !== undefined ? `₹${doctor.remuneration}` : '₹500';
                                       })()}
-                                      value={customDoctorFee || ''}
-                                      onChange={(e) => {
-                                        const value = e.target.value ? parseFloat(e.target.value) : null;
-                                        setCustomDoctorFee(value);
-                                        if (value !== null) {
-                                          setAppointmentData(prev => ({ ...prev, doctorFee: value }));
+                                    </label>
+                                    <div className="flex gap-2">
+                                      <Input
+                                        type="number"
+                                        placeholder={(() => {
+                                          const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                          return doctor && doctor.remuneration !== undefined ? doctor.remuneration.toString() : '500';
+                                        })()}
+                                        value={appointmentData.doctorFee || ''}
+                                        onChange={(e) => {
+                                          const newFee = e.target.value ? parseFloat(e.target.value) : 0;
+                                          setCustomDoctorFee(newFee);
+                                          setAppointmentData(prev => ({ ...prev, doctorFee: newFee }));
+                                          setIsFeeManuallyEdited(true); // Mark fee as manually edited
+                                        }}
+                                        min="0"
+                                        step="10"
+                                        className="flex-1"
+                                      />
+                                      {(() => {
+                                        const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                        const defaultFee = doctor && doctor.remuneration !== undefined ? doctor.remuneration : 500;
+                                        return appointmentData.doctorFee !== defaultFee;
+                                      })() && (
+                                        <Button
+                                          size="small"
+                                          type="primary"
+                                          onClick={() => updateDoctorCommissionFee(commonData.doctorName, null, appointmentData.doctorFee)}
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                          Save
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {commonData.doctorName && (
+                                  <div>
+                                    <label className="block text-sm text-gray-600 mb-1">
+                                      Appointment Fee Commission (%) - Default: {(() => {
+                                        if (commonData.brokerName) {
+                                          const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                          const brokerRate = customBrokerCommission !== null ? customBrokerCommission : (broker ? broker.commissionRate : 5);
+                                          return `${100 - brokerRate}% (100% - ${brokerRate}% broker commission)`;
                                         }
-                                      }}
-                                      min="0"
-                                      step="0.01"
-                                      className="flex-1"
-                                    />
-                                    {customDoctorFee !== null && (() => {
-                                      const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
-                                      const defaultFee = selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
-                                      return customDoctorFee !== defaultFee;
-                                    })() && (
-                                      <Button
-                                        size="small"
-                                        type="primary"
-                                        onClick={() => updateDoctorCommissionFee(commonData.doctorName, null, customDoctorFee)}
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                      >
-                                        Save
-                                      </Button>
-                                    )}
+                                        return '100% (no broker)';
+                                      })()}
+                                    </label>
+                                    <div className="flex gap-2">
+                                      <Input
+                                        type="number"
+                                        placeholder={(() => {
+                                          if (commonData.brokerName) {
+                                            const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                            const brokerRate = customBrokerCommission !== null ? customBrokerCommission : (broker ? broker.commissionRate : 5);
+                                            return (100 - brokerRate).toString();
+                                          }
+                                          return "100";
+                                        })()}
+                                        value={customAppointmentCommission !== null ? customAppointmentCommission : ''}
+                                        onChange={(e) => setCustomAppointmentCommission(e.target.value ? parseFloat(e.target.value) : null)}
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                        className="flex-1"
+                                      />
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Note: Appointment fee is split between doctor and broker. Doctor gets remaining % after broker commission.
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Broker Settings */}
+                              {commonData.brokerName && commonData.doctorName && (
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-gray-700">Broker Settings</h4>
+                                  <div>
+                                    <label className="block text-sm text-gray-600 mb-1">
+                                      Appointment Fee Commission (%) - Default: {(() => {
+                                        const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                        return broker ? `${broker.commissionRate}%` : '5%';
+                                      })()}
+                                    </label>
+                                    <div className="flex gap-2">
+                                      <Input
+                                        type="number"
+                                        placeholder={(() => {
+                                          const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                          return broker ? broker.commissionRate.toString() : '5';
+                                        })()}
+                                        value={customBrokerCommission !== null ? customBrokerCommission : ''}
+                                        onChange={(e) => {
+                                          setCustomBrokerCommission(e.target.value ? parseFloat(e.target.value) : null);
+                                          // Reset appointment commission when broker commission changes
+                                          setCustomAppointmentCommission(null);
+                                        }}
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                        className="flex-1"
+                                      />
+                                      {customBrokerCommission !== null && (() => {
+                                        const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                        const defaultCommission = broker ? broker.commissionRate : 5;
+                                        return customBrokerCommission !== defaultCommission;
+                                      })() && (
+                                        <Button
+                                          size="small"
+                                          type="primary"
+                                          onClick={() => updateBrokerCommission(commonData.brokerName, customBrokerCommission)}
+                                          className="bg-orange-600 hover:bg-orange-700"
+                                        >
+                                          Save
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <label className="block text-sm text-gray-600 mb-1">
-                                  Test Referral Commission (%) - Default: {(() => {
-                                    const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-                                    return doctor ? doctor.testReferralCommission || 5 : 5;
-                                  })()}%
-                                </label>
-                                <div className="flex gap-2">
-                                  <Input
-                                    type="number"
-                                    placeholder={(() => {
-                                      const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-                                      return (doctor ? doctor.testReferralCommission || 5 : 5).toString();
-                                    })()}
-                                    value={customDoctorCommission || ''}
-                                    onChange={(e) => setCustomDoctorCommission(e.target.value ? parseFloat(e.target.value) : null)}
-                                    min="0"
-                                    max="100"
-                                    step="0.1"
-                                    className="flex-1"
-                                  />
-                                  {customDoctorCommission !== null && (() => {
-                                    const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-                                    const defaultCommission = doctor ? doctor.testReferralCommission || 5 : 5;
-                                    return customDoctorCommission !== defaultCommission;
-                                  })() && (
-                                    <Button
-                                      size="small"
-                                      type="primary"
-                                      onClick={() => updateDoctorCommissionFee(commonData.doctorName, customDoctorCommission, null)}
-                                      className="bg-blue-600 hover:bg-blue-700"
-                                    >
-                                      Save
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
                         
-                        {commonData.brokerName && bookingType === 'appointment' && (
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-700">Broker Settings</h4>
-                            <div>
-                              <label className="block text-sm text-gray-600 mb-1">
-                                Commission (%) - Default: 5%
-                              </label>
-                              <div className="flex gap-2">
-                                <Input
-                                  type="number"
-                                  placeholder="5"
-                                  value={customBrokerCommission || ''}
-                                  onChange={(e) => setCustomBrokerCommission(e.target.value ? parseFloat(e.target.value) : null)}
-                                  min="0"
-                                  max="100"
-                                  step="0.1"
-                                  className="flex-1"
-                                />
-                                {customBrokerCommission !== null && customBrokerCommission !== 5 && (
-                                  <Button
-                                    size="small"
-                                    type="primary"
-                                    onClick={() => updateBrokerCommission(commonData.brokerName, customBrokerCommission)}
-                                    className="bg-orange-600 hover:bg-orange-700"
-                                  >
-                                    Save
-                                  </Button>
+                        {/* Display current settings */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                          {commonData.doctorName && (
+                            <div className="bg-blue-50 p-3 rounded">
+                              <div className="font-medium text-blue-800">Doctor: {commonData.doctorName}</div>
+                              <div className="text-blue-600">
+                                <div>Test Commission: {customDoctorCommission !== null ? `${customDoctorCommission}%` : (() => {
+                                  const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
+                                  return `${doctor && doctor.testReferralCommission !== undefined ? doctor.testReferralCommission : 5}%`;
+                                })()} (Custom: {customDoctorCommission !== null ? 'Yes' : 'No'})</div>
+                                {commonData.doctorName && (
+                                  <div>Appointment Fee: Doctor gets full fee (₹{appointmentData.doctorFee || 0}) from their profile</div>
                                 )}
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Display current settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                      {commonData.doctorName && (
-                        <div className="bg-blue-50 p-3 rounded">
-                          <div className="font-medium text-blue-800">Doctor: {commonData.doctorName}</div>
-                          {bookingType === 'appointment' ? (
-                            <div className="text-blue-600">
-                              <div>Commission: {customDoctorCommission !== null ? `${customDoctorCommission}%` : (commonData.brokerName ? '90%' : '95%')} (Custom: {customDoctorCommission !== null ? 'Yes' : 'No'})</div>
-                              <div>Fee: ৳{customDoctorFee !== null ? customDoctorFee : (() => {
-                                const selectedDoctor = doctorsList.find(d => d.docName === commonData.doctorName);
-                                return selectedDoctor ? selectedDoctor.remuneration || 500 : 500;
-                              })()} (Custom: {customDoctorFee !== null ? 'Yes' : 'No'})</div>
-                            </div>
-                          ) : (
-                            <div className="text-blue-600">
-                              Commission: {customDoctorCommission !== null ? `${customDoctorCommission}%` : (() => {
-                                const doctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-                                return `${doctor ? doctor.testReferralCommission || 5 : 5}%`;
-                              })()} (Custom: {customDoctorCommission !== null ? 'Yes' : 'No'})
+                          )}
+                          
+                          {commonData.brokerName && (
+                            <div className="bg-orange-50 p-3 rounded">
+                              <div className="font-medium text-orange-800">Broker: {commonData.brokerName}</div>
+                              <div className="text-orange-600">
+                                Commission: {customBrokerCommission !== null ? `${customBrokerCommission}%` : (() => {
+                                  const broker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
+                                  return broker ? `${broker.commissionRate}%` : '5%';
+                                })()} of doctor's appointment fee (Custom: {customBrokerCommission !== null ? 'Yes' : 'No'})</div>
                             </div>
                           )}
                         </div>
-                      )}
-                      
-                      {commonData.brokerName && bookingType === 'appointment' && (
-                        <div className="bg-orange-50 p-3 rounded">
-                          <div className="font-medium text-orange-800">Broker: {commonData.brokerName}</div>
-                          <div className="text-orange-600">
-                            Commission: {customBrokerCommission !== null ? `${customBrokerCommission}%` : '5%'} (Custom: {customBrokerCommission !== null ? 'Yes' : 'No'})
-                          </div>
+                      </Card>
+                    )}
+
+                    <Card className="mb-6 shadow-sm border border-gray-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <DollarSign className="w-5 h-5 text-yellow-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">Financial Summary</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-blue-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-blue-600">৳{totalAmount}</div>
+                          <div className="text-sm text-gray-600">Total Amount</div>
                         </div>
+                        <div className="bg-green-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-green-600">৳{hospitalRevenue.toFixed(2)}</div>
+                          <div className="text-sm text-gray-600">Hospital Revenue</div>
+                        </div>
+                        <div className="bg-purple-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-purple-600">৳{doctorRevenue.toFixed(2)}</div>
+                          <div className="text-sm text-gray-600">Doctor Commission</div>
+                        </div>
+                        <div className="bg-orange-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-orange-600">৳{brokerRevenue.toFixed(2)}</div>
+                          <div className="text-sm text-gray-600">Broker Commission</div>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      {/* Appointment Summary - Show if doctor is selected */}
+                      {commonData.doctorName && (
+                        <Card className="shadow-sm border border-gray-200">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Appointment Summary</h3>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Patient:</span>
+                              <span className="font-medium">{commonData.patientName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Doctor:</span>
+                              <span className="font-medium">{commonData.doctorName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Date & Time:</span>
+                              <span className="font-medium">{appointmentData.date} at {appointmentData.time}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Consultation Fee:</span>
+                              <span className="font-medium text-purple-600">৳{appointmentData.doctorFee || 0}</span>
+                            </div>
+                            {commonData.brokerName && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Broker:</span>
+                                <span className="font-medium">{commonData.brokerName}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4">
+                            <Button
+                              type="primary"
+                              onClick={HandleAppointmentSubmit}
+                              disabled={loading || !appointmentData.time}
+                              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                              loading={loading}
+                              size="large"
+                            >
+                              <Calendar className="w-5 h-5" />
+                              {loading ? 'Booking...' : 'Book Appointment Only'}
+                            </Button>
+                          </div>
+                        </Card>
+                      )}
+
+                      {/* Test Order Summary - Only show if tests are selected */}
+                      {selectedTests.some(test => test.testId !== "") && (
+                        <Card className="shadow-sm border border-gray-200">
+                          <div className="flex items-center gap-2 mb-4">
+                            <FileText className="w-5 h-5 text-green-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Test Order Summary</h3>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Patient:</span>
+                              <span className="font-medium">{commonData.patientName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Selected Tests:</span>
+                              <span className="font-medium">{selectedTests.filter(test => test.testId !== "").length} tests</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Test Date & Time:</span>
+                              <span className="font-medium">
+                                {testData.date ? `${testData.date}${testData.time ? ` at ${testData.time}` : ''}` : 'Not scheduled'}
+                              </span>
+                            </div>
+                            <div className="max-h-32 overflow-y-auto space-y-1">
+                              {selectedTests.filter(test => test.testId !== "").map((test, index) => {
+                                const selectedTest = testsList.find(t => t.testId === parseInt(test.testId));
+                                return selectedTest ? (
+                                  <div key={index} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
+                                    <span className="text-gray-700">• {selectedTest.title}</span>
+                                    <Button
+                                      size="small"
+                                      onClick={() => deselectTest(test.id)}
+                                      className="text-red-600 hover:text-red-800 border-none shadow-none p-0 h-auto"
+                                      type="text"
+                                      title="Remove this test"
+                                    >
+                                      ✕
+                                    </Button>
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tests Total:</span>
+                              <span className="font-medium text-green-600">
+                                ৳{selectedTests.reduce((sum, test) => {
+                                  if (!test.testId) return sum;
+                                  if (test.customPrice !== null && test.customPrice !== undefined) {
+                                    return sum + test.customPrice;
+                                  }
+                                  const selectedTest = testsList.find(t => t.testId === parseInt(test.testId));
+                                  return sum + (selectedTest ? selectedTest.price : 0);
+                                }, 0)}
+                              </span>
+                            </div>
+                            {commonData.doctorName && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Referring Doctor:</span>
+                                <span className="font-medium">{commonData.doctorName}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4">
+                            <Button
+                              type="primary"
+                              onClick={HandleTestOrderSubmit}
+                              disabled={loading || !selectedTests.some(test => test.testId !== "") || !testData.date}
+                              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                              loading={loading}
+                              size="large"
+                            >
+                              <FileText className="w-5 h-5" />
+                              {loading ? 'Creating...' : 'Create Test Order Only'}
+                            </Button>
+                          </div>
+                        </Card>
                       )}
                     </div>
-                  </Card>
+                    
+                    {/* Combined Submit Option */}
+                    {commonData.doctorName && selectedTests.some(test => test.testId !== "") && (
+                      <Card className="mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Complete Booking</h3>
+                          <p className="text-sm text-gray-600 mb-4">Submit both appointment and test order together</p>
+                          <Button
+                            type="primary"
+                            onClick={HandleCombinedSubmit}
+                            disabled={loading || !appointmentData.time || !selectedTests.some(test => test.testId !== "") || !testData.date}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 px-8 py-2"
+                            loading={loading}
+                            size="large"
+                          >
+                            {loading ? 'Processing...' : 'Submit Both Appointment & Tests'}
+                          </Button>
+                        </div>
+                      </Card>
+                    )}
+                  </>
                 )}
 
-                <Card className="mb-6 shadow-sm border border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <DollarSign className="w-5 h-5 text-yellow-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Financial Summary</h3>
+                {/* Navigation Buttons */}
+                <div className="flex justify-between items-center">
+                  <div>
+                    {currentStep > 1 && (
+                      <Button
+                        type="default"
+                        onClick={prevStep}
+                        className="flex items-center gap-3 px-6 py-3 font-medium rounded-xl shadow-md transition-all duration-300 bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 hover:shadow-lg"
+                        size="large"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                        <span className="text-base">Back</span>
+                      </Button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-blue-600">{totalAmount}</div>
-                      <div className="text-sm text-gray-600">Total Amount (Taka)</div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-green-600">{hospitalRevenue.toFixed(2)}</div>
-                      <div className="text-sm text-gray-600">Hospital Revenue</div>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-600">{doctorRevenue.toFixed(2)}</div>
-                      <div className="text-sm text-gray-600">Doctor Revenue</div>
-                    </div>
-                    <div className="bg-orange-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-orange-600">{brokerRevenue.toFixed(2)}</div>
-                      <div className="text-sm text-gray-600">Broker Revenue</div>
-                    </div>
+                  
+                  <div>
+                    {currentStep < 3 && (
+                      <Button
+                        type="primary"
+                        onClick={nextStep}
+                        disabled={!canProceedToNextStep()}
+                        className={`flex items-center gap-3 px-8 py-3 font-semibold rounded-xl shadow-lg transition-all duration-300 transform ${
+                          canProceedToNextStep() 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105 hover:shadow-xl' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        size="large"
+                      >
+                        <span className="text-base">
+                          {currentStep === 1 ? 'Continue to Test Selection' : 'Review & Submit'}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm opacity-80">
+                            Step {currentStep + 1}/3
+                          </span>
+                          <ChevronRight className="w-5 h-5" />
+                        </div>
+                      </Button>
+                    )}
                   </div>
-                </Card>
-
-                <div className="flex justify-center">
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    disabled={loading}
-                      className={`flex items-center gap-2 px-6 py-2 font-semibold rounded-lg shadow-md transition-all duration-200 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 hover:shadow-lg`}
-                    loading={loading}
-                    >
-                    {loading ? 'Processing...' : (bookingType === 'appointment' ? 'Book Appointment' : 'Create Test Order')}
-                  </Button>
                 </div>
               </form>
             </div>
@@ -1181,7 +1740,6 @@ const Book_Appointment = () => {
         </div>
       </div>
       
-      {/* Print Success Modal */}
       <PrintSuccessModal
         isVisible={showPrintModal}
         onClose={() => {
