@@ -992,20 +992,19 @@ const Book_Appointment = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                           <AddressAutocomplete
                             value={commonData.address}
                             onChange={(value) => setCommonData(prev => ({ ...prev, address: value }))}
                             placeholder="Start typing your address in Bangladesh..."
-                            required
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email (Optional)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                           <Input
                             prefix={<Mail className="w-4 h-4 text-gray-400" />}
                             type="email"
-                            placeholder="abc@abc.com (optional)"
+                            placeholder="abc@gmail.com"
                             name="email"
                             value={commonData.email}
                             onChange={handleCommonDataChange}
@@ -1021,22 +1020,6 @@ const Book_Appointment = () => {
                         <h3 className="text-lg font-semibold text-gray-900">Medical Information</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Type of Disease *</label>
-                          <Select
-                            name="disease"
-                            value={commonData.disease}
-                            onChange={(value) => setCommonData(prev => ({ ...prev, disease: value }))}
-                            required
-                            className="w-full"
-                            placeholder="Select Disease"
-                          >
-                            <Option value="">Select Disease</Option>
-                            {CommonProblem.map((ele, i) => (
-                              <Option key={i} value={ele.title}>{ele.title}</Option>
-                            ))}
-                          </Select>
-                        </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name *</label>
                           <Select
@@ -1057,16 +1040,16 @@ const Book_Appointment = () => {
                           </Select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name (Optional)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name</label>
                           <Select
                             name="brokerName"
                             value={commonData.brokerName}
                             onChange={handleBrokerChange}
                             disabled={loadingBrokers}
                             className="w-full"
-                            placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}
+                            placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker"}
                           >
-                            <Option value="">{loadingBrokers ? "Loading brokers..." : "Select Broker (Optional)"}</Option>
+                            <Option value="">{loadingBrokers ? "Loading brokers..." : "Select Broker"}</Option>
                             {brokers.map((broker) => (
                               <Option key={broker._id} value={broker.name || broker.docName}>
                                 {broker.name || broker.docName}
@@ -1081,7 +1064,7 @@ const Book_Appointment = () => {
                       <div className="flex items-center gap-2 mb-4">
                         <Clock className="w-5 h-5 text-indigo-600" />
                         <h3 className="text-lg font-semibold text-gray-900">Schedule Information</h3>
-                        <span className="text-sm text-gray-500 ml-2">(Date required for all services, Time required only for appointments)</span>
+                        <span className="text-sm text-gray-500 ml-2">(Date required for all services)</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -1098,7 +1081,7 @@ const Book_Appointment = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Time <span className="text-gray-500">(Required for appointments only)</span>
+                            Time 
                           </label>
                           <Select
                             name="time"
