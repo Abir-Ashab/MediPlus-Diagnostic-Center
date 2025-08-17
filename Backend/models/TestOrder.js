@@ -1,99 +1,128 @@
 const mongoose = require("mongoose");
 
-const testOrderSchema = new mongoose.Schema(
-  {
-    patientID: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "patients",
-      // required: true,
-    },
-    patientName: {
-      type: String,
-      required: true,
-    },
-    age: {
-      type: Number,
-      required: true,
-    },
-    gender: {
-      type: String,
-      required: true,
-    },
-    mobile: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: false,
-    },
-    disease: {
-      type: String,
-    },
-    address: {
-      type: String,
-    },
-    tests: [
-      {
-        testName: {
-          type: String,
-          required: true,
-        },
-        testPrice: {
-          type: Number,
-          required: true,
-        },
-        testResult: {
-          type: String,
-          default: "Pending",
-        },
-      },
-    ],
-    doctorName: {
-      type: String,
-      default: "",
-    },
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
-    hospitalRevenue: {
-      type: Number,
-      required: true,
-    },
-    doctorRevenue: {
-      type: Number,
-      required: true,
-    },
-    date: {
-      type: String,
-      required: true,
-    },
-    time: {
-      type: String,
-      required: true,
-    },
-    status: {
-      type: String,
-      default: "Pending",
-      enum: ["Pending", "In Progress", "Completed", "Cancelled"],
-    },
-    orderType: {
-      type: String,
-      default: "test",
-    },
-    reportGeneratedAt: {
-      type: Date,
-    },
-    reportDeliveredAt: {
-      type: Date,
-    },
+const testOrderSchema = mongoose.Schema({
+  userType: {
+    type: String,
+    default: "patient",
   },
-  {
-    timestamps: true,
-    versionKey: false,
+
+  patientID: {
+    type: Number,
+  },
+
+  patientName: {
+    type: String,
+  },
+
+  mobile: {
+    type: Number,
+  },
+  
+  email: {
+    type: String,
+  },
+
+  address: {
+    type: String,
+  },
+
+  // Replace department with tests array
+  tests: [{
+    testName: {
+      type: String,
+      required: true
+    },
+    testPrice: {
+      type: Number,
+      required: true
+    }
+  }],
+
+  // Base amount before VAT and discount
+  baseAmount: {
+    type: Number,
+  },
+
+  // VAT percentage and amount
+  vatRate: {
+    type: Number,
+    default: 1 // 1% default VAT
+  },
+
+  vatAmount: {
+    type: Number,
+    default: 0
+  },
+
+  // Discount/Less amount
+  discountAmount: {
+    type: Number,
+    default: 0
+  },
+
+  // Final total after VAT and discount
+  totalAmount: {
+    type: Number,
+    required: true
+  },
+
+  paidAmount: {
+    type: Number,
+    default: 0
+  },
+
+  dueAmount: {
+    type: Number,
+    default: 0
+  },
+
+  doctorName: {
+    type: String
+  },
+
+  brokerName: {
+    type: String
+  },
+
+  hospitalRevenue: {
+    type: Number,
+    required: true
+  },
+
+  doctorRevenue: {
+    type: Number,
+    default: 0
+  },
+
+  brokerRevenue: {
+    type: Number,
+    default: 0
+  },
+
+  time: {
+    type: String,
+  },
+
+  date: {
+    type: String,
+  },
+
+  age: {
+    type: Number,
+    required: true,
+  },
+
+  gender: {
+    type: String,
+    required: true,
+  },
+
+  orderType: {
+    type: String,
+    enum: ['appointment', 'test', 'combined'],
+    default: 'test'
   }
-);
+});
 
 const TestOrderModel = mongoose.model("testorder", testOrderSchema);
 
