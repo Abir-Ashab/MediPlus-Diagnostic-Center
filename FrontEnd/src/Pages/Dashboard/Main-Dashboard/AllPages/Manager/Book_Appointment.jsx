@@ -681,13 +681,15 @@ const Book_Appointment = () => {
         dueAmount: dueAmount,
         hospitalRevenue: testHospitalRevenue,
         doctorRevenue: testDoctorRevenue,
-        brokerRevenue: 0,
+        brokerRevenue: brokerRevenue,
         orderType: 'test',
       };
 
       const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
 
       const testOrderData = { ...patientData, patientID: patientResponse.id };
+      console.log(testOrderData);
+      
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
       // const response2 = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments", testOrderData);
       setLoading(false);

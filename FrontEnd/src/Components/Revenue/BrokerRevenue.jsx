@@ -20,6 +20,7 @@ const BrokerRevenue = ({
 }) => {
   const handleExportBroker = async (brokerName) => {
     try {
+      
       const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
       const appointments = response.data;
       const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
@@ -44,7 +45,7 @@ const BrokerRevenue = ({
       toast.error("Failed to export broker revenue");
     }
   };
-
+  
   const brokerChartData = brokerData.brokers.map((broker) => ({
     name: broker._id,
     revenue: broker.totalRevenue,

@@ -399,8 +399,11 @@ const RevenueDashboard = () => {
           filteredDoctorRecords: [],
         });
 
+
         const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
+
         const filteredBrokers = (brokerResponse.data.brokers || []).filter((broker) => broker._id !== null);
+        
         setBrokerData({
           brokers: filteredBrokers,
           totalBrokerRevenue: brokerResponse.data.summary.totalBrokerRevenue || 0,
