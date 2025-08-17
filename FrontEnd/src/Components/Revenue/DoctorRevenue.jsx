@@ -1,49 +1,108 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const DoctorRevenue = ({ 
-  doctorData, 
-  doctorDateFilter, 
-  doctorCustomDateRange, 
-  selectedDoctor, 
+const DoctorRevenue = ({
+  doctorData,
+  doctorDateFilter,
+  doctorCustomDateRange,
+  selectedDoctor,
   setDoctorCustomDateRange,
   handleDoctorDateFilterChange,
   applyDoctorDateFilter,
   resetDoctorFilters,
   handleDoctorSelect,
   loading,
-  filterRecordsByDateRange 
+  filterRecordsByDateRange,
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const [doctorPayments, setDoctorPayments] = useState({});
+
+  // New: Fetch payment data on mount
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const promises = doctorData.doctors.map((doctor) =>
+          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctor._id}`, {
+            params: { dateFilter: doctorDateFilter },
+          })
+        );
+        const responses = await Promise.all(promises);
+        const payments = responses.reduce((acc, res, index) => {
+          const payment = res.data.find((p) => p.dateFilter === doctorDateFilter) || {};
+          return { ...acc, [doctorData.doctors[index]._id]: payment.paymentAmount || 0 };
+        }, {});
+        setDoctorPayments(payments);
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        toast.error("Failed to fetch payment data");
+      }
+    };
+    fetchPayments();
+  }, [doctorData.doctors, doctorDateFilter]);
+
+  // Modified: Update payment and save to backend
+  const handlePaymentChange = async (doctorId, payment) => {
+    const paymentAmount = Number(payment) || 0;
+    setDoctorPayments((prev) => ({
+      ...prev,
+      [doctorId]: paymentAmount,
+    }));
+
+    // Calculate total amount for the doctor
+    const doctorRecords = filterRecordsByDateRange(
+      [...(await fetchDoctorRecords(doctorId))],
+      doctorDateFilter,
+      doctorCustomDateRange
+    );
+    const totalAmount = doctorRecords.reduce((sum, record) => sum + (Number(record.totalAmount) || 0), 0);
+
+    try {
+      await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, {
+        doctorName: doctorId,
+        paymentAmount,
+        totalAmount,
+        dateFilter: doctorDateFilter,
+        customDateRange: doctorDateFilter === 'custom' ? doctorCustomDateRange : {},
+      });
+    } catch (error) {
+      console.error("Error saving payment:", error);
+      toast.error("Failed to save payment");
+    }
+  };
+
+  // New: Helper function to fetch doctor records
+  const fetchDoctorRecords = async (doctorName) => {
+    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
+      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
+      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
+    ]);
+
+    const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
+    const formattedTestOrders = doctorTestOrders.map((order) => ({
+      patientName: order.patientName,
+      date: order.date,
+      disease: order.tests?.map((test) => test.testName).join(", ") || "N/A",
+      totalAmount: order.totalAmount || 0,
+      doctorRevenue: order.doctorRevenue || 0,
+      recordType: "Test Order",
+    }));
+
+    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
+      ...appointment,
+      recordType: "Appointment",
+      doctorRevenue: appointment.doctorRevenue || 0,
+    }));
+
+    return [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
 
   const handleExportDoctor = async (doctorName) => {
     try {
-      const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
-      ]);
-
-      const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
-      const formattedTestOrders = doctorTestOrders.map((order) => ({
-        patientName: order.patientName,
-        date: order.date,
-        disease: order.tests?.map((test) => test.testName).join(", ") || "N/A",
-        totalAmount: order.totalAmount || 0,
-        doctorRevenue: order.doctorRevenue || 0,
-        recordType: "Test Order",
-      }));
-
-      const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-        ...appointment,
-        recordType: "Appointment",
-        doctorRevenue: appointment.doctorRevenue || 0,
-      }));
-
-      const combinedRecords = [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const combinedRecords = await fetchDoctorRecords(doctorName);
       const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
 
       const data = filteredRecords.map((record) => ({
@@ -54,9 +113,13 @@ const DoctorRevenue = ({
         TotalAmount: Number(record.totalAmount) || 0,
         Revenue: Number(record.doctorRevenue) || 0,
       }));
+
       const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
+      const payment = doctorPayments[doctorName] || 0;
+      const dueAmount = totalAmount - payment;
       const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
-      data.push({ PatientName: 'Total', TotalAmount: totalAmount, Revenue: totalRevenue });
+
+      data.push({ PatientName: 'Total', DueAmount: dueAmount, Revenue: totalRevenue });
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
@@ -72,8 +135,8 @@ const DoctorRevenue = ({
     value: doctor.totalRevenue,
   }));
 
-  const displayRecords = (doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0) 
-    ? doctorData.filteredDoctorRecords 
+  const displayRecords = (doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0)
+    ? doctorData.filteredDoctorRecords
     : (doctorData.doctorRecords || []);
 
   return (
@@ -203,10 +266,23 @@ const DoctorRevenue = ({
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="font-medium text-gray-900">Dr. {doctor._id}</div>
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 items-center">
                     <div className="text-right">
-                      <div className="font-bold text-purple-600">{doctor.totalRevenue.toFixed(0)} Taka</div>
+                      <div className="font-bold text-purple-600">
+                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
+                      </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Payment</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={doctorPayments[doctor._id] || ""}
+                        onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
+                        className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter payment"
+                      />
                     </div>
                     <button
                       onClick={() => handleDoctorSelect(doctor._id)}
