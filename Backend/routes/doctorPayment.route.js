@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
     if (payment) {
       payment.paymentAmount = paymentAmount;
       payment.dueAmount = dueAmount;
-      payment.totalAmount = totalRevenue; // Store total revenue
+      payment.totalAmount = totalRevenue; 
       payment.customDateRange = customDateRange;
       payment.createdAt = Date.now();
       await payment.save();
