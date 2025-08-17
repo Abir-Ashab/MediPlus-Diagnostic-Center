@@ -29,11 +29,9 @@ const testOrderSchema = new mongoose.Schema(
     },
     disease: {
       type: String,
-      required: true,
     },
     address: {
       type: String,
-      required: true,
     },
     tests: [
       {

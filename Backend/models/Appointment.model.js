@@ -43,6 +43,16 @@ const appointmentSchema = mongoose.Schema({
     required: true
   },
 
+  paidAmount: {
+    type: Number,
+    default: 0
+  },
+
+  dueAmount: {
+    type: Number,
+    default: 0
+  },
+
   doctorName: {
     type: String
   },
