@@ -1,47 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const DoctorPayment = require('../models/DoctorPayment');
-const axios = require('axios');
 
+// POST: Save or update payment for a doctor
 router.post('/', async (req, res) => {
   try {
-    const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
-    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
-    ]);
+    const { doctorName, paymentAmount, totalAmount, dateFilter, customDateRange } = req.body;
+    const dueAmount = totalAmount - paymentAmount;
 
-    const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
-    const formattedTestOrders = doctorTestOrders.map((order) => ({
-      doctorRevenue: order.doctorRevenue || 0,
-    }));
-
-    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-      doctorRevenue: appointment.doctorRevenue || 0,
-    }));
-
-    const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
-    const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
-    const dueAmount = totalRevenue - paymentAmount;
-
-    if (paymentAmount > totalRevenue) {
-      return res.status(400).json({ message: 'Payment cannot exceed total revenue' });
-    }
-
+    // Find existing payment for the doctor and date filter
     let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
+
     if (payment) {
+      // Update existing payment
       payment.paymentAmount = paymentAmount;
       payment.dueAmount = dueAmount;
-      payment.totalAmount = totalRevenue; 
+      payment.totalAmount = totalAmount;
       payment.customDateRange = customDateRange;
       payment.createdAt = Date.now();
       await payment.save();
     } else {
+      // Create new payment
       payment = new DoctorPayment({
         doctorName,
         paymentAmount,
         dueAmount,
-        totalAmount: totalRevenue,
+        totalAmount,
         dateFilter,
         customDateRange,
       });
