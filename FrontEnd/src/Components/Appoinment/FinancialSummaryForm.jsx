@@ -617,7 +617,7 @@ const FinancialSummaryForm = ({
                 loading={loading}
                 // icon={<FileText className="w-5 h-5" />}
               >
-                {loading ? 'Creating Test Order...' : 'Create Test Order Only'}
+                {loading ? 'Creating Test Order...' : 'Create Test Order'}
               </Button>
             </div>
           </Card>

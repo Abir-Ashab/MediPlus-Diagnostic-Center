@@ -469,10 +469,10 @@ const Book_Appointment = () => {
     setUseManualTotal(false);
     setManualTotal(0);
     setPaidAmount(0);
-    toast.success("Order completed successfully! Patient information has been preserved for your next booking.", {
-      position: "top-right",
-      autoClose: 5000,
-    });
+    // toast.success("Order completed successfully! Patient information has been preserved for your next booking.", {
+    //   position: "top-right",
+    //   autoClose: 5000,
+    // });
   };
 
   // Step navigation functions
