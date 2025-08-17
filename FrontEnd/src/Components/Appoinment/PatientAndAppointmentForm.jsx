@@ -1,7 +1,7 @@
 import React from "react";
 import { Input, Select, Card } from "antd";
 import { User, Calendar, Clock, Heart, Phone, MapPin, Mail } from 'lucide-react';
-import AddressAutocomplete from "../../../../../Components/AddressAutocomplete";
+import AddressAutocomplete from "../AddressAutocomplete";
 
 const { Option } = Select;
 

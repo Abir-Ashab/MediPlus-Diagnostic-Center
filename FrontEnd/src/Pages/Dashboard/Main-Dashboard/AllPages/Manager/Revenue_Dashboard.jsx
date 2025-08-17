@@ -67,7 +67,6 @@ const RevenueDashboard = () => {
     });
   };
 
-  // Reset filters
   const resetHospitalFilters = () => {
     setHospitalDateFilter("all");
     setHospitalCustomDateRange({ start: "", end: "" });

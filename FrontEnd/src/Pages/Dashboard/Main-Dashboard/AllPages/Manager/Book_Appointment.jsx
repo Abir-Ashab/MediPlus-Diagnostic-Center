@@ -11,9 +11,9 @@ import axios from "axios";
 import { Button, Card } from "antd";
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
-import PatientAndAppointmentForm from "./PatientAndAppointmentForm";
-import TestSelectionForm from "./TestSelectionForm";
-import FinancialSummaryForm from "./FinancialSummaryForm";
+import PatientAndAppointmentForm from "../../../../../Components/Appoinment/PatientAndAppointmentForm";
+import TestSelectionForm from "../../../../../Components/Appoinment/TestSelectionForm";
+import FinancialSummaryForm from "../../../../../Components/Appoinment/FinancialSummaryForm";
 
 const Book_Appointment = () => {
   const dispatch = useDispatch();
