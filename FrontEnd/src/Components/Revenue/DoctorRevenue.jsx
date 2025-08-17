@@ -21,7 +21,7 @@ const DoctorRevenue = ({
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
   const [doctorPayments, setDoctorPayments] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState({});
+  const [saveLoading, setSaveLoading] = useState({}); // Track loading state for each doctor's save button
 
   // Fetch payment data on mount or date filter change
   useEffect(() => {
@@ -60,18 +60,28 @@ const DoctorRevenue = ({
     setSaveLoading((prev) => ({ ...prev, [doctorId]: true }));
     const paymentAmount = doctorPayments[doctorId] || 0;
 
+    // Calculate total amount for validation
+    const doctorRecords = filterRecordsByDateRange(
+      [...(await fetchDoctorRecords(doctorId))],
+      doctorDateFilter,
+      doctorCustomDateRange
+    );
+    const totalAmount = doctorRecords.reduce((sum, record) => sum + (Number(record.totalAmount) || 0), 0);
+
+    if (paymentAmount > totalAmount) {
+      toast.error("Payment cannot exceed total amount!");
+      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
+      return;
+    }
+
     try {
       const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, {
         doctorName: doctorId,
         paymentAmount,
+        totalAmount,
         dateFilter: doctorDateFilter,
         customDateRange: doctorDateFilter === 'custom' ? doctorCustomDateRange : {},
       });
-      if (response.data.message === 'Payment cannot exceed total revenue') {
-        toast.error("Payment cannot exceed total revenue!");
-        setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
-        return;
-      }
       setDoctorPayments((prev) => ({
         ...prev,
         [doctorId]: response.data.paymentAmount || 0,
@@ -126,35 +136,38 @@ const DoctorRevenue = ({
         params: { dateFilter: doctorDateFilter },
       });
       const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-      const payment = Number(paymentData.paymentAmount) || 0;
+      const payment = paymentData.paymentAmount || 0;
 
       const combinedRecords = await fetchDoctorRecords(doctorName);
       const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
 
+      const totalAmount = filteredRecords.reduce((sum, record) => sum + (Number(record.totalAmount) || 0), 0);
       const totalRevenue = filteredRecords.reduce((sum, record) => sum + (Number(record.doctorRevenue) || 0), 0);
 
-      // Distribute payment proportionally across records based on revenue
+      // Distribute payment proportionally across records
       const data = filteredRecords.map((record) => {
-        const recordRevenue = Number(record.doctorRevenue) || 0;
-        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-        const dueAmount = recordRevenue - paymentShare;
+        const recordTotal = Number(record.totalAmount) || 0;
+        const paymentShare = totalAmount > 0 ? (recordTotal / totalAmount) * payment : 0;
+        const dueAmount = recordTotal - paymentShare;
         return {
-          "Patient Name": record.patientName,
+          PatientName: record.patientName,
           Date: record.date,
           Type: record.recordType,
           Details: record.disease || record.tests?.map((test) => test.testName).join(", ") || "N/A",
-          Revenue: recordRevenue.toFixed(2),
+          "Total Amount": recordTotal,
           "Payment Share": paymentShare.toFixed(2),
           "Due Amount": dueAmount.toFixed(2),
+          Revenue: Number(record.doctorRevenue) || 0,
         };
       });
 
       // Add total row
       data.push({
-        "Patient Name": "Total",
-        Revenue: totalRevenue.toFixed(2),
+        PatientName: 'Total',
+        "Total Amount": totalAmount.toFixed(2),
         "Payment Share": payment.toFixed(2),
-        "Due Amount": (totalRevenue - payment).toFixed(2),
+        "Due Amount": (totalAmount - payment).toFixed(2),
+        Revenue: totalRevenue.toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
