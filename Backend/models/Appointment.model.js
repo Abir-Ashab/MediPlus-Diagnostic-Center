@@ -38,6 +38,29 @@ const appointmentSchema = mongoose.Schema({
     }
   }],
 
+  // Base amount before VAT and discount
+  baseAmount: {
+    type: Number,
+  },
+
+  // VAT percentage and amount
+  vatRate: {
+    type: Number,
+    default: 1 // 1% default VAT
+  },
+
+  vatAmount: {
+    type: Number,
+    default: 0
+  },
+
+  // Discount/Less amount
+  discountAmount: {
+    type: Number,
+    default: 0
+  },
+
+  // Final total after VAT and discount
   totalAmount: {
     type: Number,
     required: true
@@ -93,6 +116,12 @@ const appointmentSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+
+  orderType: {
+    type: String,
+    enum: ['appointment', 'test', 'combined'],
+    default: 'test'
+  }
 });
 
 const AppointmentModel = mongoose.model("appointment", appointmentSchema);
