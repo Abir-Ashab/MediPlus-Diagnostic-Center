@@ -35,7 +35,6 @@ const Book_Appointment = () => {
     age: "",
     gender: "",
     mobile: "",
-    disease: "",
     address: "",
     email: "",
     doctorName: "",
@@ -54,7 +53,10 @@ const Book_Appointment = () => {
   });
 
   const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "", customPrice: null }]);
-  const [totalAmount, setTotalAmount] = useState(0);
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const [useManualTotal, setUseManualTotal] = useState(false);
+  const [manualTotal, setManualTotal] = useState(0);
+  const [paidAmount, setPaidAmount] = useState(0);
   const [hospitalRevenue, setHospitalRevenue] = useState(0);
   const [doctorRevenue, setDoctorRevenue] = useState(0);
   const [brokerRevenue, setBrokerRevenue] = useState(0);
@@ -69,6 +71,9 @@ const Book_Appointment = () => {
   const [isFeeManuallyEdited, setIsFeeManuallyEdited] = useState(false); // Track if fee has been manually edited
 
   const [testsList, setTestsList] = useState([]);
+
+  const finalTotal = useManualTotal ? manualTotal : calculatedTotal;
+  const dueAmount = finalTotal - paidAmount;
 
   // Fetch tests from API
   useEffect(() => {
@@ -215,9 +220,12 @@ const Book_Appointment = () => {
       return sum + (selectedTest ? selectedTest.price : 0);
     }, 0);
     
-    setTotalAmount(total);
-    calculateRevenueDistribution(total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee]);
+    setCalculatedTotal(total);
+    if (!useManualTotal) {
+      setManualTotal(total);
+    }
+    calculateRevenueDistribution(useManualTotal ? manualTotal : total, commonData.doctorName, commonData.brokerName);
+  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee, useManualTotal, manualTotal]);
 
   const calculateRevenueDistribution = (amount, doctorName, broker) => {
     // Check if this includes appointment fee (doctor consultation)
@@ -489,6 +497,9 @@ const Book_Appointment = () => {
     setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
     setCurrentStep(1); // Reset to first step
     setIsFeeManuallyEdited(false); // Reset manual edit flag
+    setUseManualTotal(false);
+    setManualTotal(0);
+    setPaidAmount(0);
     toast.success("Order completed successfully! Patient information has been preserved for your next booking.", {
       position: "top-right",
       autoClose: 5000,
@@ -497,6 +508,13 @@ const Book_Appointment = () => {
 
   // Step navigation functions
   const nextStep = () => {
+    if (!canProceedToNextStep()) {
+      toast.error("Please fill all required fields before proceeding.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -515,21 +533,17 @@ const Book_Appointment = () => {
   // Step validation function
   const canProceedToNextStep = () => {
     if (currentStep === 1) {
-      // Step 1: Basic validation - patient info and date must be filled
       return (
         commonData.patientName &&
         commonData.age &&
         commonData.gender &&
         commonData.mobile &&
-        commonData.disease &&
         commonData.address &&
         commonData.doctorName &&
         appointmentData.date
-        // Note: time is not required here since test orders might not need specific time
       );
     }
     if (currentStep === 2) {
-      // Step 2: Test selection validation - tests are optional, but if selected, test date is required
       const hasSelectedTest = selectedTests.some(test => test.testId !== "");
       if (hasSelectedTest && !testData.date) {
         return false; // Test date is required when tests are selected
@@ -578,7 +592,9 @@ const Book_Appointment = () => {
         ...commonData,
         ...appointmentData,
         tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
-        totalAmount: appointmentData.doctorFee,
+        totalAmount: finalTotal,
+        paidAmount: paidAmount,
+        dueAmount: dueAmount,
         hospitalRevenue: appointmentHospitalRevenue,
         doctorRevenue: appointmentDoctorRevenue,
         brokerRevenue: appointmentBrokerRevenue,
@@ -598,7 +614,7 @@ const Book_Appointment = () => {
       });
       
       // Clear only appointment data, keep patient info and tests
-      setAppointmentData({ date: "", time: "", doctorFee: 0 });
+      clearFormAfterSubmit();
     } catch (error) {
       setLoading(false);
       const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
@@ -674,7 +690,9 @@ const Book_Appointment = () => {
         date: testData.date,
         time: testData.time,
         tests: testsWithPrices,
-        totalAmount: testAmount,
+        totalAmount: finalTotal,
+        paidAmount: paidAmount,
+        dueAmount: dueAmount,
         hospitalRevenue: testHospitalRevenue,
         doctorRevenue: testDoctorRevenue,
         brokerRevenue: 0,
@@ -704,8 +722,7 @@ const Book_Appointment = () => {
       });
       
       // Clear only test selection, keep patient info and appointment
-      setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
-      setTestData({ date: "", time: "" });
+      clearFormAfterSubmit();
     } catch (error) {
       setLoading(false);
       const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
@@ -772,7 +789,9 @@ const Book_Appointment = () => {
         ...commonData,
         ...appointmentData,
         tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
-        totalAmount: appointmentData.doctorFee,
+        totalAmount: finalTotal,
+        paidAmount: paidAmount,
+        dueAmount: dueAmount,
         hospitalRevenue: appointmentHospitalRevenue,
         doctorRevenue: appointmentDoctorRevenue,
         brokerRevenue: appointmentBrokerRevenue,
@@ -817,7 +836,9 @@ const Book_Appointment = () => {
         date: testData.date,
         time: testData.time,
         tests: testsWithPrices,
-        totalAmount: testAmount,
+        totalAmount: finalTotal,
+        paidAmount: paidAmount,
+        dueAmount: dueAmount,
         hospitalRevenue: testHospitalRevenue,
         doctorRevenue: testDoctorRevenue,
         brokerRevenue: 0,
@@ -1508,8 +1529,29 @@ const Book_Appointment = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="bg-blue-50 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-blue-600">৳{totalAmount}</div>
-                          <div className="text-sm text-gray-600">Total Amount</div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            ৳{finalTotal}
+                            {useManualTotal && <span className="text-xs text-orange-600 ml-2">(Manual)</span>}
+                          </div>
+                          <div className="text-sm text-gray-600 flex justify-center items-center gap-2">
+                            Total Amount
+                            <Button
+                              size="small"
+                              icon={<Edit className="w-3 h-3" />}
+                              onClick={() => setUseManualTotal(!useManualTotal)}
+                            >
+                              {useManualTotal ? 'Use Calculated' : 'Edit'}
+                            </Button>
+                          </div>
+                          {useManualTotal && (
+                            <Input
+                              type="number"
+                              value={manualTotal}
+                              onChange={(e) => setManualTotal(parseFloat(e.target.value) || 0)}
+                              className="mt-2"
+                              min="0"
+                            />
+                          )}
                         </div>
                         <div className="bg-green-50 rounded-lg p-4 text-center">
                           <div className="text-2xl font-bold text-green-600">৳{hospitalRevenue.toFixed(2)}</div>
@@ -1522,6 +1564,25 @@ const Book_Appointment = () => {
                         <div className="bg-orange-50 rounded-lg p-4 text-center">
                           <div className="text-2xl font-bold text-orange-600">৳{brokerRevenue.toFixed(2)}</div>
                           <div className="text-sm text-gray-600">Broker Commission</div>
+                        </div>
+                      </div>
+                      <Divider />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-indigo-600">৳{paidAmount}</div>
+                          <div className="text-sm text-gray-600">Paid Amount</div>
+                          <Input
+                            type="number"
+                            value={paidAmount}
+                            onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                            className="mt-2"
+                            min="0"
+                            max={finalTotal}
+                          />
+                        </div>
+                        <div className="bg-red-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-red-600">৳{dueAmount.toFixed(2)}</div>
+                          <div className="text-sm text-gray-600">Due Amount</div>
                         </div>
                       </div>
                     </Card>
@@ -1697,6 +1758,7 @@ const Book_Appointment = () => {
                         type="primary"
                         onClick={nextStep}
                         disabled={!canProceedToNextStep()}
+                        title={!canProceedToNextStep() ? 'Please fill all required fields' : ''}
                         className={`flex items-center gap-3 px-8 py-3 font-semibold rounded-xl shadow-lg transition-all duration-300 transform ${
                           canProceedToNextStep() 
                             ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105 hover:shadow-xl' 
