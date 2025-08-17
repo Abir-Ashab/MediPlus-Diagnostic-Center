@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const DoctorPayment = require('../models/DoctorPayment');
+const DoctorPayment = require('../models/doctorPayment.model');
 
 // POST: Save or update payment for a doctor
 router.post('/', async (req, res) => {
