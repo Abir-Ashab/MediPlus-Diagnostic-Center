@@ -56,6 +56,13 @@ const Book_Appointment = () => {
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [useManualTotal, setUseManualTotal] = useState(false);
   const [manualTotal, setManualTotal] = useState(0);
+  
+  // New VAT and discount states
+  const [baseTotal, setBaseTotal] = useState(0);
+  const [vatRate, setVatRate] = useState(1); // Default 1% VAT
+  const [vatAmount, setVatAmount] = useState(0);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  
   const [paidAmount, setPaidAmount] = useState(0);
   const [hospitalRevenue, setHospitalRevenue] = useState(0);
   const [doctorRevenue, setDoctorRevenue] = useState(0);
@@ -71,7 +78,8 @@ const Book_Appointment = () => {
 
   const [testsList, setTestsList] = useState([]);
 
-  const finalTotal = useManualTotal ? manualTotal : calculatedTotal;
+  // Calculate final total with VAT and discount
+  const finalTotal = useManualTotal ? manualTotal : (baseTotal + vatAmount - discountAmount);
   const dueAmount = finalTotal - paidAmount;
 
   useEffect(() => {
@@ -197,13 +205,14 @@ const Book_Appointment = () => {
     }
   }, [commonData.doctorName, doctorsList, isFeeManuallyEdited]);
 
+  // Calculate base total and then apply VAT and discount
   useEffect(() => {
-    let total = 0;
+    let base = 0;
     if (appointmentData.doctorFee > 0) {
-      total += appointmentData.doctorFee;
+      base += appointmentData.doctorFee;
     }
     
-    total += selectedTests.reduce((sum, test) => {
+    base += selectedTests.reduce((sum, test) => {
       if (!test.testId || test.testId === "doctor-fee") return sum;
       
       if (test.customPrice !== null && test.customPrice !== undefined) {
@@ -215,16 +224,26 @@ const Book_Appointment = () => {
       return sum + (selectedTest ? selectedTest.price : 0);
     }, 0);
     
+    setBaseTotal(base);
+    
+    // Calculate VAT amount
+    const vat = (base * vatRate) / 100;
+    setVatAmount(vat);
+    
+    // Calculate final total
+    const total = base + vat - discountAmount;
     setCalculatedTotal(total);
+    
     if (!useManualTotal) {
       setManualTotal(total);
     }
+    
     calculateRevenueDistribution(useManualTotal ? manualTotal : total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee, useManualTotal, manualTotal]);
+  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee, useManualTotal, manualTotal, vatRate, discountAmount]);
 
   const calculateRevenueDistribution = (amount, doctorName, broker) => {
     const hasAppointmentFee = appointmentData.doctorFee > 0;
-    const testAmount = amount - (hasAppointmentFee ? appointmentData.doctorFee : 0);
+    const testAmount = baseTotal - (hasAppointmentFee ? appointmentData.doctorFee : 0);
     
     let doctorCommission = 0;
     let brokerCommission = 0;
@@ -249,6 +268,9 @@ const Book_Appointment = () => {
       const brokerCommissionRate = customBrokerCommission !== null ? customBrokerCommission / 100 : (selectedBroker ? selectedBroker.commissionRate / 100 : 0.05);
       brokerCommission = appointmentData.doctorFee * brokerCommissionRate;
     }
+    
+    // Add VAT to hospital revenue and subtract discount from hospital revenue
+    hospitalShare += vatAmount - discountAmount;
     
     setHospitalRevenue(Math.max(0, hospitalShare));
     setDoctorRevenue(doctorCommission);
@@ -469,10 +491,8 @@ const Book_Appointment = () => {
     setUseManualTotal(false);
     setManualTotal(0);
     setPaidAmount(0);
-    // toast.success("Order completed successfully! Patient information has been preserved for your next booking.", {
-    //   position: "top-right",
-    //   autoClose: 5000,
-    // });
+    setDiscountAmount(0);
+    setVatRate(1); // Reset to default 1%
   };
 
   // Step navigation functions
@@ -549,12 +569,16 @@ const Book_Appointment = () => {
         : (selectedBroker ? selectedBroker.commissionRate / 100 : 0);
       const appointmentBrokerRevenue = commonData.brokerName ? appointmentData.doctorFee * brokerCommissionRate : 0;
       
-      const appointmentHospitalRevenue = 0;
+      const appointmentHospitalRevenue = vatAmount - discountAmount; // VAT goes to hospital, discount reduces hospital revenue
 
       const patientData = {
         ...commonData,
         ...appointmentData,
         tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
+        baseAmount: baseTotal,
+        vatRate: vatRate,
+        vatAmount: vatAmount,
+        discountAmount: discountAmount,
         totalAmount: finalTotal,
         paidAmount: paidAmount,
         dueAmount: dueAmount,
@@ -641,13 +665,17 @@ const Book_Appointment = () => {
         ? customDoctorCommission / 100 
         : (selectedDoctor ? selectedDoctor.testReferralCommission / 100 : 0);
       const testDoctorRevenue = commonData.doctorName ? testAmount * doctorTestCommissionRate : 0;
-      const testHospitalRevenue = testAmount - testDoctorRevenue;
+      const testHospitalRevenue = testAmount - testDoctorRevenue + vatAmount - discountAmount; // Include VAT and discount
 
       const patientData = {
         ...commonData,
         date: testData.date,
         time: testData.time,
         tests: testsWithPrices,
+        baseAmount: baseTotal,
+        vatRate: vatRate,
+        vatAmount: vatAmount,
+        discountAmount: discountAmount,
         totalAmount: finalTotal,
         paidAmount: paidAmount,
         dueAmount: dueAmount,
@@ -798,6 +826,10 @@ const Book_Appointment = () => {
                     testData={testData}
                     selectedTests={selectedTests}
                     testsList={testsList}
+                    baseTotal={baseTotal}
+                    vatRate={vatRate}
+                    vatAmount={vatAmount}
+                    discountAmount={discountAmount}
                     finalTotal={finalTotal}
                     hospitalRevenue={hospitalRevenue}
                     doctorRevenue={doctorRevenue}
@@ -817,6 +849,8 @@ const Book_Appointment = () => {
                     setUseManualTotal={setUseManualTotal}
                     setManualTotal={setManualTotal}
                     setPaidAmount={setPaidAmount}
+                    setVatRate={setVatRate}
+                    setDiscountAmount={setDiscountAmount}
                     setCustomDoctorCommission={setCustomDoctorCommission}
                     setCustomAppointmentCommission={setCustomAppointmentCommission}
                     setCustomDoctorFee={setCustomDoctorFee}

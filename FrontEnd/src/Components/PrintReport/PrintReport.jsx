@@ -60,6 +60,16 @@ const PrintReport = ({ order, onPrint }) => {
       deliveryTime = `${start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })} to ${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
     }
 
+    // Calculate totals properly
+    const baseAmount = order.baseAmount || order.totalAmount || 0;
+    const vatRate = order.vatRate || 0;
+    const vatAmount = order.vatAmount || 0;
+    const discountAmount = order.discountAmount || 0;
+    const totalWithVat = baseAmount + vatAmount;
+    const finalTotal = totalWithVat - discountAmount;
+    const paidAmount = order.paidAmount || 0;
+    const dueAmount = order.dueAmount || (finalTotal - paidAmount);
+
     printWindow.document.write(`
       <html>
       <head>
@@ -208,7 +218,7 @@ const PrintReport = ({ order, onPrint }) => {
                 <tr class="test-row">
                   <td class="group-row">APPOINTMENT</td>
                   <td class="test-name-col">Doctor Consultation (${order.doctorName})</td>
-                  <td class="price-col">${order.totalAmount}.00</td>
+                  <td class="price-col">${baseAmount.toFixed(2)}</td>
                 </tr>
               `
               : Object.keys(groupedTests).map(category => {
@@ -223,14 +233,14 @@ const PrintReport = ({ order, onPrint }) => {
                         <tr class="test-row">
                           <td rowspan="${categoryTests.length}" class="group-row">${categoryDisplayName.toUpperCase()}</td>
                           <td class="test-name-col">${test.testName}</td>
-                          <td class="price-col">${test.testPrice}.00</td>
+                          <td class="price-col">${test.testPrice.toFixed(2)}</td>
                         </tr>
                       `;
                     } else {
                       return `
                         <tr class="test-row">
                           <td class="test-name-col">${test.testName}</td>
-                          <td class="price-col">${test.testPrice}.00</td>
+                          <td class="price-col">${test.testPrice.toFixed(2)}</td>
                         </tr>
                       `;
                     }
@@ -249,14 +259,14 @@ const PrintReport = ({ order, onPrint }) => {
             </div>
           </div>
           <div class="totals-box">
-            <div class="total-line"><strong>Total:</strong> ${order.totalAmount}.00</div>
-            <div class="total-line"><strong>Add Vat (0%):</strong> 0.00</div>
+            <div class="total-line"><strong>Total:</strong> ${baseAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Add Vat (${vatRate}%):</strong> ${vatAmount.toFixed(2)}</div>
             <br/>
             <div style="border-top: 1px solid #000; width: 150px; margin-bottom: 5px;"></div>
-            <div class="total-line"><strong>Total+Vat:</strong> ${order.totalAmount}.00</div>
-            <div class="total-line"><strong>Advance:</strong> ${order.paidAmount}.00</div>
-            <div class="total-line"><strong>Due:</strong> ${order.dueAmount}.00</div>
-            <div class="total-line"><strong>Less:</strong> 0.00</div>
+            <div class="total-line"><strong>Total+Vat:</strong> ${totalWithVat.toFixed(2)}</div>
+            <div class="total-line"><strong>Advance:</strong> ${paidAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Due:</strong> ${dueAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Less:</strong> ${discountAmount.toFixed(2)}</div>
           </div>
         </div>
       </body>
@@ -321,6 +331,16 @@ export const usePrintReport = () => {
       deliveryTime = `${start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })} to ${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
     }
 
+    // Calculate totals properly
+    const baseAmount = order.baseAmount || order.totalAmount || 0;
+    const vatRate = order.vatRate || 0;
+    const vatAmount = order.vatAmount || 0;
+    const discountAmount = order.discountAmount || 0;
+    const totalWithVat = baseAmount + vatAmount;
+    const finalTotal = totalWithVat - discountAmount;
+    const paidAmount = order.paidAmount || 0;
+    const dueAmount = order.dueAmount || (finalTotal - paidAmount);
+
     printWindow.document.write(`
       <html>
       <head>
@@ -469,7 +489,7 @@ export const usePrintReport = () => {
                 <tr class="test-row">
                   <td class="group-row">APPOINTMENT</td>
                   <td class="test-name-col">Doctor Consultation (${order.doctorName})</td>
-                  <td class="price-col">${order.totalAmount}.00</td>
+                  <td class="price-col">${baseAmount.toFixed(2)}</td>
                 </tr>
               `
               : Object.keys(groupedTests).map(category => {
@@ -484,14 +504,14 @@ export const usePrintReport = () => {
                         <tr class="test-row">
                           <td rowspan="${categoryTests.length}" class="group-row">${categoryDisplayName.toUpperCase()}</td>
                           <td class="test-name-col">${test.testName}</td>
-                          <td class="price-col">${test.testPrice}.00</td>
+                          <td class="price-col">${test.testPrice.toFixed(2)}</td>
                         </tr>
                       `;
                     } else {
                       return `
                         <tr class="test-row">
                           <td class="test-name-col">${test.testName}</td>
-                          <td class="price-col">${test.testPrice}.00</td>
+                          <td class="price-col">${test.testPrice.toFixed(2)}</td>
                         </tr>
                       `;
                     }
@@ -510,14 +530,14 @@ export const usePrintReport = () => {
             </div>
           </div>
           <div class="totals-box">
-            <div class="total-line"><strong>Total:</strong> ${order.totalAmount}.00</div>
-            <div class="total-line"><strong>Add Vat (0%):</strong> 0.00</div>
+            <div class="total-line"><strong>Total:</strong> ${baseAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Add Vat (${vatRate}%):</strong> ${vatAmount.toFixed(2)}</div>
             <br/>
             <div style="border-top: 1px solid #000; width: 150px; margin-bottom: 5px;"></div>
-            <div class="total-line"><strong>Total+Vat:</strong> ${order.totalAmount}.00</div>
-            <div class="total-line"><strong>Advance:</strong> ${order.paidAmount}.00</div>
-            <div class="total-line"><strong>Due:</strong> ${order.dueAmount}.00</div>
-            <div class="total-line"><strong>Less:</strong> 0.00</div>
+            <div class="total-line"><strong>Total+Vat:</strong> ${totalWithVat.toFixed(2)}</div>
+            <div class="total-line"><strong>Advance:</strong> ${paidAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Due:</strong> ${dueAmount.toFixed(2)}</div>
+            <div class="total-line"><strong>Less:</strong> ${discountAmount.toFixed(2)}</div>
           </div>
         </div>
       </body>
