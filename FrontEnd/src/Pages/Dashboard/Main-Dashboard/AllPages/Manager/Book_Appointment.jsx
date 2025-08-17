@@ -689,7 +689,7 @@ const Book_Appointment = () => {
 
       const testOrderData = { ...patientData, patientID: patientResponse.id };
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
-      
+      // const response2 = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments", testOrderData);
       setLoading(false);
       
       setLastCreatedOrder({

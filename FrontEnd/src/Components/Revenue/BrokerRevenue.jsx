@@ -20,7 +20,7 @@ const BrokerRevenue = ({
 }) => {
   const handleExportBroker = async (brokerName) => {
     try {
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?brokerName=${brokerName}`);
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
       const appointments = response.data;
       const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
 

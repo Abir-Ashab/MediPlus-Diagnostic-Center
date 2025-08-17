@@ -51,8 +51,9 @@ router.post("/", async (req, res) => {
 
 // Get all test orders
 router.get("/", async (req, res) => {
+  let query = req.query;
   try {
-    const testOrders = await TestOrderModel.find().sort({ createdAt: -1 });
+    const testOrders = await TestOrderModel.find(query).sort({ createdAt: -1 });
     res.status(200).json(testOrders);
   } catch (error) {
     res.status(500).json({ message: error.message });
