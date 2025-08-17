@@ -176,7 +176,6 @@ const RevenueDashboard = () => {
     }
   };
 
-  // Broker filter handlers
   const handleBrokerDateFilterChange = (filterType) => {
     setBrokerDateFilter(filterType);
     if (filterType !== "custom") {
@@ -209,7 +208,6 @@ const RevenueDashboard = () => {
     }
   };
 
-  // Handle doctor selection
   const handleDoctorSelect = async (doctorName) => {
     setSelectedDoctor(doctorName);
     try {
@@ -401,8 +399,7 @@ const RevenueDashboard = () => {
           filteredDoctorRecords: [],
         });
 
-        // Process broker data
-        const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
+        const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
         const filteredBrokers = (brokerResponse.data.brokers || []).filter((broker) => broker._id !== null);
         setBrokerData({
           brokers: filteredBrokers,

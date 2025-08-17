@@ -250,4 +250,40 @@ router.get("/doctors/commission", async (req, res) => {
   }
 });
 
+router.get("/revenue/broker", async (req, res) => {
+  try {
+    // Get broker-wise revenue
+    const brokerRevenue = await TestOrderModel.aggregate([
+      { $match: { brokerName: { $ne: null, $ne: "" } } },
+      {
+        $group: {
+          _id: "$brokerName",
+          totalRevenue: { $sum: "$brokerRevenue" },
+          appointments: { $sum: 1 }
+        }
+      },
+      { $sort: { totalRevenue: -1 } }
+    ]);
+
+    // Get overall total
+    const totalResult = await TestOrderModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalBrokerRevenue: { $sum: "$brokerRevenue" },
+          totalAppointments: { $sum: { $cond: [{ $ne: ["$brokerName", ""] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    res.status(200).send({
+      brokers: brokerRevenue,
+      summary: totalResult[0] || { totalBrokerRevenue: 0, totalAppointments: 0 }
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({ error: "Failed to fetch broker revenue" });
+  }
+});
+
 module.exports = router;
