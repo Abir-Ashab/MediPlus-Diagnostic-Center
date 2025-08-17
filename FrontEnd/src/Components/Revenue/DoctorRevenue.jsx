@@ -20,8 +20,10 @@ const DoctorRevenue = ({
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
   const [doctorPayments, setDoctorPayments] = useState({});
+  const [exportLoading, setExportLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState({}); // Track loading state for each doctor's save button
 
-  // New: Fetch payment data on mount
+  // Fetch payment data on mount or date filter change
   useEffect(() => {
     const fetchPayments = async () => {
       try {
@@ -44,15 +46,21 @@ const DoctorRevenue = ({
     fetchPayments();
   }, [doctorData.doctors, doctorDateFilter]);
 
-  // Modified: Update payment and save to backend
-  const handlePaymentChange = async (doctorId, payment) => {
-    const paymentAmount = Number(payment) || 0;
+  // Handle payment input change (local state only)
+  const handlePaymentChange = (doctorId, payment) => {
+    const paymentAmount = Math.max(Number(payment) || 0, 0);
     setDoctorPayments((prev) => ({
       ...prev,
       [doctorId]: paymentAmount,
     }));
+  };
 
-    // Calculate total amount for the doctor
+  // Save payment to backend
+  const handleSavePayment = async (doctorId) => {
+    setSaveLoading((prev) => ({ ...prev, [doctorId]: true }));
+    const paymentAmount = doctorPayments[doctorId] || 0;
+
+    // Calculate total amount for validation
     const doctorRecords = filterRecordsByDateRange(
       [...(await fetchDoctorRecords(doctorId))],
       doctorDateFilter,
@@ -60,73 +68,118 @@ const DoctorRevenue = ({
     );
     const totalAmount = doctorRecords.reduce((sum, record) => sum + (Number(record.totalAmount) || 0), 0);
 
+    if (paymentAmount > totalAmount) {
+      toast.error("Payment cannot exceed total amount!");
+      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
+      return;
+    }
+
     try {
-      await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, {
+      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, {
         doctorName: doctorId,
         paymentAmount,
         totalAmount,
         dateFilter: doctorDateFilter,
         customDateRange: doctorDateFilter === 'custom' ? doctorCustomDateRange : {},
       });
+      setDoctorPayments((prev) => ({
+        ...prev,
+        [doctorId]: response.data.paymentAmount || 0,
+      }));
+      toast.success("Payment saved successfully!");
     } catch (error) {
       console.error("Error saving payment:", error);
       toast.error("Failed to save payment");
+    } finally {
+      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
     }
   };
 
-  // New: Helper function to fetch doctor records
+  // Fetch doctor records
   const fetchDoctorRecords = async (doctorName) => {
-    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
-    ]);
+    try {
+      const [appointmentsResponse, testOrdersResponse] = await Promise.all([
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
+        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
+      ]);
 
-    const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
-    const formattedTestOrders = doctorTestOrders.map((order) => ({
-      patientName: order.patientName,
-      date: order.date,
-      disease: order.tests?.map((test) => test.testName).join(", ") || "N/A",
-      totalAmount: order.totalAmount || 0,
-      doctorRevenue: order.doctorRevenue || 0,
-      recordType: "Test Order",
-    }));
+      const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
+      const formattedTestOrders = doctorTestOrders.map((order) => ({
+        patientName: order.patientName,
+        date: order.date,
+        disease: order.tests?.map((test) => test.testName).join(", ") || "N/A",
+        totalAmount: order.totalAmount || 0,
+        doctorRevenue: order.doctorRevenue || 0,
+        recordType: "Test Order",
+      }));
 
-    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-      ...appointment,
-      recordType: "Appointment",
-      doctorRevenue: appointment.doctorRevenue || 0,
-    }));
+      const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
+        ...appointment,
+        recordType: "Appointment",
+        doctorRevenue: appointment.doctorRevenue || 0,
+      }));
 
-    return [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+      return [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+    } catch (error) {
+      console.error("Error fetching doctor records:", error);
+      throw error;
+    }
   };
 
+  // Export doctor data
   const handleExportDoctor = async (doctorName) => {
+    if (exportLoading) return;
+    setExportLoading(true);
     try {
+      // Fetch latest payment data
+      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
+        params: { dateFilter: doctorDateFilter },
+      });
+      const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
+      const payment = paymentData.paymentAmount || 0;
+
       const combinedRecords = await fetchDoctorRecords(doctorName);
       const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
 
-      const data = filteredRecords.map((record) => ({
-        PatientName: record.patientName,
-        Date: record.date,
-        Type: record.recordType,
-        Details: record.disease || record.tests?.map((test) => test.testName).join(", ") || "N/A",
-        TotalAmount: Number(record.totalAmount) || 0,
-        Revenue: Number(record.doctorRevenue) || 0,
-      }));
+      const totalAmount = filteredRecords.reduce((sum, record) => sum + (Number(record.totalAmount) || 0), 0);
+      const totalRevenue = filteredRecords.reduce((sum, record) => sum + (Number(record.doctorRevenue) || 0), 0);
 
-      const totalAmount = data.reduce((sum, row) => sum + (row.TotalAmount || 0), 0);
-      const payment = doctorPayments[doctorName] || 0;
-      const dueAmount = totalAmount - payment;
-      const totalRevenue = data.reduce((sum, row) => sum + (row.Revenue || 0), 0);
+      // Distribute payment proportionally across records
+      const data = filteredRecords.map((record) => {
+        const recordTotal = Number(record.totalAmount) || 0;
+        const paymentShare = totalAmount > 0 ? (recordTotal / totalAmount) * payment : 0;
+        const dueAmount = recordTotal - paymentShare;
+        return {
+          PatientName: record.patientName,
+          Date: record.date,
+          Type: record.recordType,
+          Details: record.disease || record.tests?.map((test) => test.testName).join(", ") || "N/A",
+          "Total Amount": recordTotal,
+          "Payment Share": paymentShare.toFixed(2),
+          "Due Amount": dueAmount.toFixed(2),
+          Revenue: Number(record.doctorRevenue) || 0,
+        };
+      });
 
-      data.push({ PatientName: 'Total', DueAmount: dueAmount, Revenue: totalRevenue });
+      // Add total row
+      data.push({
+        PatientName: 'Total',
+        "Total Amount": totalAmount.toFixed(2),
+        "Payment Share": payment.toFixed(2),
+        "Due Amount": (totalAmount - payment).toFixed(2),
+        Revenue: totalRevenue.toFixed(2),
+      });
+
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
       XLSX.writeFile(wb, `doctor_${doctorName}_revenue.xlsx`);
+      toast.success("Report exported successfully!");
     } catch (error) {
       console.error("Error exporting doctor revenue:", error);
       toast.error("Failed to export doctor revenue");
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -273,16 +326,25 @@ const DoctorRevenue = ({
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="block text-sm font-medium text-gray-700">Payment</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={doctorPayments[doctor._id] || ""}
-                        onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
-                        className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="Enter payment"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={doctorPayments[doctor._id] || ""}
+                          onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
+                          className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          placeholder="Enter payment"
+                        />
+                        <button
+                          onClick={() => handleSavePayment(doctor._id)}
+                          className={`px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${saveLoading[doctor._id] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={saveLoading[doctor._id]}
+                        >
+                          {saveLoading[doctor._id] ? 'Saving...' : 'Save Payment'}
+                        </button>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleDoctorSelect(doctor._id)}
@@ -292,9 +354,10 @@ const DoctorRevenue = ({
                     </button>
                     <button
                       onClick={() => handleExportDoctor(doctor._id)}
-                      className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      className={`px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${exportLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={exportLoading}
                     >
-                      Export
+                      {exportLoading ? 'Exporting...' : 'Export'}
                     </button>
                   </div>
                 </div>
