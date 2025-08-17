@@ -1,165 +1,164 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Input, AutoComplete } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Select, Input } from 'antd';
 import { MapPin } from 'lucide-react';
-import { debounce } from 'lodash';
 
-const AddressAutocomplete = ({ 
-  value, 
-  onChange, 
-  placeholder = "", 
-  className = "",
-  required = false 
-}) => {
-  const [options, setOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
+const { Option } = Select;
 
-  // Debounced function to search for places
-  const searchPlaces = useCallback(
-    debounce(async (searchText) => {
-      if (!searchText || searchText.length < 3) {
-        setOptions([]);
-        return;
+// Static addresses for Narayanganj District
+const narayanganjAddresses = [
+  // Narayanganj Sadar Upazila
+  'Narayanganj Sadar, Narayanganj',
+  'Chashara, Narayanganj Sadar',
+  'Fatullah, Narayanganj Sadar',
+  'Kadam Rasul, Narayanganj Sadar',
+  'Panchdona, Narayanganj Sadar',
+  'Siddhirganj, Narayanganj Sadar',
+  'Kalagachhia, Narayanganj Sadar',
+  'Godnail, Narayanganj Sadar',
+  
+  // Araihazar Upazila
+  'Araihazar Sadar, Araihazar',
+  'Sreenagar, Araihazar',
+  'Hajipur, Araihazar',
+  'Shimrail, Araihazar',
+  'Chandra, Araihazar',
+  'Nayamati, Araihazar',
+  
+  // Bandar Upazila
+  'Bandar Sadar, Bandar',
+  'East Char, Bandar',
+  'West Char, Bandar',
+  'Char Bhadrasan, Bandar',
+  'Char Atra, Bandar',
+  
+  // Rupganj Upazila
+  'Rupganj Sadar, Rupganj',
+  'Bhulta, Rupganj',
+  'Murapara, Rupganj',
+  'Kayetpara, Rupganj',
+  'Golakandail, Rupganj',
+  'Tarabo, Rupganj',
+  
+  // Sonargaon Upazila
+  'Sonargaon Sadar, Sonargaon',
+  'Pirojpur, Sonargaon',
+  'Kholamora, Sonargaon',
+  'Hasara, Sonargaon',
+  'Jampur, Sonargaon',
+  'Baidya Bazar, Sonargaon',
+  'Barodi, Sonargaon',
+  'Noagaon, Sonargaon',
+  
+  // Popular Areas and Neighborhoods
+  'Shitalakshya Residential Area, Narayanganj',
+  'BSCIC Industrial Area, Narayanganj',
+  'Chandra Highway, Narayanganj',
+  'Khanpur, Narayanganj',
+  'Nabiganj, Narayanganj',
+  'Deobhog, Narayanganj',
+  'Madanganj, Narayanganj',
+  'Pagla, Narayanganj',
+  'Signboard, Narayanganj',
+  'Telipara, Narayanganj',
+  'Bondor Bazaar, Narayanganj',
+  'Shimrail Bazar, Narayanganj',
+  'Rupganj Bazar, Narayanganj',
+  'Sonargaon Bazar, Narayanganj',
+  'Araihazar Bazar, Narayanganj'
+];
+
+const NarayanganjAddressSelect = ({ value, onChange, placeholder = "Type to search or select address in Narayanganj..." }) => {
+  const [searchText, setSearchText] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
       }
+    };
 
-      setLoading(true);
-      try {
-        // Using Nominatim API for Bangladesh addresses - free and reliable
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?` +
-          `q=${encodeURIComponent(searchText)}&` +
-          `countrycodes=bd&` +
-          `format=json&` +
-          `limit=8&` +
-          `addressdetails=1&` +
-          `accept-language=en`
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          const formattedOptions = data.map((place, index) => {
-            // Format the display name for better readability
-            let displayName = place.display_name;
-            
-            // Extract key components
-            const address = place.address || {};
-            const components = [];
-            
-            // Add road/area name if available
-            if (address.road) components.push(address.road);
-            if (address.neighbourhood) components.push(address.neighbourhood);
-            if (address.suburb) components.push(address.suburb);
-            
-            // Add city/district
-            if (address.city) components.push(address.city);
-            else if (address.county) components.push(address.county);
-            else if (address.state_district) components.push(address.state_district);
-            
-            // Add division/state
-            if (address.state) components.push(address.state);
-            
-            // Create a cleaner display name
-            const cleanDisplayName = components.length > 0 
-              ? components.join(', ') + ', Bangladesh'
-              : displayName;
-
-            return {
-              value: cleanDisplayName,
-              label: (
-                <div className="flex items-center gap-2 py-1">
-                  <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {components.slice(0, 2).join(', ') || place.name}
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {components.slice(2).join(', ') || 'Bangladesh'}
-                    </div>
-                  </div>
-                </div>
-              ),
-              key: `${place.place_id}-${index}`,
-              originalData: place
-            };
-          });
-
-          setOptions(formattedOptions);
-        } else {
-          console.warn('Address search API error:', response.status);
-          setOptions([]);
-        }
-      } catch (error) {
-        console.error('Error searching addresses:', error);
-        setOptions([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300),
-    []
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Filter addresses based on search text
+  const filteredAddresses = narayanganjAddresses.filter(address =>
+    address.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  useEffect(() => {
-    if (value && value.length >= 3) {
-      searchPlaces(value);
-    } else {
-      setOptions([]);
-    }
-  }, [value, searchPlaces]);
-
-  const handleSearch = (searchText) => {
-    if (onChange) {
-      onChange(searchText);
-    }
+  const handleInputChange = (e) => {
+    const inputValue = e.target.value;
+    setSearchText(inputValue);
+    onChange(inputValue);
+    setIsTyping(true);
+    setShowDropdown(inputValue.length > 0);
   };
 
-  const handleSelect = (selectedValue, option) => {
-    if (onChange) {
-      onChange(selectedValue);
-    }
-    setOptions([]); // Clear options after selection
+  const handleInputFocus = () => {
+    setShowDropdown(true);
   };
+
+  const handleAddressSelect = (address) => {
+    onChange(address);
+    setSearchText('');
+    setIsTyping(false);
+    setShowDropdown(false);
+  };
+
+  const handleInputClear = () => {
+    onChange('');
+    setSearchText('');
+    setIsTyping(false);
+    setShowDropdown(false);
+  };
+
+  // Show all addresses when focused but not typing, filtered when typing
+  const addressesToShow = searchText ? filteredAddresses : narayanganjAddresses;
 
   return (
-    <AutoComplete
-      value={value}
-      options={options}
-      onSearch={handleSearch}
-      onSelect={handleSelect}
-      className={`w-full ${className}`}
-      filterOption={false}
-      notFoundContent={loading ? (
-        <div className="flex items-center justify-center py-3">
-          <div className="flex items-center gap-2 text-gray-500">
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm">Searching addresses...</span>
-          </div>
-        </div>
-      ) : options.length === 0 && value && value.length >= 3 ? (
-        <div className="flex items-center gap-2 py-3 px-3 text-gray-500">
-          <MapPin className="w-4 h-4" />
-          <span className="text-sm">No addresses found. Try a different search term.</span>
-        </div>
-      ) : null}
-      dropdownStyle={{
-        maxHeight: '300px',
-        overflow: 'auto',
-        backgroundColor: 'white',
-        border: '1px solid #d1d5db',
-        borderRadius: '8px',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-      }}
-    >
+    <div className="relative" ref={dropdownRef}>
       <Input
         prefix={<MapPin className="w-4 h-4 text-gray-400" />}
         placeholder={placeholder}
-        required={required}
+        value={value}
+        onChange={handleInputChange}
+        onFocus={handleInputFocus}
+        allowClear
+        onClear={handleInputClear}
         className="border-gray-200 focus:ring-blue-500"
-        suffix={loading ? (
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        ) : null}
       />
-    </AutoComplete>
+      
+      {/* Combined Search Results and All Options Dropdown */}
+      {showDropdown && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          {addressesToShow.length > 0 ? (
+            <>
+              {addressesToShow.map((address, index) => (
+                <div
+                  key={index}
+                  className="px-3 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
+                  onClick={() => handleAddressSelect(address)}
+                >
+                  <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <span className="text-sm">{address}</span>
+                </div>
+              ))}
+            </>
+          ) : searchText ? (
+            <div className="px-3 py-2 text-sm text-gray-500">
+              No matching addresses found. You can still use "{searchText}" as your address.
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 };
 
-export default AddressAutocomplete;
+export default NarayanganjAddressSelect;
