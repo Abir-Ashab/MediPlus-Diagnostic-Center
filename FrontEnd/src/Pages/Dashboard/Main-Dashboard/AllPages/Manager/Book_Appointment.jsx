@@ -688,143 +688,6 @@ const Book_Appointment = () => {
     }
   };
 
-  const HandleCombinedSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (commonData.gender === "") {
-      return toast.error("Please fill all the required fields", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-    
-    if (!appointmentData.time) {
-      return toast.error("Please select an appointment time", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-
-    if (!testData.date) {
-      return toast.error("Please select a date for the test order", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-
-    const hasSelectedTest = selectedTests.some(test => test.testId !== "");
-    if (!hasSelectedTest) {
-      return toast.error("Please select at least one test", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-
-    setLoading(true);
-    try {
-      // First submit appointment
-      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-      const selectedBroker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
-      
-      const appointmentDoctorRevenue = appointmentData.doctorFee;
-      
-      const brokerCommissionRate = customBrokerCommission !== null 
-        ? customBrokerCommission / 100 
-        : (selectedBroker ? selectedBroker.commissionRate / 100 : 0);
-      const appointmentBrokerRevenue = commonData.brokerName ? appointmentData.doctorFee * brokerCommissionRate : 0;
-      
-      const appointmentHospitalRevenue = 0;
-      
-      const appointmentPatientData = {
-        ...commonData,
-        ...appointmentData,
-        tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
-        totalAmount: finalTotal,
-        paidAmount: paidAmount,
-        dueAmount: dueAmount,
-        hospitalRevenue: appointmentHospitalRevenue,
-        doctorRevenue: appointmentDoctorRevenue,
-        brokerRevenue: appointmentBrokerRevenue,
-        orderType: 'appointment',
-      };
-
-      const appointmentPatientResponse = await dispatch(AddPatients({ ...appointmentPatientData, patientId: Date.now() }));
-      const bookingData = { ...appointmentPatientData, patientID: appointmentPatientResponse.id };
-      await dispatch(CreateBooking(bookingData));
-
-      // Then submit test order
-      const testsWithPrices = selectedTests
-        .filter(test => test.testId !== "")
-        .map(test => {
-          const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
-                             TestsList.find(t => t.id === parseInt(test.testId));
-          
-          const finalPrice = test.customPrice !== null && test.customPrice !== undefined 
-            ? test.customPrice 
-            : selectedTest.price;
-          
-          return { 
-            testName: selectedTest.title, 
-            testPrice: finalPrice,
-            originalPrice: selectedTest.price,
-            isCustomPrice: test.customPrice !== null && test.customPrice !== undefined,
-            category: selectedTest.category
-          };
-        });
-
-      const testAmount = testsWithPrices.reduce((sum, test) => sum + test.testPrice, 0);
-      
-      const doctorTestCommissionRate = customDoctorCommission !== null 
-        ? customDoctorCommission / 100 
-        : (selectedDoctor ? selectedDoctor.testReferralCommission / 100 : 0);
-      const testDoctorRevenue = commonData.doctorName ? testAmount * doctorTestCommissionRate : 0;
-      const testHospitalRevenue = testAmount - testDoctorRevenue;
-      
-      const testPatientData = {
-        ...commonData,
-        date: testData.date,
-        time: testData.time,
-        tests: testsWithPrices,
-        totalAmount: finalTotal,
-        paidAmount: paidAmount,
-        dueAmount: dueAmount,
-        hospitalRevenue: testHospitalRevenue,
-        doctorRevenue: testDoctorRevenue,
-        brokerRevenue: 0,
-        orderType: 'test',
-      };
-
-      const testPatientResponse = await dispatch(AddPatients({ ...testPatientData, patientId: Date.now() + 1 }));
-      const testOrderData = { ...testPatientData, patientID: testPatientResponse.id };
-      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
-      
-      fetchBookedAppointments(commonData.doctorName, appointmentData.date);
-      setLoading(false);
-      
-      setLastCreatedOrder({
-        ...testOrderData,
-        _id: response.data._id || Date.now().toString()
-      });
-      
-      setShowPrintModal(true);
-      
-      toast.success("Both appointment and test order created successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      
-      clearFormAfterSubmit();
-    } catch (error) {
-      setLoading(false);
-      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
-      toast.error(`Error: ${errorMessage}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
-      console.error("Error:", error);
-    }
-  };
-
   return (
     <div>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
@@ -833,7 +696,6 @@ const Book_Appointment = () => {
         <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`}>
           <div className="flex-1 p-6 ml-40">
             <div>
-              {/* Header */}
               <Card className="mb-6 shadow-lg border border-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
@@ -845,8 +707,6 @@ const Book_Appointment = () => {
                   </div>
                 </div>
               </Card>
-
-              {/* Step Indicator */}
               <Card className="mb-6 shadow-lg border border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-6">
@@ -913,7 +773,6 @@ const Book_Appointment = () => {
                   />
                 )}
 
-                {/* Step 2: Test Selection Form */}
                 {currentStep === 2 && (
                   <TestSelectionForm
                     selectedTests={selectedTests}
@@ -969,12 +828,10 @@ const Book_Appointment = () => {
                     updateBrokerCommission={updateBrokerCommission}
                     HandleAppointmentSubmit={HandleAppointmentSubmit}
                     HandleTestOrderSubmit={HandleTestOrderSubmit}
-                    HandleCombinedSubmit={HandleCombinedSubmit}
                     deselectTest={deselectTest}
                   />
                 )}
 
-                {/* Navigation Buttons */}
                 <div className="flex justify-between items-center">
                   <div>
                     {currentStep > 1 && (

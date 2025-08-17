@@ -169,24 +169,6 @@ const PatientAndAppointmentForm = ({
               min={new Date().toISOString().split('T')[0]}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Time 
-            </label>
-            <Select
-              name="time"
-              value={appointmentData.time}
-              onChange={(value) => setAppointmentData(prev => ({ ...prev, time: value }))}
-              className="w-full"
-              placeholder={!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time (optional for tests)"}
-              disabled={!commonData.doctorName || !appointmentData.date}
-            >
-              <Option value="">{!commonData.doctorName || !appointmentData.date ? "Select doctor and date first" : "Select available time (optional for tests)"}</Option>
-              {availableTimeSlots.map((slot) => (
-                <Option key={slot} value={slot}>{slot}</Option>
-              ))}
-            </Select>
-          </div>
         </div>
         
         {commonData.doctorName && (
