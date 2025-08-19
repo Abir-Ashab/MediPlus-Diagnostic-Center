@@ -17,8 +17,7 @@ const DoctorRevenue = ({
   handleDoctorSelect,
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-  const [doctorPayments, setDoctorPayments] = useState({}); // Store { doctorId: { paymentAmount, dueAmount } }
-  const [paymentInputs, setPaymentInputs] = useState({});
+  const [doctorPayments, setDoctorPayments] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
@@ -94,17 +93,6 @@ const DoctorRevenue = ({
   const totalRecords = filteredTestOrders.length;
   const activeDoctors = computedDoctors.length;
 
-  // Compute total due revenue from backend dueAmount
-  const totalDueRevenue = useMemo(() => {
-    const due = computedDoctors.reduce((sum, d) => {
-      const paymentData = doctorPayments[d._id] || { dueAmount: d.totalRevenue, paymentAmount: 0 };
-      console.log(`Doctor: ${d._id}, Total Revenue: ${d.totalRevenue}, Payment: ${paymentData.paymentAmount}, Due: ${paymentData.dueAmount}`);
-      return sum + paymentData.dueAmount;
-    }, 0);
-    console.log("Computed totalDueRevenue:", due);
-    return due;
-  }, [computedDoctors, doctorPayments]);
-
   // Fetch payment data
   useEffect(() => {
     const fetchPayments = async () => {
@@ -117,15 +105,8 @@ const DoctorRevenue = ({
         const responses = await Promise.all(promises);
         const payments = responses.reduce((acc, res, index) => {
           const payment = res.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-          return {
-            ...acc,
-            [computedDoctors[index]._id]: {
-              paymentAmount: payment.paymentAmount || 0,
-              dueAmount: payment.dueAmount !== undefined ? payment.dueAmount : computedDoctors[index].totalRevenue,
-            },
-          };
+          return { ...acc, [computedDoctors[index]._id]: payment.paymentAmount || 0 };
         }, {});
-        console.log("Fetched payments:", payments);
         setDoctorPayments(payments);
       } catch (error) {
         console.error("Error fetching payments:", error);
@@ -140,13 +121,13 @@ const DoctorRevenue = ({
   // Handle payment input change
   const handlePaymentChange = (doctorId, payment) => {
     const paymentAmount = Math.max(Number(payment) || 0, 0);
-    setPaymentInputs((prev) => ({
+    setDoctorPayments((prev) => ({
       ...prev,
       [doctorId]: paymentAmount,
     }));
   };
 
-  // Save payment to backend and refresh payments
+  // Save payment to backend
   const handleSavePayment = async (doctorId) => {
     if (!doctorId || !doctorDateFilter) {
       toast.error("Doctor name or date filter is missing");
@@ -154,7 +135,7 @@ const DoctorRevenue = ({
     }
 
     setSaveLoading((prev) => ({ ...prev, [doctorId]: true }));
-    const paymentAmount = Number(paymentInputs[doctorId]) || 0;
+    const paymentAmount = Number(doctorPayments[doctorId]) || 0;
 
     if (isNaN(paymentAmount) || paymentAmount < 0) {
       toast.error("Invalid payment amount");
@@ -162,18 +143,9 @@ const DoctorRevenue = ({
       return;
     }
 
-    // Validate payment against backend dueAmount
-    const doctorData = computedDoctors.find((d) => d._id === doctorId);
-    const totalRevenue = doctorData ? doctorData.totalRevenue : 0;
-    const dueAmount = doctorPayments[doctorId]?.dueAmount !== undefined ? doctorPayments[doctorId].dueAmount : totalRevenue;
-    if (paymentAmount > dueAmount) {
-      toast.error(`Payment (${paymentAmount} Taka) cannot exceed due amount (${dueAmount.toFixed(0)} Taka)`);
-      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
-      return;
-    }
-
     // Prepare payload
     const payload = {
+      doctorName: doctorId,
       paymentAmount,
       dateFilter: doctorDateFilter,
     };
@@ -187,39 +159,11 @@ const DoctorRevenue = ({
     }
 
     try {
-      console.log("Sending payment payload:", payload);
-      // Check if payment exists to decide between POST and PATCH
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, {
-        params: { dateFilter: doctorDateFilter },
-      });
-      const existingPayment = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter);
-
-      if (existingPayment) {
-        // Update existing payment
-        await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, payload);
-      } else {
-        // Create new payment
-        payload.doctorName = doctorId;
-        await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
-      }
-
-      // Refresh payments for the specific doctor
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, {
-        params: { dateFilter: doctorDateFilter },
-      });
-      const payment = response.data.find((p) => p.dateFilter === doctorDateFilter) || {};
+      console.log("Sending payment payload:", payload); // Debug log
+      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
       setDoctorPayments((prev) => ({
         ...prev,
-        [doctorId]: {
-          paymentAmount: payment.paymentAmount || 0,
-          dueAmount: payment.dueAmount !== undefined ? payment.dueAmount : totalRevenue,
-        },
-      }));
-
-      // Clear the payment input field
-      setPaymentInputs((prev) => ({
-        ...prev,
-        [doctorId]: '',
+        [doctorId]: response.data.paymentAmount || 0,
       }));
       toast.success("Payment saved successfully!");
     } catch (error) {
@@ -268,7 +212,7 @@ const DoctorRevenue = ({
         "Patient Name": "Total",
         Revenue: totalRevenue.toFixed(2),
         "Payment Share": payment.toFixed(2),
-        "Due Amount": (paymentData.dueAmount || totalRevenue).toFixed(2),
+        "Due Amount": (totalRevenue - payment).toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -307,8 +251,8 @@ const DoctorRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Due Revenue</h3>
-          <p className="text-2xl font-bold text-purple-600">{totalDueRevenue.toFixed(0)} Taka</p>
+          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
+          <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
@@ -428,7 +372,7 @@ const DoctorRevenue = ({
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-purple-600">
-                        {(doctorPayments[doctor._id]?.dueAmount || doctor.totalRevenue).toFixed(0)} Taka (Due)
+                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>
@@ -438,7 +382,7 @@ const DoctorRevenue = ({
                         <input
                           type="number"
                           min="0"
-                          value={paymentInputs[doctor._id] || ""}
+                          value={doctorPayments[doctor._id] || ""}
                           onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="Enter payment"
