@@ -261,14 +261,23 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
       const newDoctorRevenue = orderRevenue - paymentForThisOrder;
       const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
 
-      // Update the order
+      // Update the order with payment tracking
       const updatedOrder = await TestOrderModel.findByIdAndUpdate(
         order._id,
         {
           doctorRevenue: newDoctorRevenue,
           hospitalRevenue: newHospitalRevenue,
           lastPaymentDate: new Date(),
-          lastPaymentAmount: paymentForThisOrder
+          lastPaymentAmount: paymentForThisOrder,
+          totalPaymentsMade: (order.totalPaymentsMade || 0) + paymentForThisOrder,
+          $push: {
+            paymentHistory: {
+              paymentDate: new Date(),
+              paymentAmount: paymentForThisOrder,
+              previousRevenue: orderRevenue,
+              newRevenue: newDoctorRevenue
+            }
+          }
         },
         { new: true }
       );
