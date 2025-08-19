@@ -192,9 +192,11 @@ const DoctorRevenue = ({
       const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
 
       const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
+      const totalDueAmount = totalRevenue - payment;
 
       const data = filteredRecords.map((order) => {
         const recordRevenue = calculateDoctorRevenue(order);
+        // Calculate payment share proportionally based on record revenue
         const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
         const dueAmount = recordRevenue - paymentShare;
         return {
@@ -202,17 +204,18 @@ const DoctorRevenue = ({
           Date: order.date,
           Type: "Test Order",
           "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          Revenue: recordRevenue.toFixed(2),
-          "Payment Share": paymentShare.toFixed(2),
-          "Due Amount": dueAmount.toFixed(2),
+          Revenue: dueAmount.toFixed(2), // Show due amount as revenue
+          "Payment Share": paymentShare.toFixed(2), // Proportional payment share
+          "Due Amount": dueAmount.toFixed(2), // Remaining due for this record
         };
       });
 
+      // Add total row
       data.push({
         "Patient Name": "Total",
-        Revenue: totalRevenue.toFixed(2),
+        Revenue: totalDueAmount.toFixed(2), // Total due amount
         "Payment Share": payment.toFixed(2),
-        "Due Amount": (totalRevenue - payment).toFixed(2),
+        "Due Amount": totalDueAmount.toFixed(2), // Total due amount
       });
 
       const ws = XLSX.utils.json_to_sheet(data);

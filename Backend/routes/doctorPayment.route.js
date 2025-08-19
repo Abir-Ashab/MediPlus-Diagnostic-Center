@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
     if (payment) {
       payment.paymentAmount = paymentAmount;
       payment.dueAmount = dueAmount;
-      payment.totalAmount = totalRevenue; // Store total revenue
+      payment.totalAmount = dueAmount; // Store due amount instead of total revenue
       payment.customDateRange = customDateRange;
       payment.createdAt = Date.now();
       await payment.save();
@@ -44,7 +44,7 @@ router.post('/', async (req, res) => {
         doctorName,
         paymentAmount,
         dueAmount,
-        totalAmount: totalRevenue,
+        totalAmount: dueAmount, // Store due amount instead of total revenue
         dateFilter,
         customDateRange,
       });
