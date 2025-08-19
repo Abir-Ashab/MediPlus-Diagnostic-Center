@@ -1,6 +1,6 @@
 import React from "react";
 import { Input, Select, Card } from "antd";
-import { User, Calendar, Clock, Heart, Phone, MapPin, Mail } from 'lucide-react';
+import { User, Calendar, Heart, Phone, MapPin, Mail } from 'lucide-react';
 import AddressAutocomplete from "../AddressAutocomplete";
 
 const { Option } = Select;
@@ -20,6 +20,11 @@ const PatientAndAppointmentForm = ({
   setCommonData,
   setAppointmentData
 }) => {
+  React.useEffect(() => {
+    if (!appointmentData.date) {
+      setAppointmentData(prev => ({ ...prev, date: new Date().toISOString().split('T')[0] }));
+    }
+  }, [appointmentData.date, setAppointmentData]);
   return (
     <>
       <Card className="mb-6 shadow-sm border border-gray-200">
@@ -152,33 +157,24 @@ const PatientAndAppointmentForm = ({
 
       <Card className="mb-6 shadow-sm border border-gray-200">
         <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-5 h-5 text-indigo-600" />
+          <Calendar className="w-5 h-5 text-indigo-600" />
           <h3 className="text-lg font-semibold text-gray-900">Schedule Information</h3>
           <span className="text-sm text-gray-500 ml-2">(Date required for all services)</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-            <Input
-              type="date"
-              name="date"
-              value={appointmentData.date}
-              onChange={handleModeSpecificChange}
-              required
-              className="border-gray-200 focus:ring-indigo-500"
-              min={new Date().toISOString().split('T')[0]}
-            />
+      <Input
+        type="date"
+        name="date"
+        value={appointmentData.date}
+        onChange={handleModeSpecificChange}
+        required
+        className="border-gray-200 focus:ring-indigo-500"
+        min={new Date().toISOString().split('T')[0]}
+      />
           </div>
         </div>
-        
-        {commonData.doctorName && (
-          <div className="mt-4 bg-purple-50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Doctor Consultation Fee:</span>
-              <span className="font-medium text-purple-700">৳{appointmentData.doctorFee || 0}</span>
-            </div>
-          </div>
-        )}
       </Card>
     </>
   );

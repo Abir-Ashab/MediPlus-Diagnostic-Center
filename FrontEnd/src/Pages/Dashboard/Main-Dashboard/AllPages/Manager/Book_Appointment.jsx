@@ -44,7 +44,6 @@ const Book_Appointment = () => {
   const [appointmentData, setAppointmentData] = useState({
     date: "",
     time: "",
-    doctorFee: 0,
   });
 
   const [testData, setTestData] = useState({
@@ -53,32 +52,15 @@ const Book_Appointment = () => {
   });
 
   const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "", customPrice: null }]);
-  const [calculatedTotal, setCalculatedTotal] = useState(0);
-  const [useManualTotal, setUseManualTotal] = useState(false);
-  const [manualTotal, setManualTotal] = useState(0);
-  
-  // New VAT and discount states
   const [baseTotal, setBaseTotal] = useState(0);
-  const [vatRate, setVatRate] = useState(1); // Default 1% VAT
+  const [vatRate, setVatRate] = useState(1); 
   const [vatAmount, setVatAmount] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
-  
+  const [useManualTotal, setUseManualTotal] = useState(false);
+  const [manualTotal, setManualTotal] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
-  const [hospitalRevenue, setHospitalRevenue] = useState(0);
-  const [doctorRevenue, setDoctorRevenue] = useState(0);
-  const [brokerRevenue, setBrokerRevenue] = useState(0);
-  const [doctorsList, setDoctorsList] = useState([]);
-
-  const [customDoctorCommission, setCustomDoctorCommission] = useState(null);
-  const [customAppointmentCommission, setCustomAppointmentCommission] = useState(null);
-  const [customDoctorFee, setCustomDoctorFee] = useState(null);
-  const [customBrokerCommission, setCustomBrokerCommission] = useState(null);
-  const [showCommissionEdit, setShowCommissionEdit] = useState(false);
-  const [isFeeManuallyEdited, setIsFeeManuallyEdited] = useState(false);
-
   const [testsList, setTestsList] = useState([]);
 
-  // Calculate final total with VAT and discount
   const finalTotal = useManualTotal ? manualTotal : (baseTotal + vatAmount - discountAmount);
   const dueAmount = finalTotal - paidAmount;
 
@@ -93,67 +75,6 @@ const Book_Appointment = () => {
     };
     fetchTests();
   }, []);
-
-  // Fetch doctors with commission settings
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
-        setDoctorsList(response.data);
-      } catch (error) {
-        console.error("Error fetching doctors:", error);
-      }
-    };
-    fetchDoctors();
-  }, []);
-
-  const getCurrentModeData = () => {
-    return { ...commonData, ...appointmentData };
-  };
-
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 9; hour <= 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        if (hour === 18 && minute > 0) break;
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        slots.push(timeString);
-      }
-    }
-    return slots;
-  };
-
-  const fetchBookedAppointments = async (doctorName, date) => {
-    if (!doctorName || !date) return;
-    try {
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctor=${doctorName}&date=${date}`);
-      setBookedAppointments(response.data);
-    } catch (error) {
-      console.error("Error fetching booked appointments:", error);
-      setBookedAppointments([]);
-    }
-  };
-
-  useEffect(() => {
-    const allSlots = generateTimeSlots();
-    const bookedTimes = bookedAppointments.map(appointment => appointment.time);
-    const available = allSlots.filter(slot => {
-      const slotTime = new Date(`2000-01-01T${slot}:00`);
-      return !bookedTimes.some(bookedTime => {
-        const bookedDateTime = new Date(`2000-01-01T${bookedTime}:00`);
-        const timeDifference = Math.abs(slotTime - bookedDateTime) / (1000 * 60);
-        return timeDifference < 15;
-      });
-    });
-    setAvailableTimeSlots(available);
-  }, [bookedAppointments]);
-
-  useEffect(() => {
-    const currentData = getCurrentModeData();
-    if (currentData.doctorName && currentData.date) {
-      fetchBookedAppointments(currentData.doctorName, currentData.date);
-    }
-  }, [commonData.doctorName, appointmentData.date]);
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -193,27 +114,10 @@ const Book_Appointment = () => {
     fetchBrokers();
   }, []);
 
+  // Calculate base total and apply VAT
   useEffect(() => {
-    if (commonData.doctorName && !isFeeManuallyEdited) {
-      const selectedDoctor = doctorsList.find(
-        d => d.docName === commonData.doctorName
-      );
-      if (selectedDoctor) {
-        const fee = selectedDoctor.remuneration || 500;
-        setAppointmentData(prev => ({ ...prev, doctorFee: fee }));
-      }
-    }
-  }, [commonData.doctorName, doctorsList, isFeeManuallyEdited]);
-
-  // Calculate base total and then apply VAT and discount
-  useEffect(() => {
-    let base = 0;
-    if (appointmentData.doctorFee > 0) {
-      base += appointmentData.doctorFee;
-    }
-    
-    base += selectedTests.reduce((sum, test) => {
-      if (!test.testId || test.testId === "doctor-fee") return sum;
+    const base = selectedTests.reduce((sum, test) => {
+      if (!test.testId) return sum;
       
       if (test.customPrice !== null && test.customPrice !== undefined) {
         return sum + test.customPrice;
@@ -230,52 +134,11 @@ const Book_Appointment = () => {
     const vat = (base * vatRate) / 100;
     setVatAmount(vat);
     
-    // Calculate final total
-    const total = base + vat - discountAmount;
-    setCalculatedTotal(total);
-    
+    // Set manual total if not manually overridden
     if (!useManualTotal) {
-      setManualTotal(total);
+      setManualTotal(base + vat - discountAmount);
     }
-    
-    calculateRevenueDistribution(useManualTotal ? manualTotal : total, commonData.doctorName, commonData.brokerName);
-  }, [selectedTests, commonData.doctorName, commonData.brokerName, appointmentData.doctorFee, doctorsList, testsList, customDoctorCommission, customAppointmentCommission, customBrokerCommission, customDoctorFee, useManualTotal, manualTotal, vatRate, discountAmount]);
-
-  const calculateRevenueDistribution = (amount, doctorName, broker) => {
-    const hasAppointmentFee = appointmentData.doctorFee > 0;
-    const testAmount = baseTotal - (hasAppointmentFee ? appointmentData.doctorFee : 0);
-    
-    let doctorCommission = 0;
-    let brokerCommission = 0;
-    let hospitalShare = 0;
-
-    if (hasAppointmentFee && doctorName) {
-      doctorCommission += appointmentData.doctorFee;
-    }
-
-    if (testAmount > 0 && doctorName) {
-      const doctor = doctorsList.find(doc => doc.docName === doctorName);
-      const testCommissionRate = doctor ? (customDoctorCommission !== null ? customDoctorCommission / 100 : doctor.testReferralCommission / 100) : 0;
-      const doctorTestCommission = testAmount * testCommissionRate;
-      doctorCommission += doctorTestCommission;
-      hospitalShare += testAmount - doctorTestCommission;
-    } else if (testAmount > 0) {
-      hospitalShare += testAmount;
-    }
-
-    if (broker && hasAppointmentFee) {
-      const selectedBroker = brokers.find(b => (b.name || b.docName) === broker);
-      const brokerCommissionRate = customBrokerCommission !== null ? customBrokerCommission / 100 : (selectedBroker ? selectedBroker.commissionRate / 100 : 0.05);
-      brokerCommission = appointmentData.doctorFee * brokerCommissionRate;
-    }
-    
-    // Add VAT to hospital revenue and subtract discount from hospital revenue
-    hospitalShare += vatAmount - discountAmount;
-    
-    setHospitalRevenue(Math.max(0, hospitalShare));
-    setDoctorRevenue(doctorCommission);
-    setBrokerRevenue(brokerCommission);
-  };
+  }, [selectedTests, testsList, useManualTotal, vatRate, discountAmount]);
 
   const handleCommonDataChange = (e) => {
     const { name, value } = e.target;
@@ -287,22 +150,10 @@ const Book_Appointment = () => {
 
   const handleDoctorChange = (value) => {
     setCommonData(prev => ({ ...prev, doctorName: value }));
-    setCustomDoctorCommission(null);
-    setCustomAppointmentCommission(null);
-    setIsFeeManuallyEdited(false);
-    
-    const selectedDoctor = doctorsList.find(d => d.docName === value);
-    if (selectedDoctor) {
-      const fee = selectedDoctor.remuneration || 500;
-      setAppointmentData(prev => ({ ...prev, time: "", doctorFee: fee }));
-      setCustomDoctorFee(fee);
-    }
   };
 
   const handleBrokerChange = (value) => {
     setCommonData(prev => ({ ...prev, brokerName: value }));
-    setCustomBrokerCommission(null);
-    setCustomAppointmentCommission(null);
   };
 
   const handleModeSpecificChange = (e) => {
@@ -384,62 +235,6 @@ const Book_Appointment = () => {
     }
   };
 
-  const updateDoctorCommissionFee = async (doctorName, commission, fee) => {
-    try {
-      const doctor = doctorsList.find(d => d.docName === doctorName);
-      if (!doctor) return;
-
-      const updateData = {};
-      if (commission !== null && commission !== undefined) {
-        updateData.testReferralCommission = commission;
-      }
-      if (fee !== null && fee !== undefined) {
-        updateData.remuneration = fee;
-      }
-
-      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors/${doctor._id}`, updateData);
-
-      toast.success("Doctor commission/fee updated successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
-      setDoctorsList(response.data);
-    } catch (error) {
-      console.error('Error updating doctor commission/fee:', error);
-      toast.error("Failed to update doctor commission/fee. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-  };
-
-  const updateBrokerCommission = async (brokerName, commission) => {
-    try {
-      const broker = brokers.find(b => (b.name || b.docName) === brokerName);
-      if (!broker) return;
-
-      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers/${broker._id}`, {
-        commissionRate: commission
-      });
-
-      toast.success("Broker commission updated successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
-      setBrokers(response.data);
-    } catch (error) {
-      console.error('Error updating broker commission:', error);
-      toast.error("Failed to update broker commission. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-  };
-
   const addMoreTest = () => {
     const newTest = { id: Date.now(), testId: "", customPrice: null };
     setSelectedTests(prev => [...prev, newTest]);
@@ -483,16 +278,15 @@ const Book_Appointment = () => {
   };
 
   const clearFormAfterSubmit = () => {
-    setAppointmentData({ date: "", time: "", doctorFee: 0 });
+    setAppointmentData({ date: "", time: "" });
     setTestData({ date: "", time: "" });
     setSelectedTests([{ id: Date.now(), testId: "", customPrice: null }]);
     setCurrentStep(1);
-    setIsFeeManuallyEdited(false);
     setUseManualTotal(false);
     setManualTotal(0);
     setPaidAmount(0);
     setDiscountAmount(0);
-    setVatRate(1); // Reset to default 1%
+    setVatRate(1);
   };
 
   // Step navigation functions
@@ -540,78 +334,6 @@ const Book_Appointment = () => {
     return true;
   };
 
-  const HandleAppointmentSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (commonData.gender === "") {
-      return toast.error("Please fill all the required fields", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-    
-    if (!appointmentData.time) {
-      return toast.error("Please select an appointment time", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-
-    setLoading(true);
-    try {
-      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-      const selectedBroker = brokers.find(b => (b.name || b.docName) === commonData.brokerName);
-      
-      const appointmentDoctorRevenue = appointmentData.doctorFee;
-      
-      const brokerCommissionRate = customBrokerCommission !== null 
-        ? customBrokerCommission / 100 
-        : (selectedBroker ? selectedBroker.commissionRate / 100 : 0);
-      const appointmentBrokerRevenue = commonData.brokerName ? appointmentData.doctorFee * brokerCommissionRate : 0;
-      
-      const appointmentHospitalRevenue = vatAmount - discountAmount; // VAT goes to hospital, discount reduces hospital revenue
-
-      const patientData = {
-        ...commonData,
-        ...appointmentData,
-        tests: [{ testName: "Doctor Fee", testPrice: appointmentData.doctorFee }],
-        baseAmount: baseTotal,
-        vatRate: vatRate,
-        vatAmount: vatAmount,
-        discountAmount: discountAmount,
-        totalAmount: finalTotal,
-        paidAmount: paidAmount,
-        dueAmount: dueAmount,
-        hospitalRevenue: appointmentHospitalRevenue,
-        doctorRevenue: appointmentDoctorRevenue,
-        brokerRevenue: appointmentBrokerRevenue,
-        orderType: 'appointment',
-      };
-
-      const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
-      const bookingData = { ...patientData, patientID: patientResponse.id };
-      await dispatch(CreateBooking(bookingData));
-      
-      fetchBookedAppointments(commonData.doctorName, appointmentData.date);
-      setLoading(false);
-      
-      toast.success("Appointment booked successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      
-      clearFormAfterSubmit();
-    } catch (error) {
-      setLoading(false);
-      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
-      toast.error(`Error: ${errorMessage}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
-      console.error("Error:", error);
-    }
-  };
-
   const HandleTestOrderSubmit = async (e) => {
     e.preventDefault();
     
@@ -656,17 +378,8 @@ const Book_Appointment = () => {
         };
       });
 
-    const testAmount = testsWithPrices.reduce((sum, test) => sum + test.testPrice, 0);
-
     setLoading(true);
     try {
-      const selectedDoctor = doctorsList.find(doc => doc.docName === commonData.doctorName);
-      const doctorTestCommissionRate = customDoctorCommission !== null 
-        ? customDoctorCommission / 100 
-        : (selectedDoctor ? selectedDoctor.testReferralCommission / 100 : 0);
-      const testDoctorRevenue = commonData.doctorName ? testAmount * doctorTestCommissionRate : 0;
-      const testHospitalRevenue = testAmount - testDoctorRevenue + vatAmount - discountAmount; // Include VAT and discount
-
       const patientData = {
         ...commonData,
         date: testData.date,
@@ -679,19 +392,14 @@ const Book_Appointment = () => {
         totalAmount: finalTotal,
         paidAmount: paidAmount,
         dueAmount: dueAmount,
-        hospitalRevenue: testHospitalRevenue,
-        doctorRevenue: testDoctorRevenue,
-        brokerRevenue: brokerRevenue,
         orderType: 'test',
       };
 
       const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
 
       const testOrderData = { ...patientData, patientID: patientResponse.id };
-      console.log(testOrderData);
       
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
-      // const response2 = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments", testOrderData);
       setLoading(false);
       
       setLastCreatedOrder({
@@ -718,6 +426,50 @@ const Book_Appointment = () => {
     }
   };
 
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 9; hour <= 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        if (hour === 18 && minute > 0) break;
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
+    }
+    return slots;
+  };
+
+  const fetchBookedAppointments = async (doctorName, date) => {
+    if (!doctorName || !date) return;
+    try {
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctor=${doctorName}&date=${date}`);
+      setBookedAppointments(response.data);
+    } catch (error) {
+      console.error("Error fetching booked appointments:", error);
+      setBookedAppointments([]);
+    }
+  };
+
+  useEffect(() => {
+    const allSlots = generateTimeSlots();
+    const bookedTimes = bookedAppointments.map(appointment => appointment.time);
+    const available = allSlots.filter(slot => {
+      const slotTime = new Date(`2000-01-01T${slot}:00`);
+      return !bookedTimes.some(bookedTime => {
+        const bookedDateTime = new Date(`2000-01-01T${bookedTime}:00`);
+        const timeDifference = Math.abs(slotTime - bookedDateTime) / (1000 * 60);
+        return timeDifference < 15;
+      });
+    });
+    setAvailableTimeSlots(available);
+  }, [bookedAppointments]);
+
+  useEffect(() => {
+    const currentData = { ...commonData, ...appointmentData };
+    if (currentData.doctorName && currentData.date) {
+      fetchBookedAppointments(currentData.doctorName, currentData.date);
+    }
+  }, [commonData.doctorName, appointmentData.date]);
+
   return (
     <div>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
@@ -733,7 +485,7 @@ const Book_Appointment = () => {
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900">Medical Services Booking</h1>
-                    <p className="text-gray-600">Complete appointment booking and test ordering in one place</p>
+                    <p className="text-gray-600">Complete test ordering in one place</p>
                   </div>
                 </div>
               </Card>
@@ -760,14 +512,14 @@ const Book_Appointment = () => {
                           <div className={`text-sm font-semibold transition-all duration-200 ${
                             currentStep === step ? 'text-blue-700' : currentStep > step ? 'text-green-700' : 'text-gray-500'
                           }`}>
-                            {step === 1 && 'Doctor Appointment'}
+                            {step === 1 && 'Patient Information'}
                             {step === 2 && 'Test Selection'}
                             {step === 3 && 'Financial Summary'}
                           </div>
                           <div className={`text-xs transition-all duration-200 ${
                             currentStep === step ? 'text-blue-600' : currentStep > step ? 'text-green-600' : 'text-gray-400'
                           }`}>
-                            {step === 1 && 'Patient & Doctor Info'}
+                            {step === 1 && 'Patient & Reference Info'}
                             {step === 2 && 'Choose Tests'}
                             {step === 3 && 'Review & Submit'}
                           </div>
@@ -784,7 +536,6 @@ const Book_Appointment = () => {
               </Card>
 
               <form onSubmit={(e) => e.preventDefault()}>
-                {/* Step 1: Patient and Appointment Form */}
                 {currentStep === 1 && (
                   <PatientAndAppointmentForm
                     commonData={commonData}
@@ -820,11 +571,9 @@ const Book_Appointment = () => {
                   />
                 )}
 
-                {/* Step 3: Financial Summary Form */}
                 {currentStep === 3 && (
                   <FinancialSummaryForm
                     commonData={commonData}
-                    appointmentData={appointmentData}
                     testData={testData}
                     selectedTests={selectedTests}
                     testsList={testsList}
@@ -833,36 +582,16 @@ const Book_Appointment = () => {
                     vatAmount={vatAmount}
                     discountAmount={discountAmount}
                     finalTotal={finalTotal}
-                    hospitalRevenue={hospitalRevenue}
-                    doctorRevenue={doctorRevenue}
-                    brokerRevenue={brokerRevenue}
                     paidAmount={paidAmount}
                     dueAmount={dueAmount}
                     useManualTotal={useManualTotal}
                     manualTotal={manualTotal}
                     loading={loading}
-                    customDoctorCommission={customDoctorCommission}
-                    customAppointmentCommission={customAppointmentCommission}
-                    customDoctorFee={customDoctorFee}
-                    customBrokerCommission={customBrokerCommission}
-                    showCommissionEdit={showCommissionEdit}
-                    doctorsList={doctorsList}
-                    brokers={brokers}
                     setUseManualTotal={setUseManualTotal}
                     setManualTotal={setManualTotal}
                     setPaidAmount={setPaidAmount}
                     setVatRate={setVatRate}
                     setDiscountAmount={setDiscountAmount}
-                    setCustomDoctorCommission={setCustomDoctorCommission}
-                    setCustomAppointmentCommission={setCustomAppointmentCommission}
-                    setCustomDoctorFee={setCustomDoctorFee}
-                    setCustomBrokerCommission={setCustomBrokerCommission}
-                    setShowCommissionEdit={setShowCommissionEdit}
-                    setAppointmentData={setAppointmentData}
-                    setIsFeeManuallyEdited={setIsFeeManuallyEdited}
-                    updateDoctorCommissionFee={updateDoctorCommissionFee}
-                    updateBrokerCommission={updateBrokerCommission}
-                    HandleAppointmentSubmit={HandleAppointmentSubmit}
                     HandleTestOrderSubmit={HandleTestOrderSubmit}
                     deselectTest={deselectTest}
                   />
