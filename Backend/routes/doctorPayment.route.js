@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     const dueAmount = totalRevenue - paymentAmount;
 
     if (paymentAmount > totalRevenue) {
-      return res.status(400).json({ message: 'Payment cannot exceed total revenue', testOrdersResponse });
+      return res.status(400).json({ message: `Payment cannot exceed total revenue, ${JSON.stringify(testOrdersResponse.data)}` });
     }
 
     let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
