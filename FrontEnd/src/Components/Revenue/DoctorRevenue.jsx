@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -6,7 +6,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const DoctorRevenue = ({
-  doctorData,
   doctorDateFilter,
   doctorCustomDateRange,
   selectedDoctor,
@@ -14,20 +13,91 @@ const DoctorRevenue = ({
   handleDoctorDateFilterChange,
   applyDoctorDateFilter,
   resetDoctorFilters,
-  handleDoctorSelect,
-  loading,
   filterRecordsByDateRange,
+  handleDoctorSelect,
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
   const [doctorPayments, setDoctorPayments] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState({});
+  const [allTestOrders, setAllTestOrders] = useState([]);
+  const [testsMap, setTestsMap] = useState({});
 
-  // Fetch payment data on mount or date filter change
+  // Fetch all tests for commissions
+  useEffect(() => {
+    const fetchTests = async () => {
+      try {
+        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true");
+        const map = {};
+        res.data.forEach(t => {
+          map[t.title.toLowerCase()] = t.doctorCommissionPercentage || 0;
+        });
+        setTestsMap(map);
+      } catch (error) {
+        console.error("Error fetching tests:", error);
+        toast.error("Failed to fetch test commissions");
+      }
+    };
+    fetchTests();
+  }, []);
+
+  // Function to calculate doctor revenue for an order
+  const calculateDoctorRevenue = (order) => {
+    let drRev = 0;
+    (order.tests || []).forEach(test => {
+      const perc = testsMap[test.testName.toLowerCase()] || 0;
+      if (perc > 0) {
+        drRev += (test.testPrice || 0) * (perc / 100);
+      }
+    });
+    return drRev;
+  };
+
+  // Fetch all test orders
+  useEffect(() => {
+    const fetchAllTestOrders = async () => {
+      try {
+        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
+        setAllTestOrders(res.data);
+      } catch (error) {
+        console.error("Error fetching test orders:", error);
+        toast.error("Failed to fetch test orders");
+      }
+    };
+    fetchAllTestOrders();
+  }, []);
+
+  // Compute filtered test orders
+  const filteredTestOrders = useMemo(
+    () => filterRecordsByDateRange(allTestOrders, doctorDateFilter, doctorCustomDateRange),
+    [allTestOrders, doctorDateFilter, doctorCustomDateRange, filterRecordsByDateRange]
+  );
+
+  // Compute doctors data
+  const computedDoctors = useMemo(() => {
+    const doctorMap = {};
+    filteredTestOrders.forEach((order) => {
+      const doctorName = order.doctorName;
+      if (!doctorName) return;
+      if (!doctorMap[doctorName]) {
+        doctorMap[doctorName] = { _id: doctorName, totalRevenue: 0, appointments: 0 };
+      }
+      const drRev = calculateDoctorRevenue(order);
+      doctorMap[doctorName].totalRevenue += drRev;
+      doctorMap[doctorName].appointments += 1;
+    });
+    return Object.values(doctorMap);
+  }, [filteredTestOrders, testsMap]);
+
+  const totalDoctorRevenue = computedDoctors.reduce((sum, d) => sum + d.totalRevenue, 0);
+  const totalRecords = filteredTestOrders.length;
+  const activeDoctors = computedDoctors.length;
+
+  // Fetch payment data
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const promises = doctorData.doctors.map((doctor) =>
+        const promises = computedDoctors.map((doctor) =>
           axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctor._id}`, {
             params: { dateFilter: doctorDateFilter },
           })
@@ -35,7 +105,7 @@ const DoctorRevenue = ({
         const responses = await Promise.all(promises);
         const payments = responses.reduce((acc, res, index) => {
           const payment = res.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-          return { ...acc, [doctorData.doctors[index]._id]: payment.paymentAmount || 0 };
+          return { ...acc, [computedDoctors[index]._id]: payment.paymentAmount || 0 };
         }, {});
         setDoctorPayments(payments);
       } catch (error) {
@@ -43,10 +113,12 @@ const DoctorRevenue = ({
         toast.error("Failed to fetch payment data");
       }
     };
-    fetchPayments();
-  }, [doctorData.doctors, doctorDateFilter]);
+    if (computedDoctors.length > 0) {
+      fetchPayments();
+    }
+  }, [computedDoctors, doctorDateFilter]);
 
-  // Handle payment input change (local state only)
+  // Handle payment input change
   const handlePaymentChange = (doctorId, payment) => {
     const paymentAmount = Math.max(Number(payment) || 0, 0);
     setDoctorPayments((prev) => ({
@@ -85,37 +157,6 @@ const DoctorRevenue = ({
     }
   };
 
-  // Fetch doctor records
-  const fetchDoctorRecords = async (doctorName) => {
-    try {
-      const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
-      ]);
-
-      const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
-      const formattedTestOrders = doctorTestOrders.map((order) => ({
-        patientName: order.patientName,
-        date: order.date,
-        disease: order.tests?.map((test) => test.testName).join(", ") || "N/A",
-        totalAmount: order.totalAmount || 0,
-        doctorRevenue: order.doctorRevenue || 0,
-        recordType: "Test Order",
-      }));
-
-      const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-        ...appointment,
-        recordType: "Appointment",
-        doctorRevenue: appointment.doctorRevenue || 0,
-      }));
-
-      return [...formattedAppointments, ...formattedTestOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
-    } catch (error) {
-      console.error("Error fetching doctor records:", error);
-      throw error;
-    }
-  };
-
   // Export doctor data
   const handleExportDoctor = async (doctorName) => {
     if (exportLoading) return;
@@ -128,21 +169,20 @@ const DoctorRevenue = ({
       const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
       const payment = Number(paymentData.paymentAmount) || 0;
 
-      const combinedRecords = await fetchDoctorRecords(doctorName);
-      const filteredRecords = filterRecordsByDateRange(combinedRecords, doctorDateFilter, doctorCustomDateRange);
+      const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
 
-      const totalRevenue = filteredRecords.reduce((sum, record) => sum + (Number(record.doctorRevenue) || 0), 0);
+      const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
 
-      // Distribute payment proportionally across records based on revenue
-      const data = filteredRecords.map((record) => {
-        const recordRevenue = Number(record.doctorRevenue) || 0;
+      // Distribute payment proportionally
+      const data = filteredRecords.map((order) => {
+        const recordRevenue = calculateDoctorRevenue(order);
         const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
         const dueAmount = recordRevenue - paymentShare;
         return {
-          "Patient Name": record.patientName,
-          Date: record.date,
-          Type: record.recordType,
-          Details: record.disease || record.tests?.map((test) => test.testName).join(", ") || "N/A",
+          "Patient Name": order.patientName,
+          Date: order.date,
+          Type: "Test Order",
+          "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
           Revenue: recordRevenue.toFixed(2),
           "Payment Share": paymentShare.toFixed(2),
           "Due Amount": dueAmount.toFixed(2),
@@ -160,7 +200,7 @@ const DoctorRevenue = ({
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
-      XLSX.writeFile(wb, `doctor_${doctorName}_revenue.xlsx`);
+      XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
       toast.success("Report exported successfully!");
     } catch (error) {
       console.error("Error exporting doctor revenue:", error);
@@ -170,14 +210,23 @@ const DoctorRevenue = ({
     }
   };
 
-  const doctorChartData = doctorData.doctors.map((doctor) => ({
+  const doctorChartData = computedDoctors.map((doctor) => ({
     name: doctor._id,
     value: doctor.totalRevenue,
   }));
 
-  const displayRecords = (doctorData.filteredDoctorRecords && doctorData.filteredDoctorRecords.length > 0)
-    ? doctorData.filteredDoctorRecords
-    : (doctorData.doctorRecords || []);
+  const displayRecords = selectedDoctor
+    ? filteredTestOrders
+        .filter((order) => order.doctorName === selectedDoctor)
+        .map((order) => ({
+          patientName: order.patientName,
+          date: order.date,
+          recordType: "Test Order",
+          tests: order.tests,
+          totalAmount: order.totalAmount || 0,
+          doctorRevenue: calculateDoctorRevenue(order),
+        }))
+    : [];
 
   return (
     <>
@@ -185,15 +234,15 @@ const DoctorRevenue = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
-          <p className="text-2xl font-bold text-purple-600">{doctorData.totalDoctorRevenue.toFixed(0)} Taka</p>
+          <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
-          <p className="text-2xl font-bold text-purple-600">{doctorData.totalAppointments}</p>
+          <p className="text-2xl font-bold text-purple-600">{totalRecords}</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Active Doctors</h3>
-          <p className="text-2xl font-bold text-purple-600">{doctorData.doctors.length}</p>
+          <p className="text-2xl font-bold text-purple-600">{activeDoctors}</p>
         </div>
       </div>
 
@@ -271,37 +320,33 @@ const DoctorRevenue = ({
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Doctor</h3>
-        {loading ? (
-          <p className="text-gray-600">Loading chart data...</p>
-        ) : (
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={doctorChartData.filter((entry) => entry.name && entry.value)}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={true}
-                  label={({ name, percent }) => name && percent && `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={150}
-                  dataKey="value"
-                >
-                  {doctorChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value.toFixed(0)} Taka`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <div className="h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={doctorChartData.filter((entry) => entry.name && entry.value)}
+                cx="50%"
+                cy="50%"
+                labelLine={true}
+                label={({ name, percent }) => name && percent && `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={150}
+                dataKey="value"
+              >
+                {doctorChartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value.toFixed(0)} Taka`} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Doctor Details */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctor Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {doctorData.doctors.map((doctor, index) => (
+          {computedDoctors.map((doctor, index) => (
             doctor._id && (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -362,60 +407,56 @@ const DoctorRevenue = ({
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Records for Dr. {selectedDoctor || 'Select a Doctor'}
         </h3>
-        {loading ? (
-          <p className="text-gray-600">Loading record data...</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700">Details</th>
-                  <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                  <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayRecords
-                  .slice(0, 10)
-                  .map((record, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="p-3 border-b border-gray-200">{record.patientName}</td>
-                      <td className="p-3 border-b border-gray-200">{record.date}</td>
-                      <td className="p-3 border-b border-gray-200">{record.recordType || 'N/A'}</td>
-                      <td className="p-3 border-b border-gray-200">
-                        {record.tests?.map((test) => test.testName).join(", ") || record.disease || 'N/A'}
-                      </td>
-                      <td className="p-3 text-right border-b border-gray-200">{record.totalAmount?.toFixed(0) || 0} Taka</td>
-                      <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
-                        {record.doctorRevenue?.toFixed(0) || 0} Taka
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-100">
-                  <td colSpan="5" className="p-3 text-right font-bold">
-                    Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
-                  </td>
-                  <td className="p-3 text-right font-bold text-purple-600">
-                    {displayRecords
-                      .slice(0, 10)
-                      .reduce((sum, record) => sum + (record.doctorRevenue || 0), 0)
-                      .toFixed(0)} Taka
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-            {displayRecords.length > 10 && (
-              <p className="text-center text-gray-600 mt-4">
-                Showing 10 of {displayRecords.length} records
-              </p>
-            )}
-          </div>
-        )}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayRecords
+                .slice(0, 10)
+                .map((record, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="p-3 border-b border-gray-200">{record.patientName}</td>
+                    <td className="p-3 border-b border-gray-200">{record.date}</td>
+                    <td className="p-3 border-b border-gray-200">{record.recordType || 'N/A'}</td>
+                    <td className="p-3 border-b border-gray-200">
+                      {record.tests?.map((test) => test.testName).join(", ") || 'N/A'}
+                    </td>
+                    <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
+                    <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
+                      {record.doctorRevenue.toFixed(0)} Taka
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-100">
+                <td colSpan="5" className="p-3 text-right font-bold">
+                  Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
+                </td>
+                <td className="p-3 text-right font-bold text-purple-600">
+                  {displayRecords
+                    .slice(0, 10)
+                    .reduce((sum, record) => sum + record.doctorRevenue, 0)
+                    .toFixed(0)} Taka
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          {displayRecords.length > 10 && (
+            <p className="text-center text-gray-600 mt-4">
+              Showing 10 of {displayRecords.length} records
+            </p>
+          )}
+        </div>
       </div>
     </>
   );
