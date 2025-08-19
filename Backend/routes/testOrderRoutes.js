@@ -172,21 +172,128 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+// Update doctor revenue after payment
+router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
   try {
-    const updatedTestOrder = await TestOrderModel.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const { doctorName } = req.params;
+    const { paymentAmount, dateFilter, customDateRange } = req.body;
 
-    if (!updatedTestOrder) {
-      return res.status(404).json({ message: "Test order not found" });
+    if (!doctorName || paymentAmount === undefined) {
+      return res.status(400).json({ message: "Doctor name and payment amount are required" });
     }
 
-    res.status(200).json(updatedTestOrder);
+    // Build date query based on filter
+    let dateQuery = {};
+    const now = new Date();
+    
+    switch (dateFilter) {
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: weekStart, $lte: weekEnd };
+        break;
+        
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: monthStart, $lte: monthEnd };
+        break;
+        
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31);
+        yearEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: yearStart, $lte: yearEnd };
+        break;
+        
+      case 'custom':
+        if (customDateRange && customDateRange.start && customDateRange.end) {
+          const startDate = new Date(customDateRange.start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(customDateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          dateQuery.createdAt = { $gte: startDate, $lte: endDate };
+        }
+        break;
+        
+      default: // 'all' or any other value
+        // No date filter
+        break;
+    }
+
+    // Find test orders for this doctor within the date range
+    const query = { 
+      doctorName: doctorName,
+      doctorRevenue: { $gt: 0 }, // Only orders with pending revenue
+      ...dateQuery 
+    };
+
+    const testOrders = await TestOrderModel.find(query).sort({ createdAt: 1 });
+
+    if (testOrders.length === 0) {
+      return res.status(404).json({ message: "No pending revenue found for this doctor in the specified period" });
+    }
+
+    // Calculate total pending revenue
+    const totalPendingRevenue = testOrders.reduce((sum, order) => sum + (order.doctorRevenue || 0), 0);
+    
+    if (paymentAmount > totalPendingRevenue) {
+      return res.status(400).json({ 
+        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(2)})` 
+      });
+    }
+
+    // Distribute the payment across orders proportionally
+    let remainingPayment = paymentAmount;
+    const updatedOrders = [];
+
+    for (const order of testOrders) {
+      if (remainingPayment <= 0) break;
+
+      const orderRevenue = order.doctorRevenue || 0;
+      const paymentForThisOrder = Math.min(remainingPayment, orderRevenue);
+      
+      const newDoctorRevenue = orderRevenue - paymentForThisOrder;
+      const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
+
+      // Update the order
+      const updatedOrder = await TestOrderModel.findByIdAndUpdate(
+        order._id,
+        {
+          doctorRevenue: newDoctorRevenue,
+          hospitalRevenue: newHospitalRevenue,
+          lastPaymentDate: new Date(),
+          lastPaymentAmount: paymentForThisOrder
+        },
+        { new: true }
+      );
+
+      updatedOrders.push(updatedOrder);
+      remainingPayment -= paymentForThisOrder;
+    }
+
+    res.status(200).json({
+      message: "Doctor revenue updated successfully",
+      paymentProcessed: paymentAmount,
+      ordersUpdated: updatedOrders.length,
+      remainingPayment: remainingPayment,
+      updatedOrders: updatedOrders.map(order => ({
+        orderId: order._id,
+        patientName: order.patientName,
+        previousRevenue: testOrders.find(o => o._id.toString() === order._id.toString())?.doctorRevenue || 0,
+        newRevenue: order.doctorRevenue,
+        paymentApplied: (testOrders.find(o => o._id.toString() === order._id.toString())?.doctorRevenue || 0) - order.doctorRevenue
+      }))
+    });
+
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Error updating doctor revenue:", error);
+    res.status(500).json({ message: error.message });
   }
 });
 
