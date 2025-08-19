@@ -8,7 +8,9 @@ router.post('/', async (req, res) => {
   try {
     const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
 
-    const testOrdersResponse = await Promise.all([
+    // Fetch records to calculate total revenue
+    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
+      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
     ]);
 
@@ -17,12 +19,16 @@ router.post('/', async (req, res) => {
       doctorRevenue: order.doctorRevenue || 0,
     }));
 
-    const combinedRecords = [...formattedTestOrders];
+    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
+      doctorRevenue: appointment.doctorRevenue || 0,
+    }));
+
+    const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
     const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
     const dueAmount = totalRevenue - paymentAmount;
 
     if (paymentAmount > totalRevenue) {
-      return res.status(400).json({ message: `Payment cannot exceed total revenue, ${JSON.stringify(testOrdersResponse.data)}` });
+      return res.status(400).json({ message: 'Payment cannot exceed total revenue' });
     }
 
     let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
