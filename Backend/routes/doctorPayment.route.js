@@ -8,11 +8,6 @@ router.post('/', async (req, res) => {
   try {
     const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
 
-    // Validate input
-    if (!doctorName || !dateFilter || paymentAmount < 0) {
-      return res.status(400).json({ message: 'Invalid input: doctorName, dateFilter, and non-negative paymentAmount are required' });
-    }
-
     // Fetch records to calculate total revenue
     const [appointmentsResponse, testOrdersResponse] = await Promise.all([
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
@@ -29,50 +24,93 @@ router.post('/', async (req, res) => {
     }));
 
     const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
-    const initialTotalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
+    const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
 
     // Find existing payment record
     let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
+    let previousPayment = 0;
+    
+    if (payment) {
+      previousPayment = payment.paymentAmount || 0;
+    }
+
+    // Calculate new cumulative payment amount
+    const newCumulativePayment = paymentAmount;
+    const dueAmount = Math.max(totalRevenue - newCumulativePayment, 0);
+
+    // Validate that total cumulative payment doesn't exceed total revenue
+    if (newCumulativePayment > totalRevenue) {
+      return res.status(400).json({ 
+        message: `Payment amount ${newCumulativePayment} cannot exceed total revenue ${totalRevenue}. Current due: ${Math.max(totalRevenue - previousPayment, 0)}` 
+      });
+    }
 
     if (payment) {
-      // Accumulate payment
-      const newPaymentAmount = payment.paymentAmount + Number(paymentAmount);
-      const dueAmount = initialTotalRevenue - newPaymentAmount;
-
-      if (dueAmount < 0) {
-        return res.status(400).json({ message: 'Total payment cannot exceed initial total revenue' });
-      }
-
-      // Update existing record
-      payment.paymentAmount = newPaymentAmount;
+      payment.paymentAmount = newCumulativePayment;
       payment.dueAmount = dueAmount;
-      payment.totalAmount = dueAmount; // Store due amount as totalAmount
-      payment.customDateRange = customDateRange || payment.customDateRange;
+      payment.totalAmount = totalRevenue;
+      payment.customDateRange = customDateRange;
       payment.createdAt = Date.now();
       await payment.save();
     } else {
-      // Create new record
-      const dueAmount = initialTotalRevenue - paymentAmount;
-
-      if (dueAmount < 0) {
-        return res.status(400).json({ message: 'Payment cannot exceed initial total revenue' });
-      }
-
       payment = new DoctorPayment({
         doctorName,
-        paymentAmount,
+        paymentAmount: newCumulativePayment,
         dueAmount,
-        totalAmount: dueAmount, // Store due amount as totalAmount
+        totalAmount: totalRevenue,
         dateFilter,
         customDateRange,
       });
       await payment.save();
     }
 
-    res.status(200).json(payment);
+    res.status(200).json({
+      ...payment.toObject(),
+      message: `Payment updated. Previous: ${previousPayment}, New: ${newCumulativePayment}, Due: ${dueAmount}`
+    });
   } catch (error) {
     console.error('Error saving payment:', error);
-    res.status(500).json({ message: 'Failed to save payment' });
+    res.status(500).json({ message: 'Failed to save payment', error: error.message });
+  }
+});
+
+// POST: Add additional payment (cumulative)
+router.post('/add', async (req, res) => {
+  try {
+    const { doctorName, additionalPayment, dateFilter, customDateRange } = req.body;
+
+    // Find existing payment record
+    let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'No existing payment record found. Please create initial payment first.' });
+    }
+
+    const previousPayment = payment.paymentAmount || 0;
+    const newCumulativePayment = previousPayment + Number(additionalPayment);
+    const totalRevenue = payment.totalAmount || 0;
+    const dueAmount = Math.max(totalRevenue - newCumulativePayment, 0);
+
+    // Validate that total cumulative payment doesn't exceed total revenue
+    if (newCumulativePayment > totalRevenue) {
+      return res.status(400).json({ 
+        message: `Total payment ${newCumulativePayment} cannot exceed total revenue ${totalRevenue}. Maximum additional payment allowed: ${Math.max(totalRevenue - previousPayment, 0)}` 
+      });
+    }
+
+    payment.paymentAmount = newCumulativePayment;
+    payment.dueAmount = dueAmount;
+    payment.customDateRange = customDateRange;
+    payment.createdAt = Date.now();
+    await payment.save();
+
+    res.status(200).json({
+      ...payment.toObject(),
+      message: `Additional payment added. Previous: ${previousPayment}, Added: ${additionalPayment}, New Total: ${newCumulativePayment}, Due: ${dueAmount}`
+    });
+  } catch (error) {
+    console.error('Error adding payment:', error);
+    res.status(500).json({ message: 'Failed to add payment', error: error.message });
   }
 });
 

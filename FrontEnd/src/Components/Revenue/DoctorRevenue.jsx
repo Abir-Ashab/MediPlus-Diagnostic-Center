@@ -89,7 +89,13 @@ const DoctorRevenue = ({
     return Object.values(doctorMap);
   }, [filteredTestOrders, testsMap]);
 
-  const totalDoctorRevenue = computedDoctors.reduce((sum, d) => sum + d.totalRevenue, 0);
+  // Calculate total due revenue (total revenue minus payments)
+  const totalDoctorRevenue = computedDoctors.reduce((sum, d) => {
+    const payment = doctorPayments[d._id] || 0;
+    const dueAmount = Math.max(d.totalRevenue - payment, 0);
+    return sum + dueAmount;
+  }, 0);
+
   const totalRecords = filteredTestOrders.length;
   const activeDoctors = computedDoctors.length;
 
@@ -178,74 +184,95 @@ const DoctorRevenue = ({
     }
   };
 
-// Export doctor data
-const handleExportDoctor = async (doctorName) => {
-  if (exportLoading) return;
-  setExportLoading(true);
-  try {
-    const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
-      params: { dateFilter: doctorDateFilter },
-    });
-    const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-    const payment = Number(paymentData.paymentAmount) || 0;
-    const totalDueAmount = Number(paymentData.totalAmount) || 0; // Use totalAmount from DB (now due amount)
+  // Export doctor data
+  const handleExportDoctor = async (doctorName) => {
+    if (exportLoading) return;
+    setExportLoading(true);
+    try {
+      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
+        params: { dateFilter: doctorDateFilter },
+      });
+      const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
+      const payment = Number(paymentData.paymentAmount) || 0;
 
-    const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
+      const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
 
-    const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
+      const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
+      const dueAmount = Math.max(totalRevenue - payment, 0);
 
-    const data = filteredRecords.map((order) => {
-      const recordRevenue = calculateDoctorRevenue(order);
-      // Calculate payment share proportionally based on record revenue
-      const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-      const dueAmount = recordRevenue - paymentShare;
-      return {
-        "Patient Name": order.patientName,
-        Date: order.date,
-        Type: "Test Order",
-        "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-        Revenue: dueAmount.toFixed(2), // Show due amount as revenue
-        "Payment Share": paymentShare.toFixed(2), // Proportional payment share
-        "Due Amount": dueAmount.toFixed(2), // Remaining due for this record
-      };
-    });
+      const data = filteredRecords.map((order) => {
+        const recordRevenue = calculateDoctorRevenue(order);
+        // Calculate proportional payment share based on record's contribution to total revenue
+        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
+        // Calculate due amount for this record (remaining revenue after payment)
+        const recordDueAmount = Math.max(recordRevenue - paymentShare, 0);
+        
+        return {
+          "Patient Name": order.patientName,
+          Date: order.date,
+          Type: "Test Order",
+          "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
+          "Original Revenue": recordRevenue.toFixed(2),
+          "Payment Share": paymentShare.toFixed(2),
+          "Due Amount": recordDueAmount.toFixed(2),
+        };
+      });
 
-    // Add total row
-    data.push({
-      "Patient Name": "Total",
-      Revenue: totalDueAmount.toFixed(2), // Use totalAmount from DB (due amount)
-      "Payment Share": payment.toFixed(2),
-      "Due Amount": totalDueAmount.toFixed(2), // Use totalAmount from DB (due amount)
-    });
+      data.push({
+        "Patient Name": "Total",
+        "Original Revenue": totalRevenue.toFixed(2),
+        "Payment Share": payment.toFixed(2),
+        "Due Amount": dueAmount.toFixed(2),
+      });
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
-    XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
-    toast.success("Report exported successfully!");
-  } catch (error) {
-    console.error("Error exporting doctor revenue:", error);
-    toast.error("Failed to export doctor revenue");
-  } finally {
-    setExportLoading(false);
-  }
-};
-  const doctorChartData = computedDoctors.map((doctor) => ({
-    name: doctor._id,
-    value: doctor.totalRevenue,
-  }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
+      XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
+      toast.success("Report exported successfully!");
+    } catch (error) {
+      console.error("Error exporting doctor revenue:", error);
+      toast.error("Failed to export doctor revenue");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Chart data should show due amounts (revenue minus payments)
+  const doctorChartData = computedDoctors.map((doctor) => {
+    const payment = doctorPayments[doctor._id] || 0;
+    const dueAmount = Math.max(doctor.totalRevenue - payment, 0);
+    return {
+      name: doctor._id,
+      value: dueAmount,
+    };
+  });
 
   const displayRecords = selectedDoctor
     ? filteredTestOrders
         .filter((order) => order.doctorName === selectedDoctor)
-        .map((order) => ({
-          patientName: order.patientName,
-          date: order.date,
-          recordType: "Test Order",
-          tests: order.tests,
-          totalAmount: order.totalAmount || 0,
-          doctorRevenue: calculateDoctorRevenue(order),
-        }))
+        .map((order) => {
+          const originalRevenue = calculateDoctorRevenue(order);
+          const doctorData = computedDoctors.find(d => d._id === selectedDoctor);
+          const totalDoctorRevenue = doctorData ? doctorData.totalRevenue : 0;
+          const totalPayment = doctorPayments[selectedDoctor] || 0;
+          
+          // Calculate proportional payment share for this record
+          const paymentShare = totalDoctorRevenue > 0 ? (originalRevenue / totalDoctorRevenue) * totalPayment : 0;
+          // Calculate due amount (remaining revenue after payment)
+          const dueRevenue = Math.max(originalRevenue - paymentShare, 0);
+          
+          return {
+            patientName: order.patientName,
+            date: order.date,
+            recordType: "Test Order",
+            tests: order.tests,
+            totalAmount: order.totalAmount || 0,
+            originalRevenue: originalRevenue,
+            paymentShare: paymentShare,
+            doctorRevenue: dueRevenue, // This now shows the due amount
+          };
+        })
     : [];
 
   return (
@@ -253,7 +280,7 @@ const handleExportDoctor = async (doctorName) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Due Revenue</h3>
           <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -339,12 +366,12 @@ const handleExportDoctor = async (doctorName) => {
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Doctor</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Due Revenue Distribution by Doctor</h3>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={doctorChartData.filter((entry) => entry.name && entry.value)}
+                data={doctorChartData.filter((entry) => entry.name && entry.value > 0)}
                 cx="50%"
                 cy="50%"
                 labelLine={true}
@@ -366,15 +393,24 @@ const handleExportDoctor = async (doctorName) => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctor Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {computedDoctors.map((doctor, index) => (
-            doctor._id && (
+          {computedDoctors.map((doctor, index) => {
+            if (!doctor._id) return null;
+            
+            const payment = doctorPayments[doctor._id] || 0;
+            const dueAmount = Math.max(doctor.totalRevenue - payment, 0);
+            const avgDueRevenue = doctor.appointments > 0 ? (dueAmount / doctor.appointments) : 0;
+            
+            return (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="font-medium text-gray-900">Dr. {doctor._id}</div>
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-purple-600">
-                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
+                        {dueAmount.toFixed(0)} Taka (Due)
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Original: {doctor.totalRevenue.toFixed(0)} Taka | Paid: {payment.toFixed(0)} Taka
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>
@@ -414,11 +450,11 @@ const handleExportDoctor = async (doctorName) => {
                   </div>
                 </div>
                 <div className="text-sm text-gray-600 mt-2">
-                  Avg: {doctor.appointments > 0 ? (doctor.totalRevenue / doctor.appointments).toFixed(0) : 0} Taka
+                  Avg Due: {avgDueRevenue.toFixed(0)} Taka per record
                 </div>
               </div>
-            )
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -436,7 +472,9 @@ const handleExportDoctor = async (doctorName) => {
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
                 <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Original Revenue</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Payment Share</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Due Revenue</th>
               </tr>
             </thead>
             <tbody>
@@ -451,6 +489,8 @@ const handleExportDoctor = async (doctorName) => {
                       {record.tests?.map((test) => test.testName).join(", ") || 'N/A'}
                     </td>
                     <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
+                    <td className="p-3 text-right border-b border-gray-200">{record.originalRevenue.toFixed(0)} Taka</td>
+                    <td className="p-3 text-right border-b border-gray-200 text-green-600">{record.paymentShare.toFixed(0)} Taka</td>
                     <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
                       {record.doctorRevenue.toFixed(0)} Taka
                     </td>
@@ -459,7 +499,7 @@ const handleExportDoctor = async (doctorName) => {
             </tbody>
             <tfoot>
               <tr className="bg-gray-100">
-                <td colSpan="5" className="p-3 text-right font-bold">
+                <td colSpan="7" className="p-3 text-right font-bold">
                   Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
                 </td>
                 <td className="p-3 text-right font-bold text-purple-600">
