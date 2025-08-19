@@ -65,7 +65,7 @@ const BrokerRevenue = ({
         });
         setTestsMap(map);
       } catch (error) {
-        console.error("Error fetching tests:", error);
+        console.error("Error fetching tests:", error.message, error.response?.data);
         toast.error("Failed to fetch test commissions", {
           position: "top-right",
           autoClose: 4000,
@@ -98,7 +98,7 @@ const BrokerRevenue = ({
         const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
         setAllTestOrders(res.data);
       } catch (error) {
-        console.error("Error fetching test orders:", error);
+        console.error("Error fetching test orders:", error.message, error.response?.data);
         toast.error("Failed to fetch test orders", {
           position: "top-right",
           autoClose: 4000,
@@ -150,8 +150,8 @@ const BrokerRevenue = ({
         }, {});
         setBrokerPayments(payments);
       } catch (error) {
-        console.error("Error fetching payments:", error);
-        toast.error("Failed to fetch payment data", {
+        console.error("Error fetching payments:", error.message, error.response?.data, error.response?.status);
+        toast.error(`Failed to fetch payment data: ${error.message}`, {
           position: "top-right",
           autoClose: 4000,
         });
@@ -200,8 +200,8 @@ const BrokerRevenue = ({
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error saving payment:", error);
-      toast.error("Failed to save payment", {
+      console.error("Error saving payment:", error.message, error.response?.data, error.response?.status);
+      toast.error(`Failed to save payment: ${error.message}`, {
         position: "top-right",
         autoClose: 4000,
       });
@@ -255,8 +255,8 @@ const BrokerRevenue = ({
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error exporting broker revenue:", error);
-      toast.error("Failed to export broker revenue", {
+      console.error("Error exporting broker revenue:", error.message, error.response?.data, error.response?.status);
+      toast.error(`Failed to export broker revenue: ${error.message}`, {
         position: "top-right",
         autoClose: 4000,
       });

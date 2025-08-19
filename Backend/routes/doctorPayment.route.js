@@ -10,8 +10,7 @@ router.post('/', async (req, res) => {
 
     // Fetch records to calculate total revenue
     const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
+      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
     ]);
 
     const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);

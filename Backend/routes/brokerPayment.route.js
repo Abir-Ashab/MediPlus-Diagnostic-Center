@@ -9,7 +9,7 @@ router.post('/', async (req, res) => {
     const { brokerName, paymentAmount, dateFilter, customDateRange } = req.body;
 
     // Fetch records to calculate total revenue
-    const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`);
+    const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
 
     const brokerTestOrders = testOrdersResponse.data.filter((order) => order.brokerName === brokerName);
     const formattedTestOrders = brokerTestOrders.map((order) => ({
