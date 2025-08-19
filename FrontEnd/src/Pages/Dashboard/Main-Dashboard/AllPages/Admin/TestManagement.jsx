@@ -80,10 +80,11 @@ const TestManagement = () => {
     try {
       setLoading(true);
       
-      // Convert price to number
+      // Convert price and commission to number
       const payload = {
         ...values,
-        price: Number(values.price)
+        price: Number(values.price),
+        doctorCommissionPercentage: Number(values.doctorCommissionPercentage) || undefined // Let backend handle default if not set
       };
       
       if (editingTest) {
@@ -148,6 +149,7 @@ const TestManagement = () => {
       category: test.category,
       description: test.description,
       isActive: test.isActive,
+      doctorCommissionPercentage: test.doctorCommissionPercentage,
     });
     setIsModalVisible(true);
   };
@@ -248,6 +250,14 @@ const TestManagement = () => {
           <span className="font-medium text-green-600">৳{price}</span>
         )
       ),
+    },
+    {
+      title: 'Commission (%)',
+      dataIndex: 'doctorCommissionPercentage',
+      key: 'doctorCommissionPercentage',
+      width: 120,
+      sorter: (a, b) => a.doctorCommissionPercentage - b.doctorCommissionPercentage,
+      render: (perc) => `${perc}%`
     },
     {
       title: 'Status',
@@ -471,6 +481,16 @@ const TestManagement = () => {
               <Input type="number" placeholder="Enter price" />
             </Form.Item>
           </div>
+          <Form.Item
+            label="Doctor Commission (%)"
+            name="doctorCommissionPercentage"
+            rules={[
+              { required: false },
+              { type: 'number', min: 0, max: 100, message: 'Must be between 0 and 100' }
+            ]}
+          >
+            <Input type="number" step="1" placeholder="Enter commission percentage (default based on test name)" />
+          </Form.Item>
           <Form.Item
             label="Category"
             name="category"
