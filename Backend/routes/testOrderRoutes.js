@@ -172,6 +172,24 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.patch("/:id", async (req, res) => {
+  try {
+    const updatedTestOrder = await TestOrderModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updatedTestOrder) {
+      return res.status(404).json({ message: "Test order not found" });
+    }
+
+    res.status(200).json(updatedTestOrder);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // Get revenue distribution report
 router.get("/reports/revenue", async (req, res) => {
   try {
