@@ -59,7 +59,7 @@ app.listen(process.env.port, async () => {
     await connection; // Connect to the database using existing connection promise
     console.log('✅ Connected to DB');
     
-    // await seedOnStartup();
+    await seedOnStartup();
     
   } catch (error) {
     console.error('❌ Unable to connect to DB:', error);

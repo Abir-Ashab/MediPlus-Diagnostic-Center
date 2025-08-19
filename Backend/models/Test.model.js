@@ -6,6 +6,7 @@ const testSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   category: { type: String, required: true },
   doctorCommissionPercentage: { type: Number, default: 0 },
+  brokerCommissionPercentage: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true }
 });
 
