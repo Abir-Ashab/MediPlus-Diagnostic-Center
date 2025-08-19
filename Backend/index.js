@@ -13,13 +13,13 @@ const bedRouter = require('./routes/Beds.Route');
 const doctorRouter = require('./routes/Doctors.Route');
 const nurseRouter = require('./routes/Nurses.Route');
 const patientRouter = require('./routes/Patients.Route');
-const paymentRouter = require('./routes/Payments.route');
 const prescriptionRouter = require('./routes/Prescriptions.Route');
 const reportRouter = require('./routes/Reports.Route');
 const brokerRoutes = require('./routes/Brokers.Route');
 const testOrder = require('./routes/testOrderRoutes');
 const testsRouter = require('./routes/Tests.Route');
 const seederRouter = require('./routes/Seeder.Route');
+const brokerPaymentRoutes = require('./routes/brokerPayment.route');
 
 const app = express();
 
@@ -37,12 +37,12 @@ app.use('/beds', bedRouter);
 app.use('/doctors', doctorRouter);
 app.use('/nurses', nurseRouter);
 app.use('/patients', patientRouter);
-app.use('/payments', paymentRouter);
 app.use('/prescriptions', prescriptionRouter);
 app.use('/reports', reportRouter);
 app.use('/brokers', brokerRoutes);
 app.use('/tests', testsRouter);
 app.use('/doctorPayments', doctorPaymentRoutes);
+app.use('/brokerPayments', brokerPaymentRoutes);
 app.use('/seeder', seederRouter);
 
 const seedOnStartup = async () => {
@@ -59,7 +59,7 @@ app.listen(process.env.port, async () => {
     await connection; // Connect to the database using existing connection promise
     console.log('✅ Connected to DB');
     
-    await seedOnStartup();
+    // await seedOnStartup();
     
   } catch (error) {
     console.error('❌ Unable to connect to DB:', error);

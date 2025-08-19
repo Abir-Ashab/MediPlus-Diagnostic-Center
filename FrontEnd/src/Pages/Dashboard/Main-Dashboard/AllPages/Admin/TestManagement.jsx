@@ -80,11 +80,12 @@ const TestManagement = () => {
     try {
       setLoading(true);
       
-      // Convert price and commission to number
+      // Convert price and commissions to number
       const payload = {
         ...values,
         price: Number(values.price),
-        doctorCommissionPercentage: Number(values.doctorCommissionPercentage) || undefined // Let backend handle default if not set
+        doctorCommissionPercentage: Number(values.doctorCommissionPercentage) || undefined,
+        brokerCommissionPercentage: Number(values.brokerCommissionPercentage) || undefined
       };
       
       if (editingTest) {
@@ -150,6 +151,7 @@ const TestManagement = () => {
       description: test.description,
       isActive: test.isActive,
       doctorCommissionPercentage: test.doctorCommissionPercentage,
+      brokerCommissionPercentage: test.brokerCommissionPercentage,
     });
     setIsModalVisible(true);
   };
@@ -252,11 +254,19 @@ const TestManagement = () => {
       ),
     },
     {
-      title: 'Commission (%)',
+      title: 'Doctor Commission (%)',
       dataIndex: 'doctorCommissionPercentage',
       key: 'doctorCommissionPercentage',
       width: 120,
       sorter: (a, b) => a.doctorCommissionPercentage - b.doctorCommissionPercentage,
+      render: (perc) => `${perc}%`
+    },
+    {
+      title: 'Broker Commission (%)',
+      dataIndex: 'brokerCommissionPercentage',
+      key: 'brokerCommissionPercentage',
+      width: 120,
+      sorter: (a, b) => a.brokerCommissionPercentage - b.brokerCommissionPercentage,
       render: (perc) => `${perc}%`
     },
     {
@@ -489,7 +499,17 @@ const TestManagement = () => {
               { type: 'number', min: 0, max: 100, message: 'Must be between 0 and 100' }
             ]}
           >
-            <Input type="number" step="1" placeholder="Enter commission percentage (default based on test name)" />
+            <Input type="number" step="1" placeholder="Enter doctor commission percentage" />
+          </Form.Item>
+          <Form.Item
+            label="Broker Commission (%)"
+            name="brokerCommissionPercentage"
+            rules={[
+              { required: false },
+              { type: 'number', min: 0, max: 100, message: 'Must be between 0 and 100' }
+            ]}
+          >
+            <Input type="number" step="1" placeholder="Enter broker commission percentage" />
           </Form.Item>
           <Form.Item
             label="Category"
