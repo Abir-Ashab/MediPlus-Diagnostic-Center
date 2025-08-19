@@ -18,6 +18,7 @@ const DoctorRevenue = ({
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
   const [doctorPayments, setDoctorPayments] = useState({});
+  const [paymentInputs, setPaymentInputs] = useState({}); // State for input fields
   const [exportLoading, setExportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
@@ -93,6 +94,17 @@ const DoctorRevenue = ({
   const totalRecords = filteredTestOrders.length;
   const activeDoctors = computedDoctors.length;
 
+  // Compute total due revenue
+  const totalDueRevenue = useMemo(() => {
+    const due = computedDoctors.reduce((sum, d) => {
+      const payment = doctorPayments[d._id] || 0;
+      console.log(`Doctor: ${d._id}, Total Revenue: ${d.totalRevenue}, Payment: ${payment}, Due: ${d.totalRevenue - payment}`);
+      return sum + (d.totalRevenue - payment);
+    }, 0);
+    console.log("Computed totalDueRevenue:", due);
+    return due;
+  }, [computedDoctors, doctorPayments]);
+
   // Fetch payment data
   useEffect(() => {
     const fetchPayments = async () => {
@@ -107,6 +119,7 @@ const DoctorRevenue = ({
           const payment = res.data.find((p) => p.dateFilter === doctorDateFilter) || {};
           return { ...acc, [computedDoctors[index]._id]: payment.paymentAmount || 0 };
         }, {});
+        console.log("Fetched payments:", payments);
         setDoctorPayments(payments);
       } catch (error) {
         console.error("Error fetching payments:", error);
@@ -121,13 +134,13 @@ const DoctorRevenue = ({
   // Handle payment input change
   const handlePaymentChange = (doctorId, payment) => {
     const paymentAmount = Math.max(Number(payment) || 0, 0);
-    setDoctorPayments((prev) => ({
+    setPaymentInputs((prev) => ({
       ...prev,
       [doctorId]: paymentAmount,
     }));
   };
 
-  // Save payment to backend
+  // Save payment to backend and refresh payments
   const handleSavePayment = async (doctorId) => {
     if (!doctorId || !doctorDateFilter) {
       toast.error("Doctor name or date filter is missing");
@@ -135,10 +148,19 @@ const DoctorRevenue = ({
     }
 
     setSaveLoading((prev) => ({ ...prev, [doctorId]: true }));
-    const paymentAmount = Number(doctorPayments[doctorId]) || 0;
+    const paymentAmount = Number(paymentInputs[doctorId]) || 0;
 
     if (isNaN(paymentAmount) || paymentAmount < 0) {
       toast.error("Invalid payment amount");
+      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
+      return;
+    }
+
+    // Validate payment against frontend-calculated totalRevenue
+    const doctorData = computedDoctors.find((d) => d._id === doctorId);
+    const totalRevenue = doctorData ? doctorData.totalRevenue : 0;
+    if (paymentAmount > totalRevenue) {
+      toast.error(`Payment (${paymentAmount} Taka) cannot exceed total revenue (${totalRevenue.toFixed(0)} Taka)`);
       setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
       return;
     }
@@ -159,11 +181,23 @@ const DoctorRevenue = ({
     }
 
     try {
-      console.log("Sending payment payload:", payload); // Debug log
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
+      console.log("Sending payment payload:", payload);
+      await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
+      
+      // Refresh payments for the specific doctor
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, {
+        params: { dateFilter: doctorDateFilter },
+      });
+      const payment = response.data.find((p) => p.dateFilter === doctorDateFilter) || {};
       setDoctorPayments((prev) => ({
         ...prev,
-        [doctorId]: response.data.paymentAmount || 0,
+        [doctorId]: payment.paymentAmount || 0,
+      }));
+      
+      // Clear the payment input field
+      setPaymentInputs((prev) => ({
+        ...prev,
+        [doctorId]: '',
       }));
       toast.success("Payment saved successfully!");
     } catch (error) {
@@ -251,8 +285,8 @@ const DoctorRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
-          <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
+          <h3 className="text-lg font-semibold text-gray-700">Total Due Revenue</h3>
+          <p className="text-2xl font-bold text-purple-600">{totalDueRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
@@ -382,7 +416,7 @@ const DoctorRevenue = ({
                         <input
                           type="number"
                           min="0"
-                          value={doctorPayments[doctor._id] || ""}
+                          value={paymentInputs[doctor._id] || ""}
                           onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="Enter payment"
