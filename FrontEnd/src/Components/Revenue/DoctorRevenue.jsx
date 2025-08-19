@@ -22,6 +22,7 @@ const DoctorRevenue = ({
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0); // Add this to force refresh after payment
 
   // Fetch all tests for commissions
   useEffect(() => {
@@ -41,19 +42,13 @@ const DoctorRevenue = ({
     fetchTests();
   }, []);
 
-  // Function to calculate doctor revenue for an order
+  // Function to calculate doctor revenue for an order (now uses the stored doctorRevenue from DB)
   const calculateDoctorRevenue = (order) => {
-    let drRev = 0;
-    (order.tests || []).forEach(test => {
-      const perc = testsMap[test.testName.toLowerCase()] || 0;
-      if (perc > 0) {
-        drRev += (test.testPrice || 0) * (perc / 100);
-      }
-    });
-    return drRev;
+    // Use the doctorRevenue from the database (which will be reduced after payments)
+    return order.doctorRevenue || 0;
   };
 
-  // Fetch all test orders
+  // Fetch all test orders (refresh when payment is made)
   useEffect(() => {
     const fetchAllTestOrders = async () => {
       try {
@@ -65,7 +60,7 @@ const DoctorRevenue = ({
       }
     };
     fetchAllTestOrders();
-  }, []);
+  }, [refreshKey]); // Add refreshKey as dependency
 
   // Compute filtered test orders
   const filteredTestOrders = useMemo(
@@ -87,7 +82,7 @@ const DoctorRevenue = ({
       doctorMap[doctorName].appointments += 1;
     });
     return Object.values(doctorMap);
-  }, [filteredTestOrders, testsMap]);
+  }, [filteredTestOrders, testsMap, refreshKey]); // Add refreshKey dependency
 
   const totalDoctorRevenue = computedDoctors.reduce((sum, d) => sum + d.totalRevenue, 0);
   const totalRecords = filteredTestOrders.length;
@@ -116,7 +111,7 @@ const DoctorRevenue = ({
     if (computedDoctors.length > 0) {
       fetchPayments();
     }
-  }, [computedDoctors, doctorDateFilter]);
+  }, [computedDoctors, doctorDateFilter, refreshKey]); // Add refreshKey dependency
 
   // Handle payment input change
   const handlePaymentChange = (doctorId, payment) => {
@@ -127,7 +122,7 @@ const DoctorRevenue = ({
     }));
   };
 
-  // Save payment to backend
+  // Save payment to backend and update test orders
   const handleSavePayment = async (doctorId) => {
     if (!doctorId || !doctorDateFilter) {
       toast.error("Doctor name or date filter is missing");
@@ -143,8 +138,14 @@ const DoctorRevenue = ({
       return;
     }
 
-    // Prepare payload
-    const payload = {
+    if (paymentAmount === 0) {
+      toast.error("Payment amount must be greater than 0");
+      setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
+      return;
+    }
+
+    // Prepare payload for doctor payment
+    const paymentPayload = {
       doctorName: doctorId,
       paymentAmount,
       dateFilter: doctorDateFilter,
@@ -152,20 +153,55 @@ const DoctorRevenue = ({
 
     // Only include customDateRange if dateFilter is 'custom' and it has valid values
     if (doctorDateFilter === 'custom' && doctorCustomDateRange.start && doctorCustomDateRange.end) {
-      payload.customDateRange = {
+      paymentPayload.customDateRange = {
+        start: doctorCustomDateRange.start,
+        end: doctorCustomDateRange.end,
+      };
+    }
+
+    // Prepare payload for reducing doctor revenue from test orders
+    const revenueUpdatePayload = {
+      paymentAmount,
+      dateFilter: doctorDateFilter,
+    };
+
+    if (doctorDateFilter === 'custom' && doctorCustomDateRange.start && doctorCustomDateRange.end) {
+      revenueUpdatePayload.customDateRange = {
         start: doctorCustomDateRange.start,
         end: doctorCustomDateRange.end,
       };
     }
 
     try {
-      console.log("Sending payment payload:", payload); // Debug log
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
+      console.log("Sending payment payload:", paymentPayload); // Debug log
+      
+      // First, save the payment record
+      const paymentResponse = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, paymentPayload);
+      
+      // Then, update the test orders to reduce doctor revenue
+      const revenueResponse = await axios.patch(
+        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/${doctorId}/reduce-revenue`,
+        revenueUpdatePayload
+      );
+
+      console.log("Revenue update response:", revenueResponse.data); // Debug log
+
+      // Update local state
       setDoctorPayments((prev) => ({
         ...prev,
-        [doctorId]: response.data.paymentAmount || 0,
+        [doctorId]: paymentResponse.data.paymentAmount || 0,
       }));
-      toast.success("Payment saved successfully!");
+
+      // Force refresh of test orders data
+      setRefreshKey(prev => prev + 1);
+
+      toast.success(`Payment saved successfully! Updated ${revenueResponse.data.ordersUpdated} orders.`);
+      
+      // Show detailed info about the payment processing
+      if (revenueResponse.data.updatedOrders && revenueResponse.data.updatedOrders.length > 0) {
+        console.log("Orders updated:", revenueResponse.data.updatedOrders);
+      }
+
     } catch (error) {
       console.error("Error saving payment:", error);
       const errorMessage = error.response?.data?.message || "Failed to save payment";
@@ -195,30 +231,27 @@ const DoctorRevenue = ({
 
       const data = filteredRecords.map((order) => {
         const recordRevenue = calculateDoctorRevenue(order);
-        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-        const dueAmount = recordRevenue - paymentShare;
         return {
           "Patient Name": order.patientName,
           Date: order.date,
           Type: "Test Order",
           "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          Revenue: recordRevenue.toFixed(2),
-          "Payment Share": paymentShare.toFixed(2),
-          "Due Amount": dueAmount.toFixed(2),
+          "Due Revenue": recordRevenue.toFixed(2), // Now shows the remaining due amount
+          "Last Payment": order.lastPaymentDate ? new Date(order.lastPaymentDate).toLocaleDateString() : "N/A",
+          "Last Payment Amount": order.lastPaymentAmount ? order.lastPaymentAmount.toFixed(2) : "0.00",
         };
       });
 
       data.push({
         "Patient Name": "Total",
-        Revenue: totalRevenue.toFixed(2),
-        "Payment Share": payment.toFixed(2),
-        "Due Amount": (totalRevenue - payment).toFixed(2),
+        "Due Revenue": totalRevenue.toFixed(2),
+        "Last Payment Amount": payment.toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
-      XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
+      XLSX.writeFile(wb, `doctor_${doctorName}_revenue_due.xlsx`);
       toast.success("Report exported successfully!");
     } catch (error) {
       console.error("Error exporting doctor revenue:", error);
@@ -243,6 +276,8 @@ const DoctorRevenue = ({
           tests: order.tests,
           totalAmount: order.totalAmount || 0,
           doctorRevenue: calculateDoctorRevenue(order),
+          lastPaymentDate: order.lastPaymentDate,
+          lastPaymentAmount: order.lastPaymentAmount || 0,
         }))
     : [];
 
@@ -251,8 +286,9 @@ const DoctorRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Total Due Revenue</h3>
           <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
+          <p className="text-xs text-gray-500 mt-1">Remaining amount after payments</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
@@ -337,7 +373,7 @@ const DoctorRevenue = ({
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Doctor</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Due Revenue Distribution by Doctor</h3>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -364,15 +400,17 @@ const DoctorRevenue = ({
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctor Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {computedDoctors.map((doctor, index) => (
-            doctor._id && (
+          {computedDoctors.map((doctor, index) => {
+            if (!doctor._id) return null;
+            
+            return (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="font-medium text-gray-900">Dr. {doctor._id}</div>
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-purple-600">
-                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
+                        {doctor.totalRevenue.toFixed(0)} Taka (Due)
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>
@@ -382,6 +420,7 @@ const DoctorRevenue = ({
                         <input
                           type="number"
                           min="0"
+                          max={doctor.totalRevenue}
                           value={doctorPayments[doctor._id] || ""}
                           onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -394,6 +433,9 @@ const DoctorRevenue = ({
                         >
                           {saveLoading[doctor._id] ? 'Saving...' : 'Save Payment'}
                         </button>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Max: {doctor.totalRevenue.toFixed(0)} Taka
                       </div>
                     </div>
                     <button
@@ -415,8 +457,8 @@ const DoctorRevenue = ({
                   Avg: {doctor.appointments > 0 ? (doctor.totalRevenue / doctor.appointments).toFixed(0) : 0} Taka
                 </div>
               </div>
-            )
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -434,7 +476,8 @@ const DoctorRevenue = ({
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
                 <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Due Revenue</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Last Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -452,6 +495,14 @@ const DoctorRevenue = ({
                     <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
                       {record.doctorRevenue.toFixed(0)} Taka
                     </td>
+                    <td className="p-3 text-right border-b border-gray-200 text-sm text-gray-600">
+                      {record.lastPaymentAmount > 0 ? `${record.lastPaymentAmount.toFixed(0)} Taka` : 'N/A'}
+                      {record.lastPaymentDate && (
+                        <div className="text-xs">
+                          {new Date(record.lastPaymentDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -464,6 +515,12 @@ const DoctorRevenue = ({
                   {displayRecords
                     .slice(0, 10)
                     .reduce((sum, record) => sum + record.doctorRevenue, 0)
+                    .toFixed(0)} Taka
+                </td>
+                <td className="p-3 text-right font-bold text-gray-600">
+                  {displayRecords
+                    .slice(0, 10)
+                    .reduce((sum, record) => sum + record.lastPaymentAmount, 0)
                     .toFixed(0)} Taka
                 </td>
               </tr>
