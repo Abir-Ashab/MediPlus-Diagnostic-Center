@@ -89,13 +89,7 @@ const DoctorRevenue = ({
     return Object.values(doctorMap);
   }, [filteredTestOrders, testsMap]);
 
-  // Calculate total due revenue (total revenue minus payments)
-  const totalDoctorRevenue = computedDoctors.reduce((sum, d) => {
-    const payment = doctorPayments[d._id] || 0;
-    const dueAmount = Math.max(d.totalRevenue - payment, 0);
-    return sum + dueAmount;
-  }, 0);
-
+  const totalDoctorRevenue = computedDoctors.reduce((sum, d) => sum + d.totalRevenue, 0);
   const totalRecords = filteredTestOrders.length;
   const activeDoctors = computedDoctors.length;
 
@@ -198,31 +192,27 @@ const DoctorRevenue = ({
       const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
 
       const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
-      const dueAmount = Math.max(totalRevenue - payment, 0);
 
       const data = filteredRecords.map((order) => {
         const recordRevenue = calculateDoctorRevenue(order);
-        // Calculate proportional payment share based on record's contribution to total revenue
         const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-        // Calculate due amount for this record (remaining revenue after payment)
-        const recordDueAmount = Math.max(recordRevenue - paymentShare, 0);
-        
+        const dueAmount = recordRevenue - paymentShare;
         return {
           "Patient Name": order.patientName,
           Date: order.date,
           Type: "Test Order",
           "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          "Original Revenue": recordRevenue.toFixed(2),
+          Revenue: recordRevenue.toFixed(2),
           "Payment Share": paymentShare.toFixed(2),
-          "Due Amount": recordDueAmount.toFixed(2),
+          "Due Amount": dueAmount.toFixed(2),
         };
       });
 
       data.push({
         "Patient Name": "Total",
-        "Original Revenue": totalRevenue.toFixed(2),
+        Revenue: totalRevenue.toFixed(2),
         "Payment Share": payment.toFixed(2),
-        "Due Amount": dueAmount.toFixed(2),
+        "Due Amount": (totalRevenue - payment).toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -238,41 +228,22 @@ const DoctorRevenue = ({
     }
   };
 
-  // Chart data should show due amounts (revenue minus payments)
-  const doctorChartData = computedDoctors.map((doctor) => {
-    const payment = doctorPayments[doctor._id] || 0;
-    const dueAmount = Math.max(doctor.totalRevenue - payment, 0);
-    return {
-      name: doctor._id,
-      value: dueAmount,
-    };
-  });
+  const doctorChartData = computedDoctors.map((doctor) => ({
+    name: doctor._id,
+    value: doctor.totalRevenue,
+  }));
 
   const displayRecords = selectedDoctor
     ? filteredTestOrders
         .filter((order) => order.doctorName === selectedDoctor)
-        .map((order) => {
-          const originalRevenue = calculateDoctorRevenue(order);
-          const doctorData = computedDoctors.find(d => d._id === selectedDoctor);
-          const totalDoctorRevenue = doctorData ? doctorData.totalRevenue : 0;
-          const totalPayment = doctorPayments[selectedDoctor] || 0;
-          
-          // Calculate proportional payment share for this record
-          const paymentShare = totalDoctorRevenue > 0 ? (originalRevenue / totalDoctorRevenue) * totalPayment : 0;
-          // Calculate due amount (remaining revenue after payment)
-          const dueRevenue = Math.max(originalRevenue - paymentShare, 0);
-          
-          return {
-            patientName: order.patientName,
-            date: order.date,
-            recordType: "Test Order",
-            tests: order.tests,
-            totalAmount: order.totalAmount || 0,
-            originalRevenue: originalRevenue,
-            paymentShare: paymentShare,
-            doctorRevenue: dueRevenue, // This now shows the due amount
-          };
-        })
+        .map((order) => ({
+          patientName: order.patientName,
+          date: order.date,
+          recordType: "Test Order",
+          tests: order.tests,
+          totalAmount: order.totalAmount || 0,
+          doctorRevenue: calculateDoctorRevenue(order),
+        }))
     : [];
 
   return (
@@ -280,7 +251,7 @@ const DoctorRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Due Revenue</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Total Doctor Revenue</h3>
           <p className="text-2xl font-bold text-purple-600">{totalDoctorRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -366,12 +337,12 @@ const DoctorRevenue = ({
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Due Revenue Distribution by Doctor</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Doctor</h3>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={doctorChartData.filter((entry) => entry.name && entry.value > 0)}
+                data={doctorChartData.filter((entry) => entry.name && entry.value)}
                 cx="50%"
                 cy="50%"
                 labelLine={true}
@@ -393,24 +364,15 @@ const DoctorRevenue = ({
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctor Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {computedDoctors.map((doctor, index) => {
-            if (!doctor._id) return null;
-            
-            const payment = doctorPayments[doctor._id] || 0;
-            const dueAmount = Math.max(doctor.totalRevenue - payment, 0);
-            const avgDueRevenue = doctor.appointments > 0 ? (dueAmount / doctor.appointments) : 0;
-            
-            return (
+          {computedDoctors.map((doctor, index) => (
+            doctor._id && (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="font-medium text-gray-900">Dr. {doctor._id}</div>
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-purple-600">
-                        {dueAmount.toFixed(0)} Taka (Due)
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Original: {doctor.totalRevenue.toFixed(0)} Taka | Paid: {payment.toFixed(0)} Taka
+                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>
@@ -450,11 +412,11 @@ const DoctorRevenue = ({
                   </div>
                 </div>
                 <div className="text-sm text-gray-600 mt-2">
-                  Avg Due: {avgDueRevenue.toFixed(0)} Taka per record
+                  Avg: {doctor.appointments > 0 ? (doctor.totalRevenue / doctor.appointments).toFixed(0) : 0} Taka
                 </div>
               </div>
-            );
-          })}
+            )
+          ))}
         </div>
       </div>
 
@@ -472,9 +434,7 @@ const DoctorRevenue = ({
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
                 <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Original Revenue</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Payment Share</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Due Revenue</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
               </tr>
             </thead>
             <tbody>
@@ -489,8 +449,6 @@ const DoctorRevenue = ({
                       {record.tests?.map((test) => test.testName).join(", ") || 'N/A'}
                     </td>
                     <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
-                    <td className="p-3 text-right border-b border-gray-200">{record.originalRevenue.toFixed(0)} Taka</td>
-                    <td className="p-3 text-right border-b border-gray-200 text-green-600">{record.paymentShare.toFixed(0)} Taka</td>
                     <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
                       {record.doctorRevenue.toFixed(0)} Taka
                     </td>
@@ -499,7 +457,7 @@ const DoctorRevenue = ({
             </tbody>
             <tfoot>
               <tr className="bg-gray-100">
-                <td colSpan="7" className="p-3 text-right font-bold">
+                <td colSpan="5" className="p-3 text-right font-bold">
                   Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
                 </td>
                 <td className="p-3 text-right font-bold text-purple-600">
