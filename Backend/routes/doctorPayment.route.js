@@ -9,7 +9,7 @@ router.post('/', async (req, res) => {
     const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
 
     // Fetch records to calculate total revenue
-    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
+    const [testOrdersResponse] = await Promise.all([
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
     ]);
 
@@ -18,11 +18,7 @@ router.post('/', async (req, res) => {
       doctorRevenue: order.doctorRevenue || 0,
     }));
 
-    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-      doctorRevenue: appointment.doctorRevenue || 0,
-    }));
-
-    const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
+    const combinedRecords = [...formattedTestOrders];
     const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
     const dueAmount = totalRevenue - paymentAmount;
 
