@@ -23,6 +23,29 @@ const DoctorRevenue = ({
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
 
+  const defaults = {
+    'Vaccine': 20,
+    'Hormone': 20,
+    'Path': 50,
+    'X-Ray': 30,
+    'ECG': 30,
+    'USG': 20,
+    'Echo': 20,
+    'Less': 0
+  };
+
+  const getTestCategory = (testName) => {
+    if (!testName) return 'Path';
+    const lowerName = testName.toLowerCase();
+    if (lowerName.includes('vaccine')) return 'Vaccine';
+    if (lowerName.includes('echo')) return 'Echo';
+    if (lowerName.includes('ecg') || lowerName.includes('e.c.g') || lowerName.includes('e.t.t-stress')) return 'ECG';
+    if (lowerName.includes('x-ray') || lowerName.includes('p/a view') || lowerName.includes('b/v') || lowerName.includes('lat.') || lowerName.includes('p.n.s.') || lowerName.includes('opg') || lowerName.includes('ba-') || lowerName.includes('ivu') || lowerName.includes('retrograde')) return 'X-Ray';
+    if (lowerName.includes('usg') || lowerName.includes('kub') || lowerName.includes('abdomen') || lowerName.includes('pelvic') || lowerName.includes('hbs') || lowerName.includes('genito-urinary')) return 'USG';
+    if (lowerName.includes('thyroid') || lowerName.includes('t4') || lowerName.includes('ft4') || lowerName.includes('testosterone') || lowerName.includes('hba1c') || lowerName.includes('vitamin d') || lowerName.includes('ca-') || lowerName.includes('hormone')) return 'Hormone';
+    return 'Path';
+  };
+
   // Fetch all tests for commissions
   useEffect(() => {
     const fetchTests = async () => {
@@ -45,7 +68,11 @@ const DoctorRevenue = ({
   const calculateDoctorRevenue = (order) => {
     let drRev = 0;
     (order.tests || []).forEach(test => {
-      const perc = testsMap[test.testName.toLowerCase()] || 0;
+      let perc = testsMap[test.testName.toLowerCase()] || 0;
+      if (perc === 0) {
+        const cat = getTestCategory(test.testName);
+        perc = defaults[cat] || 0;
+      }
       if (perc > 0) {
         drRev += (test.testPrice || 0) * (perc / 100);
       }
