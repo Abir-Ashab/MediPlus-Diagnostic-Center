@@ -92,6 +92,36 @@ const testOrderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastPaymentDate: {
+      type: Date,
+      default: null
+    },
+    lastPaymentAmount: {
+      type: Number,
+      default: 0
+    },
+    totalPaymentsMade: {
+      type: Number,
+      default: 0
+    },
+    paymentHistory: [{
+      paymentDate: {
+        type: Date,
+        default: Date.now
+      },
+      paymentAmount: {
+        type: Number,
+        required: true
+      },
+      previousRevenue: {
+        type: Number,
+        required: true
+      },
+      newRevenue: {
+        type: Number,
+        required: true
+      }
+    }],
     date: {
       type: String,
     },
