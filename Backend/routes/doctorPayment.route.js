@@ -8,6 +8,11 @@ router.post('/', async (req, res) => {
   try {
     const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
 
+    // Validate input
+    if (!doctorName || !dateFilter || paymentAmount < 0) {
+      return res.status(400).json({ message: 'Invalid input: doctorName, dateFilter, and non-negative paymentAmount are required' });
+    }
+
     // Fetch records to calculate total revenue
     const [appointmentsResponse, testOrdersResponse] = await Promise.all([
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
@@ -24,27 +29,40 @@ router.post('/', async (req, res) => {
     }));
 
     const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
-    const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
-    const dueAmount = totalRevenue - paymentAmount;
+    const initialTotalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
 
-    if (paymentAmount > totalRevenue) {
-      return res.status(400).json({ message: 'Payment cannot exceed total revenue' });
-    }
-
+    // Find existing payment record
     let payment = await DoctorPayment.findOne({ doctorName, dateFilter });
+
     if (payment) {
-      payment.paymentAmount = paymentAmount;
+      // Accumulate payment
+      const newPaymentAmount = payment.paymentAmount + Number(paymentAmount);
+      const dueAmount = initialTotalRevenue - newPaymentAmount;
+
+      if (dueAmount < 0) {
+        return res.status(400).json({ message: 'Total payment cannot exceed initial total revenue' });
+      }
+
+      // Update existing record
+      payment.paymentAmount = newPaymentAmount;
       payment.dueAmount = dueAmount;
-      payment.totalAmount = dueAmount; // Store due amount instead of total revenue
-      payment.customDateRange = customDateRange;
+      payment.totalAmount = dueAmount; // Store due amount as totalAmount
+      payment.customDateRange = customDateRange || payment.customDateRange;
       payment.createdAt = Date.now();
       await payment.save();
     } else {
+      // Create new record
+      const dueAmount = initialTotalRevenue - paymentAmount;
+
+      if (dueAmount < 0) {
+        return res.status(400).json({ message: 'Payment cannot exceed initial total revenue' });
+      }
+
       payment = new DoctorPayment({
         doctorName,
         paymentAmount,
         dueAmount,
-        totalAmount: dueAmount, // Store due amount instead of total revenue
+        totalAmount: dueAmount, // Store due amount as totalAmount
         dateFilter,
         customDateRange,
       });

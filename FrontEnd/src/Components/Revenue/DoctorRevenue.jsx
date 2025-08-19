@@ -178,59 +178,58 @@ const DoctorRevenue = ({
     }
   };
 
-  // Export doctor data
-  const handleExportDoctor = async (doctorName) => {
-    if (exportLoading) return;
-    setExportLoading(true);
-    try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
-        params: { dateFilter: doctorDateFilter },
-      });
-      const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-      const payment = Number(paymentData.paymentAmount) || 0;
+// Export doctor data
+const handleExportDoctor = async (doctorName) => {
+  if (exportLoading) return;
+  setExportLoading(true);
+  try {
+    const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
+      params: { dateFilter: doctorDateFilter },
+    });
+    const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
+    const payment = Number(paymentData.paymentAmount) || 0;
+    const totalDueAmount = Number(paymentData.totalAmount) || 0; // Use totalAmount from DB (now due amount)
 
-      const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
+    const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
 
-      const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
-      const totalDueAmount = totalRevenue - payment;
+    const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
 
-      const data = filteredRecords.map((order) => {
-        const recordRevenue = calculateDoctorRevenue(order);
-        // Calculate payment share proportionally based on record revenue
-        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-        const dueAmount = recordRevenue - paymentShare;
-        return {
-          "Patient Name": order.patientName,
-          Date: order.date,
-          Type: "Test Order",
-          "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          Revenue: dueAmount.toFixed(2), // Show due amount as revenue
-          "Payment Share": paymentShare.toFixed(2), // Proportional payment share
-          "Due Amount": dueAmount.toFixed(2), // Remaining due for this record
-        };
-      });
+    const data = filteredRecords.map((order) => {
+      const recordRevenue = calculateDoctorRevenue(order);
+      // Calculate payment share proportionally based on record revenue
+      const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
+      const dueAmount = recordRevenue - paymentShare;
+      return {
+        "Patient Name": order.patientName,
+        Date: order.date,
+        Type: "Test Order",
+        "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
+        Revenue: dueAmount.toFixed(2), // Show due amount as revenue
+        "Payment Share": paymentShare.toFixed(2), // Proportional payment share
+        "Due Amount": dueAmount.toFixed(2), // Remaining due for this record
+      };
+    });
 
-      // Add total row
-      data.push({
-        "Patient Name": "Total",
-        Revenue: totalDueAmount.toFixed(2), // Total due amount
-        "Payment Share": payment.toFixed(2),
-        "Due Amount": totalDueAmount.toFixed(2), // Total due amount
-      });
+    // Add total row
+    data.push({
+      "Patient Name": "Total",
+      Revenue: totalDueAmount.toFixed(2), // Use totalAmount from DB (due amount)
+      "Payment Share": payment.toFixed(2),
+      "Due Amount": totalDueAmount.toFixed(2), // Use totalAmount from DB (due amount)
+    });
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
-      XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
-      toast.success("Report exported successfully!");
-    } catch (error) {
-      console.error("Error exporting doctor revenue:", error);
-      toast.error("Failed to export doctor revenue");
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
+    XLSX.writeFile(wb, `doctor_${doctorName}_monthly_revenue.xlsx`);
+    toast.success("Report exported successfully!");
+  } catch (error) {
+    console.error("Error exporting doctor revenue:", error);
+    toast.error("Failed to export doctor revenue");
+  } finally {
+    setExportLoading(false);
+  }
+};
   const doctorChartData = computedDoctors.map((doctor) => ({
     name: doctor._id,
     value: doctor.totalRevenue,
