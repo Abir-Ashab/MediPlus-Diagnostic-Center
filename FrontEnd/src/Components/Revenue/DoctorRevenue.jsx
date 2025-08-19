@@ -17,8 +17,8 @@ const DoctorRevenue = ({
   handleDoctorSelect,
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-  const [doctorPayments, setDoctorPayments] = useState({});
-  const [paymentInputs, setPaymentInputs] = useState({}); // State for input fields
+  const [doctorPayments, setDoctorPayments] = useState({}); // Store { doctorId: { paymentAmount, dueAmount } }
+  const [paymentInputs, setPaymentInputs] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
@@ -94,12 +94,12 @@ const DoctorRevenue = ({
   const totalRecords = filteredTestOrders.length;
   const activeDoctors = computedDoctors.length;
 
-  // Compute total due revenue
+  // Compute total due revenue from backend dueAmount
   const totalDueRevenue = useMemo(() => {
     const due = computedDoctors.reduce((sum, d) => {
-      const payment = doctorPayments[d._id] || 0;
-      console.log(`Doctor: ${d._id}, Total Revenue: ${d.totalRevenue}, Payment: ${payment}, Due: ${d.totalRevenue - payment}`);
-      return sum + (d.totalRevenue - payment);
+      const paymentData = doctorPayments[d._id] || { dueAmount: d.totalRevenue, paymentAmount: 0 };
+      console.log(`Doctor: ${d._id}, Total Revenue: ${d.totalRevenue}, Payment: ${paymentData.paymentAmount}, Due: ${paymentData.dueAmount}`);
+      return sum + paymentData.dueAmount;
     }, 0);
     console.log("Computed totalDueRevenue:", due);
     return due;
@@ -117,7 +117,13 @@ const DoctorRevenue = ({
         const responses = await Promise.all(promises);
         const payments = responses.reduce((acc, res, index) => {
           const payment = res.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-          return { ...acc, [computedDoctors[index]._id]: payment.paymentAmount || 0 };
+          return {
+            ...acc,
+            [computedDoctors[index]._id]: {
+              paymentAmount: payment.paymentAmount || 0,
+              dueAmount: payment.dueAmount !== undefined ? payment.dueAmount : computedDoctors[index].totalRevenue,
+            },
+          };
         }, {});
         console.log("Fetched payments:", payments);
         setDoctorPayments(payments);
@@ -156,18 +162,18 @@ const DoctorRevenue = ({
       return;
     }
 
-    // Validate payment against frontend-calculated totalRevenue
+    // Validate payment against backend dueAmount
     const doctorData = computedDoctors.find((d) => d._id === doctorId);
     const totalRevenue = doctorData ? doctorData.totalRevenue : 0;
-    if (paymentAmount > totalRevenue) {
-      toast.error(`Payment (${paymentAmount} Taka) cannot exceed total revenue (${totalRevenue.toFixed(0)} Taka)`);
+    const dueAmount = doctorPayments[doctorId]?.dueAmount !== undefined ? doctorPayments[doctorId].dueAmount : totalRevenue;
+    if (paymentAmount > dueAmount) {
+      toast.error(`Payment (${paymentAmount} Taka) cannot exceed due amount (${dueAmount.toFixed(0)} Taka)`);
       setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
       return;
     }
 
     // Prepare payload
     const payload = {
-      doctorName: doctorId,
       paymentAmount,
       dateFilter: doctorDateFilter,
     };
@@ -182,8 +188,21 @@ const DoctorRevenue = ({
 
     try {
       console.log("Sending payment payload:", payload);
-      await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
-      
+      // Check if payment exists to decide between POST and PATCH
+      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, {
+        params: { dateFilter: doctorDateFilter },
+      });
+      const existingPayment = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter);
+
+      if (existingPayment) {
+        // Update existing payment
+        await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, payload);
+      } else {
+        // Create new payment
+        payload.doctorName = doctorId;
+        await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, payload);
+      }
+
       // Refresh payments for the specific doctor
       const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorId}`, {
         params: { dateFilter: doctorDateFilter },
@@ -191,9 +210,12 @@ const DoctorRevenue = ({
       const payment = response.data.find((p) => p.dateFilter === doctorDateFilter) || {};
       setDoctorPayments((prev) => ({
         ...prev,
-        [doctorId]: payment.paymentAmount || 0,
+        [doctorId]: {
+          paymentAmount: payment.paymentAmount || 0,
+          dueAmount: payment.dueAmount !== undefined ? payment.dueAmount : totalRevenue,
+        },
       }));
-      
+
       // Clear the payment input field
       setPaymentInputs((prev) => ({
         ...prev,
@@ -246,7 +268,7 @@ const DoctorRevenue = ({
         "Patient Name": "Total",
         Revenue: totalRevenue.toFixed(2),
         "Payment Share": payment.toFixed(2),
-        "Due Amount": (totalRevenue - payment).toFixed(2),
+        "Due Amount": (paymentData.dueAmount || totalRevenue).toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -406,7 +428,7 @@ const DoctorRevenue = ({
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-purple-600">
-                        {(doctor.totalRevenue - (doctorPayments[doctor._id] || 0)).toFixed(0)} Taka (Due)
+                        {(doctorPayments[doctor._id]?.dueAmount || doctor.totalRevenue).toFixed(0)} Taka (Due)
                       </div>
                       <div className="text-sm text-gray-600">Records: {doctor.appointments}</div>
                     </div>

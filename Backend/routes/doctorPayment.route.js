@@ -3,6 +3,39 @@ const router = express.Router();
 const DoctorPayment = require('../models/doctorPayment.model');
 const axios = require('axios');
 
+// Function to get start and end dates for filter
+const getDateRange = (dateFilter, customDateRange) => {
+  const now = new Date();
+  let start, end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999); // End of today
+
+  switch (dateFilter) {
+    case 'all':
+      start = new Date(0);
+      break;
+    case 'week':
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6); // Start of 7 days ago
+      break;
+    case 'month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'year':
+      start = new Date(now.getFullYear(), 0, 1);
+      break;
+    case 'custom':
+      if (!customDateRange || !customDateRange.start || !customDateRange.end) {
+        throw new Error('Custom date range required for custom filter');
+      }
+      start = new Date(customDateRange.start);
+      end = new Date(customDateRange.end);
+      end.setHours(23, 59, 59, 999); // End of day
+      break;
+    default:
+      throw new Error('Invalid dateFilter');
+  }
+
+  return { start, end };
+};
+
 // POST: Create a new payment for a doctor
 router.post('/', async (req, res) => {
   try {
@@ -19,22 +52,30 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Payment record already exists. Use PATCH to update.' });
     }
 
-    // Calculate totalRevenue
+    // Get date range for filtering
+    const { start, end } = getDateRange(dateFilter, customDateRange);
+
+    // Fetch records
     const [appointmentsResponse, testOrdersResponse] = await Promise.all([
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
       axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
     ]);
 
-    const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
-    const formattedTestOrders = doctorTestOrders.map((order) => ({
-      doctorRevenue: order.doctorRevenue || 0,
-    }));
-
     const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
       doctorRevenue: appointment.doctorRevenue || 0,
+      date: appointment.date,
     }));
 
-    const combinedRecords = [...formattedAppointments, ...formattedTestOrders];
+    const formattedTestOrders = testOrdersResponse.data.map((order) => ({
+      doctorRevenue: order.doctorRevenue || 0,
+      date: order.date,
+    }));
+
+    const combinedRecords = [...formattedAppointments, ...formattedTestOrders].filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate >= start && recordDate <= end;
+    });
+
     const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
     const dueAmount = totalRevenue - paymentAmount;
 
@@ -82,8 +123,8 @@ router.patch('/:doctorName', async (req, res) => {
     }
 
     // Update payment
-    payment.paymentAmount += paymentAmount; // Accumulate payments
-    payment.dueAmount -= paymentAmount; // Subtract from current dueAmount
+    payment.paymentAmount += paymentAmount;
+    payment.dueAmount -= paymentAmount;
     payment.customDateRange = customDateRange || payment.customDateRange;
     payment.createdAt = Date.now();
     await payment.save();
@@ -111,7 +152,7 @@ router.get('/:doctorName', async (req, res) => {
   }
 });
 
-// DELETE: Delete payment for a doctor (optional)
+// DELETE: Delete payment for a doctor
 router.delete('/:doctorName', async (req, res) => {
   try {
     const { doctorName } = req.params;
