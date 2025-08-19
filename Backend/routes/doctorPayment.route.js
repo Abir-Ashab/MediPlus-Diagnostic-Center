@@ -36,6 +36,43 @@ const getDateRange = (dateFilter, customDateRange) => {
   return { start, end };
 };
 
+// Function to calculate doctor revenue for an order
+const calculateDoctorRevenue = (order, testsMap) => {
+  let drRev = 0;
+  (order.tests || []).forEach(test => {
+    const perc = testsMap[test.testName.toLowerCase()] || 0;
+    if (perc > 0) {
+      drRev += (test.testPrice || 0) * (perc / 100);
+    }
+  });
+  return drRev;
+};
+
+// Function to calculate current total revenue
+const calculateCurrentTotalRevenue = async (doctorName, dateFilter, customDateRange) => {
+  const { start, end } = getDateRange(dateFilter, customDateRange);
+
+  // Fetch tests for commissions
+  const testsResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true");
+  const testsMap = {};
+  testsResponse.data.forEach(t => {
+    testsMap[t.title.toLowerCase()] = t.doctorCommissionPercentage || 0;
+  });
+
+  // Fetch test orders
+  const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`);
+  const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
+
+  const filteredTestOrders = doctorTestOrders.filter(order => {
+    const orderDate = new Date(order.date);
+    return orderDate >= start && orderDate <= end;
+  });
+
+  const totalRevenue = filteredTestOrders.reduce((sum, order) => sum + calculateDoctorRevenue(order, testsMap), 0);
+
+  return totalRevenue;
+};
+
 // POST: Create a new payment for a doctor
 router.post('/', async (req, res) => {
   try {
@@ -52,32 +89,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Payment record already exists. Use PATCH to update.' });
     }
 
-    // Get date range for filtering
-    const { start, end } = getDateRange(dateFilter, customDateRange);
-
-    // Fetch records
-    const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
-    ]);
-
-    const formattedAppointments = appointmentsResponse.data.map((appointment) => ({
-      doctorRevenue: appointment.doctorRevenue || 0,
-      date: appointment.date,
-    }));
-
-    const formattedTestOrders = testOrdersResponse.data.map((order) => ({
-      doctorRevenue: order.doctorRevenue || 0,
-      date: order.date,
-    }));
-
-    const combinedRecords = [...formattedAppointments, ...formattedTestOrders].filter(record => {
-      const recordDate = new Date(record.date);
-      return recordDate >= start && recordDate <= end;
-    });
-
-    const totalRevenue = combinedRecords.reduce((sum, record) => sum + Number(record.doctorRevenue), 0);
-    const dueAmount = totalRevenue - paymentAmount;
+    // Calculate current total revenue
+    const totalRevenue = await calculateCurrentTotalRevenue(doctorName, dateFilter, customDateRange);
 
     if (paymentAmount > totalRevenue) {
       return res.status(400).json({ message: `Payment (${paymentAmount} Taka) cannot exceed total revenue (${totalRevenue} Taka)` });
@@ -86,7 +99,6 @@ router.post('/', async (req, res) => {
     const payment = new DoctorPayment({
       doctorName,
       paymentAmount,
-      dueAmount,
       totalAmount: totalRevenue,
       dateFilter,
       customDateRange,
@@ -117,14 +129,18 @@ router.patch('/:doctorName', async (req, res) => {
       return res.status(404).json({ message: 'Payment record not found. Use POST to create.' });
     }
 
-    // Validate payment against current dueAmount
-    if (paymentAmount > payment.dueAmount) {
-      return res.status(400).json({ message: `Payment (${paymentAmount} Taka) cannot exceed due amount (${payment.dueAmount} Taka)` });
+    // Calculate current total revenue
+    const totalRevenue = await calculateCurrentTotalRevenue(doctorName, dateFilter, customDateRange);
+
+    const currentDue = totalRevenue - payment.paymentAmount;
+
+    if (paymentAmount > currentDue) {
+      return res.status(400).json({ message: `Payment (${paymentAmount} Taka) cannot exceed current due amount (${currentDue} Taka)` });
     }
 
     // Update payment
     payment.paymentAmount += paymentAmount;
-    payment.dueAmount -= paymentAmount;
+    payment.totalAmount = totalRevenue;
     payment.customDateRange = customDateRange || payment.customDateRange;
     payment.createdAt = Date.now();
     await payment.save();
