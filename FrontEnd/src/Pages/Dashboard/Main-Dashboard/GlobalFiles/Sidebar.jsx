@@ -225,7 +225,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {user?.userType === "admin" && (
+            {(user?.userType === "nurse" || user?.userType === "admin") && (
               <Link 
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/test-management"

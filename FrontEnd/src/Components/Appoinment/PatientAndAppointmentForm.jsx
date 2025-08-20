@@ -116,13 +116,12 @@ const PatientAndAppointmentForm = ({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name</label>
             <Select
               name="doctorName"
               value={commonData.doctorName}
               onChange={handleDoctorChange}
               disabled={loadingDoctors}
-              required
               className="w-full"
               placeholder={loadingDoctors ? "Loading doctors..." : "Select Doctor"}
             >

@@ -354,7 +354,6 @@ const Book_Appointment = () => {
         commonData.age &&
         commonData.gender &&
         commonData.mobile &&
-        commonData.doctorName &&
         appointmentData.date
       );
     }
