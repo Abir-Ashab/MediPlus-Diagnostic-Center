@@ -8,6 +8,7 @@ import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import { API_BASE_URL } from "../../../../../api";
 import { Button, Card } from "antd";
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -69,7 +70,7 @@ const Book_Appointment = () => {
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const response = await axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true');
+  const response = await axios.get(`${API_BASE_URL}/tests?isActive=true`);
         setTestsList(response.data);
       } catch (error) {
         console.error('Error fetching tests:', error);
@@ -82,7 +83,7 @@ const Book_Appointment = () => {
     const fetchDoctors = async () => {
       try {
         setLoadingDoctors(true);
-        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
+  const response = await axios.get(`${API_BASE_URL}/doctors`);
         setDoctors(response.data);
         setLoadingDoctors(false);
       } catch (error) {
@@ -101,7 +102,7 @@ const Book_Appointment = () => {
     const fetchBrokers = async () => {
       try {
         setLoadingBrokers(true);
-        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
+  const response = await axios.get(`${API_BASE_URL}/brokers`);
         setBrokers(response.data);
         setLoadingBrokers(false);
       } catch (error) {
@@ -120,7 +121,7 @@ const Book_Appointment = () => {
     const fetchPatientData = async () => {
       if (commonData.mobile.length === 11) {
         try {
-          const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?mobile=${commonData.mobile}`);
+          const response = await axios.get(`${API_BASE_URL}/testorders?mobile=${commonData.mobile}`);
           const prevOrders = response.data;
           if (prevOrders.length > 0) {
             prevOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -248,7 +249,7 @@ const Book_Appointment = () => {
       const test = testsList.find(t => t.testId === parseInt(testId));
       if (!test) return;
 
-      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/${test._id}`, {
+  await axios.put(`${API_BASE_URL}/tests/${test._id}`, {
         ...test,
         price: Number(newPrice)
       });
@@ -258,7 +259,7 @@ const Book_Appointment = () => {
         autoClose: 3000,
       });
 
-      const response = await axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true');
+  const response = await axios.get(`${API_BASE_URL}/tests?isActive=true`);
       setTestsList(response.data);
     } catch (error) {
       console.error('Error updating test price:', error);
@@ -446,7 +447,7 @@ const Book_Appointment = () => {
         patientID,
       };
       
-      const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
+  const response = await axios.post(`${API_BASE_URL}/testorders`, testOrderData);
       setLoading(false);
       
       setLastCreatedOrder({
@@ -488,7 +489,7 @@ const Book_Appointment = () => {
   const fetchBookedAppointments = async (doctorName, date) => {
     if (!doctorName || !date) return;
     try {
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctor=${doctorName}&date=${date}`);
+  const response = await axios.get(`${API_BASE_URL}/appointments?doctor=${doctorName}&date=${date}`);
       setBookedAppointments(response.data);
     } catch (error) {
       console.error("Error fetching booked appointments:", error);

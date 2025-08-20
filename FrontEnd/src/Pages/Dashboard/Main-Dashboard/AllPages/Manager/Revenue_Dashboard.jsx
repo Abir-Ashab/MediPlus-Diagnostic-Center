@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import HospitalRevenue from "../../../../../Components/Revenue/HospitalRevenue";
 import DoctorRevenue from "../../../../../Components/Revenue/DoctorRevenue";
 import BrokerRevenue from "../../../../../Components/Revenue/BrokerRevenue";
+import { API_BASE_URL } from "../../../../../api";
 
 const RevenueDashboard = () => {
   const [activeTab, setActiveTab] = useState("hospital");
@@ -212,8 +213,8 @@ const RevenueDashboard = () => {
     setSelectedDoctor(doctorName);
     try {
       const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-        axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders`),
+        axios.get(`${API_BASE_URL}/appointments?doctorName=${doctorName}`),
+        axios.get(`${API_BASE_URL}/testorders`),
       ]);
 
       const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
@@ -250,7 +251,7 @@ const RevenueDashboard = () => {
   const handleBrokerSelect = async (brokerName) => {
     setSelectedBroker(brokerName);
     try {
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
+      const response = await axios.get(`${API_BASE_URL}/testorders?brokerName=${brokerName}`);
       const appointments = response.data;
       const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
       setBrokerData({
@@ -271,9 +272,9 @@ const RevenueDashboard = () => {
         setLoading(true);
 
         const [appointmentResponse, testOrderResponse, appointmentsRes] = await Promise.all([
-          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/hospital").catch(() => ({ data: { brokers: [], summary: {} } })),
-          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders").catch(() => ({ data: [] })),
-          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments").catch(() => ({ data: [] })),
+          axios.get(`${API_BASE_URL}/appointments/revenue/hospital`).catch(() => ({ data: { brokers: [], summary: {} } })),
+          axios.get(`${API_BASE_URL}/testorders`).catch(() => ({ data: [] })),
+          axios.get(`${API_BASE_URL}/appointments`).catch(() => ({ data: [] })),
         ]);
 
         // Process hospital data
@@ -353,7 +354,7 @@ const RevenueDashboard = () => {
         });
 
         // Process doctor data
-        const doctorResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/doctor").catch(() => ({ data: { doctors: [], summary: {} } }));
+        const doctorResponse = await axios.get(`${API_BASE_URL}/appointments/revenue/doctor`).catch(() => ({ data: { doctors: [], summary: {} } }));
         const doctorsRevenue = (doctorResponse.data.doctors || []).filter((doctor) => doctor._id !== null);
         const testOrdersByDoctor = {};
         testOrderResponse.data.forEach((order) => {
@@ -400,7 +401,7 @@ const RevenueDashboard = () => {
         });
 
 
-        const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
+        const brokerResponse = await axios.get(`${API_BASE_URL}/testorders/revenue/broker`).catch(() => ({ data: { brokers: [], summary: {} } }));
 
         const filteredBrokers = (brokerResponse.data.brokers || []).filter((broker) => broker._id !== null);
         

@@ -3,6 +3,7 @@ import { Card, Table, DatePicker, Select, Button, Statistic, Row, Col, Spin, mes
 import { DollarSign, TrendingUp, Users, FileText, Download } from 'lucide-react';
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
+import { API_BASE_URL } from "../../../../../api";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import moment from "moment";
@@ -21,7 +22,7 @@ const RevenueManagement = () => {
   // Fetch doctors
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/commission");
+      const response = await axios.get(`${API_BASE_URL}/testorders/doctors/commission`);
       setDoctors(response.data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -46,8 +47,8 @@ const RevenueManagement = () => {
       if (selectedDoctor) {
         params.doctorName = selectedDoctor;
       }
-      
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/reports/revenue", { params });
+
+      const response = await axios.get(`${API_BASE_URL}/testorders/reports/revenue`, { params });
       setRevenueData(response.data);
       setLoading(false);
     } catch (error) {

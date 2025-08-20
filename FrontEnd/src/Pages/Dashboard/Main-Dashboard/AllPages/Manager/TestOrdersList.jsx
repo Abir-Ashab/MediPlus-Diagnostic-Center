@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../../../../api";
 import { Modal, Button, Input, Spin, Select, DatePicker, TimePicker } from "antd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -62,7 +63,7 @@ const TestOrdersList = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders"
+  `${API_BASE_URL}/testorders`
       );
       setTestOrders(response.data);
       setLoading(false);
@@ -84,7 +85,7 @@ const TestOrdersList = () => {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await axios.patch(
-        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}/status`,
+  `${API_BASE_URL}/testorders/${orderId}/status`,
         {
           status: newStatus,
         }
@@ -100,7 +101,7 @@ const TestOrdersList = () => {
   const deleteTestOrder = async (orderId) => {
     try {
       await axios.delete(
-        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}`
+  `${API_BASE_URL}/testorders/${orderId}`
       );
       toast.success("Test order deleted successfully");
       setIsConfirmDeleteOpen(false);
@@ -128,7 +129,7 @@ const TestOrdersList = () => {
           : formData.dueAmount,
       };
       await axios.put(
-        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`,
+  `${API_BASE_URL}/testorders/${selectedOrder._id}`,
         formattedData
       );
       toast.success("Test order updated successfully");

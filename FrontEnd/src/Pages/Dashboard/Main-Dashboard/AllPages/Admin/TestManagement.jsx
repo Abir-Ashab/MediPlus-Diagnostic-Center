@@ -5,6 +5,7 @@ import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import { API_BASE_URL } from "../../../../../api";
 
 const { Option } = Select;
 
@@ -25,7 +26,7 @@ const TestManagement = () => {
   const fetchTests = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests");
+  const response = await axios.get(`${API_BASE_URL}/tests`);
       setTests(response.data);
       setFilteredTests(response.data);
       setLoading(false);
@@ -42,7 +43,7 @@ const TestManagement = () => {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/categories");
+  const response = await axios.get(`${API_BASE_URL}/tests/categories`);
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -90,7 +91,7 @@ const TestManagement = () => {
       
       if (editingTest) {
         // Update existing test
-        await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/${editingTest._id}`, payload);
+  await axios.put(`${API_BASE_URL}/tests/${editingTest._id}`, payload);
         toast.success("Test updated successfully!", {
           position: "top-right",
           autoClose: 3000,
@@ -98,7 +99,7 @@ const TestManagement = () => {
       } else {
         // Create new test
         const newTestId = Math.max(...tests.map(t => t.testId), 0) + 1;
-        await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests", {
+  await axios.post(`${API_BASE_URL}/tests`, {
           ...payload,
           testId: newTestId,
         });
@@ -126,7 +127,7 @@ const TestManagement = () => {
   // Handle delete test
   const handleDelete = async (testId) => {
     try {
-      await axios.delete(`https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/${testId}`);
+  await axios.delete(`${API_BASE_URL}/tests/${testId}`);
       toast.success("Test deleted successfully!", {
         position: "top-right",
         autoClose: 3000,
@@ -173,7 +174,7 @@ const TestManagement = () => {
         return { testId: test.testId, price: test.price };
       });
 
-      await axios.put("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/bulk/update-prices", { updates });
+  await axios.put(`${API_BASE_URL}/tests/bulk/update-prices`, { updates });
       toast.success("Bulk price update completed!", {
         position: "top-right",
         autoClose: 3000,

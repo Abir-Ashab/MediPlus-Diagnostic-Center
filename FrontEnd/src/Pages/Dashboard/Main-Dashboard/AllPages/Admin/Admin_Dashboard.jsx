@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../../../../api";
 import moment from "moment";
 import { useSelector } from "react-redux";
 import Sidebar from "../../GlobalFiles/Sidebar";
@@ -50,7 +51,7 @@ const AdminDashboard = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
+  const response = await axios.get(`${API_BASE_URL}/doctors`);
       setDoctors(response.data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -59,7 +60,7 @@ const AdminDashboard = () => {
 
   const fetchBrokers = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
+  const response = await axios.get(`${API_BASE_URL}/brokers`);
       setBrokers(response.data);
     } catch (error) {
       console.error("Error fetching brokers:", error);
@@ -68,7 +69,7 @@ const AdminDashboard = () => {
 
   const fetchNurses = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
+  const response = await axios.get(`${API_BASE_URL}/nurses`);
       setNurses(response.data);
     } catch (error) {
       console.error("Error fetching nurses:", error);
@@ -77,7 +78,7 @@ const AdminDashboard = () => {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/admin");
+  const response = await axios.get(`${API_BASE_URL}/admin`);
       setAdmins(response.data);
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -114,7 +115,7 @@ const AdminDashboard = () => {
           return;
       }
 
-      await axios.delete(`https://medi-plus-diagnostic-center-bdbv.vercel.app/${endpoint}/${idField}`);
+  await axios.delete(`${API_BASE_URL}/${endpoint}/${idField}`);
       toast.success(`${userType} deleted successfully`);
       fetchAllData();
     } catch (error) {
@@ -155,7 +156,7 @@ const AdminDashboard = () => {
         formattedData.DOB = moment(formattedData.DOB, 'YYYY-MM-DD').format('YYYY-MM-DD');
       }
 
-      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/${endpoint}/${idField}`, formattedData);
+  await axios.put(`${API_BASE_URL}/${endpoint}/${idField}`, formattedData);
       toast.success(`${selectedUserType} updated successfully`);
       setIsModalOpen(false);
       setSelectedRecord(null);

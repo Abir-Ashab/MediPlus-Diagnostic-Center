@@ -8,6 +8,7 @@ import { BsFillBookmarkCheckFill } from "react-icons/bs";
 import Sidebar from "./Sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { GetAllData, GetPatients } from "../../../../Redux/Datas/action";
+import { API_BASE_URL } from "../../../../api";
 
 const FrontPage = () => {
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ const FrontPage = () => {
 
   const fetchBrokers = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
+  const response = await axios.get(`${API_BASE_URL}/brokers`);
       setBrokers(response.data);
       return response.data;
     } catch (error) {
@@ -62,7 +63,7 @@ const FrontPage = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors");
+  const response = await axios.get(`${API_BASE_URL}/doctors`);
       setDoctors(response.data);
       return response.data;
     } catch (error) {
@@ -73,7 +74,7 @@ const FrontPage = () => {
 
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/admin");
+  const response = await axios.get(`${API_BASE_URL}/admin`);
       setAdmins(response.data);
       return response.data;
     } catch (error) {
@@ -84,7 +85,7 @@ const FrontPage = () => {
 
   const fetchNurses = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
+      const response = await axios.get(`${API_BASE_URL}/nurses`);
       setNurses(response.data);
       return response.data;
     } catch (error) {
@@ -95,7 +96,7 @@ const FrontPage = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments");
+      const response = await axios.get(`${API_BASE_URL}/appointments`);
       setAppointments(response.data);
       return response.data;
     } catch (error) {

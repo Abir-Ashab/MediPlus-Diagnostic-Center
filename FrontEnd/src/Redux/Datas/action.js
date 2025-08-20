@@ -1,5 +1,6 @@
 import * as types from "./types";
 import axios from "axios";
+import { API_BASE_URL } from "../../api";
 export const CREATE_TEST_ORDER_REQUEST = "CREATE_TEST_ORDER_REQUEST";
 export const CREATE_TEST_ORDER_SUCCESS = "CREATE_TEST_ORDER_SUCCESS";
 export const CREATE_TEST_ORDER_FAILURE = "CREATE_TEST_ORDER_FAILURE";
@@ -12,28 +13,28 @@ export const GET_ALL_TEST_ORDERS_FAILURE = "GET_ALL_TEST_ORDERS_FAILURE";
 export const CreateTestOrder = (data) => async (dispatch) => {
   try {
     dispatch({ type: CREATE_TEST_ORDER_REQUEST });
-    
+
     // Make API call to create test order
-    const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", {
+    const response = await fetch(`${API_BASE_URL}/testorders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
-    
+
     const result = await response.json();
     console.log(result);
-    
+
     if (!response.ok) {
       throw new Error(result.message || "Something went wrong");
     }
-    
+
     dispatch({
       type: CREATE_TEST_ORDER_SUCCESS,
       payload: result,
     });
-    
+
     return result;
   } catch (error) {
     dispatch({
@@ -47,22 +48,22 @@ export const CreateTestOrder = (data) => async (dispatch) => {
 export const GetAllTestOrders = () => async (dispatch) => {
   try {
     dispatch({ type: GET_ALL_TEST_ORDERS_REQUEST });
-    
+
     // Make API call to fetch all test orders
-    const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
-    
+    const response = await fetch(`${API_BASE_URL}/testorders`);
+
     const result = await response.json();
     console.log(result);
-    
+
     if (!response.ok) {
       throw new Error(result.message || "Something went wrong");
     }
-    
+
     dispatch({
       type: GET_ALL_TEST_ORDERS_SUCCESS,
       payload: result,
     });
-    
+
     return result;
   } catch (error) {
     dispatch({
@@ -77,10 +78,7 @@ export const GetAllTestOrders = () => async (dispatch) => {
 export const CreateReport = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.CREATE_REPORT_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/reports/create",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/reports/create`, data);
     console.log(res);
     return res.data;
     // dispatch({
@@ -103,9 +101,7 @@ export const CreateReport = (data) => async (dispatch) => {
 export const GetDoctorDetails = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_DOCTOR_REQUEST });
-    const res = await axios.get(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors"
-    );
+    const res = await axios.get(`${API_BASE_URL}/doctors`);
     console.log(res);
     // dispatch({
     //   type: types.GET_DOCTOR_SUCCESS,
@@ -127,10 +123,7 @@ export const GetDoctorDetails = () => async (dispatch) => {
 export const AddPatients = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.ADD_PATIENT_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/patients/register",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/patients/register`, data);
     return res.data;
     // dispatch({
     //   type: types.ADD_PATIENT_SUCCESS,
@@ -152,10 +145,7 @@ export const AddPatients = (data) => async (dispatch) => {
 export const CreateBeds = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.ADD_BED_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/beds/add",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/beds/add`, data);
     return res.data;
     // dispatch({
     //   type: types.ADD_BED_SUCCESS,
@@ -177,10 +167,7 @@ export const CreateBeds = (data) => async (dispatch) => {
 export const CreatePayment = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.CREATE_PAYMENT_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/payments/add",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/payments/add`, data);
     console.log(res.data);
     // dispatch({
     //   type: types.CREATE_PAYMENT_SUCCESS,
@@ -202,7 +189,7 @@ export const CreatePayment = (data) => async (dispatch) => {
 export const GetBeds = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_BED_REQUEST });
-    const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/beds");
+    const res = await axios.get(`${API_BASE_URL}/beds`);
     console.log(res);
     dispatch({
       type: types.GET_BED_SUCCESS,
@@ -222,10 +209,7 @@ export const GetBeds = () => async (dispatch) => {
 export const CreateBooking = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.CREATE_BOOKING_REQUEST });
-    const res = await axios.post(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/create`,
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/appointments/create`, data);
     console.log(res);
     // dispatch({ type: types.CREATE_BOOKING_SUCCESS, payload: res.data.postData });
   } catch (error) {
@@ -237,10 +221,7 @@ export const CreateBooking = (data) => async (dispatch) => {
 export const AddBed = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.ADD_BEDS_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/beds/add",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/beds/add`, data);
     console.log(res);
     // dispatch({
     //   type: types.ADD_BEDS_SUCCESS,
@@ -263,10 +244,7 @@ export const AddBed = (data) => async (dispatch) => {
 export const GetSingleBed = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.GET_SINGLE_BEDS_REQUEST });
-    const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/beds/single",
-      data
-    );
+    const res = await axios.post(`${API_BASE_URL}/beds/single`, data);
     // console.log(res);
     return res.data;
     // dispatch({
@@ -290,10 +268,7 @@ export const GetSingleBed = (data) => async (dispatch) => {
 export const EditSingleBed = (data, id) => async (dispatch) => {
   try {
     dispatch({ type: types.GET_SINGLE_BEDS_REQUEST });
-    const res = await axios.patch(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/beds/${id}`,
-      data
-    );
+    const res = await axios.patch(`${API_BASE_URL}/beds/${id}`, data);
     // console.log(res);
     return res.data;
     // dispatch({
@@ -317,10 +292,7 @@ export const EditSingleBed = (data, id) => async (dispatch) => {
 export const dischargePatient = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.DISCHARGE_PATIENT_REQUEST });
-    const res = await axios.put(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/beds/discharge`,
-      data
-    );
+    const res = await axios.put(`${API_BASE_URL}/beds/discharge`, data);
     console.log(res);
     // return res.data;
     dispatch({
@@ -344,9 +316,7 @@ export const dischargePatient = (data) => async (dispatch) => {
 export const GetPatients = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_PATIENT_REQUEST });
-    const res = await axios.get(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/patients`
-    );
+    const res = await axios.get(`${API_BASE_URL}/patients`);
     console.log(res.data);
     dispatch({
       type: types.GET_PATIENT_SUCCESS,
@@ -361,9 +331,7 @@ export const GetPatients = () => async (dispatch) => {
 export const GetAllData = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_ALLDATA_REQUEST });
-    const res = await axios.get(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/hospitals`
-    );
+    const res = await axios.get(`${API_BASE_URL}/hospitals`);
     console.log(res.data);
     dispatch({
       type: types.GET_ALLDATA_SUCCESS,
@@ -378,9 +346,7 @@ export const GetAllData = () => async (dispatch) => {
 export const GetAllAppointment = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_APPOINTMENT_DETAILS_REQUEST });
-    const res = await axios.get(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments`
-    );
+    const res = await axios.get(`${API_BASE_URL}/appointments`);
     // console.log(res.data);
     // return res.data;
     dispatch({
@@ -396,9 +362,7 @@ export const GetAllAppointment = () => async (dispatch) => {
 export const DeleteAppointment = (id) => async (dispatch) => {
   try {
     dispatch({ type: types.DELETE_APPOINTMENT_REQUEST });
-    const res = await axios.delete(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/${id}`
-    );
+    const res = await axios.delete(`${API_BASE_URL}/appointments/${id}`);
     console.log(res.data);
     // return res.data;
     dispatch({
@@ -414,9 +378,7 @@ export const DeleteAppointment = (id) => async (dispatch) => {
 export const GetAllReports = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_REPORTS_REQUEST });
-    const res = await axios.get(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/reports`
-    );
+    const res = await axios.get(`${API_BASE_URL}/reports`);
     // console.log(res.data);
     return res.data;
     // dispatch({

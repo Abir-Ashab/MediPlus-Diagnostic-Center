@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import { API_BASE_URL } from '../../api';
 const CategorizedTestSelection = ({ selectedTests, onTestSelect, onSelectTestDirectly, onAddMore, onRemove }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState('sections'); 
@@ -15,8 +15,8 @@ const CategorizedTestSelection = ({ selectedTests, onTestSelect, onSelectTestDir
       try {
         setLoading(true);
         const [testsResponse, categoriesResponse] = await Promise.all([
-          axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true'),
-          axios.get('https://medi-plus-diagnostic-center-bdbv.vercel.app/tests/categories')
+          axios.get(`${API_BASE_URL}/tests?isActive=true`),
+          axios.get(`${API_BASE_URL}/tests/categories`)
         ]);
         
         setTestsList(testsResponse.data);

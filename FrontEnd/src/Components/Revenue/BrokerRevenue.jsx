@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
 import axios from "axios";
+import { API_BASE_URL } from "../../api";
 import { toast } from "react-toastify";
 
 const BrokerRevenue = ({
@@ -58,7 +59,7 @@ const BrokerRevenue = ({
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true");
+  const res = await axios.get(`${API_BASE_URL}/tests?isActive=true`);
         const map = {};
         res.data.forEach(t => {
           map[t.title.toLowerCase()] = t.brokerCommissionPercentage || 0;
@@ -95,7 +96,7 @@ const BrokerRevenue = ({
   useEffect(() => {
     const fetchAllTestOrders = async () => {
       try {
-        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
+  const res = await axios.get(`${API_BASE_URL}/testorders`);
         setAllTestOrders(res.data);
       } catch (error) {
         console.error("Error fetching test orders:", error.message, error.response?.data);
@@ -139,7 +140,7 @@ const BrokerRevenue = ({
     const fetchPayments = async () => {
       try {
         const promises = computedBrokers.map((broker) =>
-          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments/${broker._id}`, {
+          axios.get(`${API_BASE_URL}/brokerPayments/${broker._id}`, {
             params: { dateFilter: brokerDateFilter },
           })
         );
@@ -177,7 +178,7 @@ const BrokerRevenue = ({
     const paymentAmount = brokerPayments[brokerId] || 0;
 
     try {
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments`, {
+  const response = await axios.post(`${API_BASE_URL}/brokerPayments`, {
         brokerName: brokerId,
         paymentAmount,
         dateFilter: brokerDateFilter,
@@ -215,7 +216,7 @@ const BrokerRevenue = ({
     if (exportLoading) return;
     setExportLoading(true);
     try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments/${brokerName}`, {
+  const paymentResponse = await axios.get(`${API_BASE_URL}/brokerPayments/${brokerName}`, {
         params: { dateFilter: brokerDateFilter },
       });
       const paymentData = paymentResponse.data.find((p) => p.dateFilter === brokerDateFilter) || {};

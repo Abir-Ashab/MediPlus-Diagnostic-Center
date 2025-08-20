@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
 import axios from "axios";
+import { API_BASE_URL } from "../../api";
 import { toast } from "react-toastify";
 
 const DoctorRevenue = ({
@@ -28,7 +29,7 @@ const DoctorRevenue = ({
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true");
+  const res = await axios.get(`${API_BASE_URL}/tests?isActive=true`);
         const map = {};
         res.data.forEach(t => {
           map[t.title.toLowerCase()] = t.doctorCommissionPercentage || 0;
@@ -52,7 +53,7 @@ const DoctorRevenue = ({
   useEffect(() => {
     const fetchAllTestOrders = async () => {
       try {
-        const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
+  const res = await axios.get(`${API_BASE_URL}/testorders`);
         setAllTestOrders(res.data);
       } catch (error) {
         console.error("Error fetching test orders:", error);
@@ -93,7 +94,7 @@ const DoctorRevenue = ({
     const fetchPayments = async () => {
       try {
         const promises = computedDoctors.map((doctor) =>
-          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctor._id}`, {
+          axios.get(`${API_BASE_URL}/doctorPayments/${doctor._id}`, {
             params: { dateFilter: doctorDateFilter },
           })
         );
@@ -176,11 +177,11 @@ const DoctorRevenue = ({
       console.log("Sending payment payload:", paymentPayload); // Debug log
       
       // First, save the payment record
-      const paymentResponse = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, paymentPayload);
+  const paymentResponse = await axios.post(`${API_BASE_URL}/doctorPayments`, paymentPayload);
       
       // Then, update the test orders to reduce doctor revenue
       const revenueResponse = await axios.patch(
-        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/doctors/${doctorId}/reduce-revenue`,
+  `${API_BASE_URL}/testorders/doctors/${doctorId}/reduce-revenue`,
         revenueUpdatePayload
       );
 
@@ -219,7 +220,7 @@ const DoctorRevenue = ({
     if (exportLoading) return;
     setExportLoading(true);
     try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
+  const paymentResponse = await axios.get(`${API_BASE_URL}/doctorPayments/${doctorName}`, {
         params: { dateFilter: doctorDateFilter },
       });
       const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};

@@ -3,7 +3,7 @@ import { User, Phone, Mail, Calendar, MapPin, Lock, Info, Percent, Activity, Use
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Sidebar from "../../GlobalFiles/Sidebar";
-
+import { API_BASE_URL } from "../../../../../api";
 const notify = (text) => toast(text);
 
 const AddBroker = () => {
@@ -34,7 +34,7 @@ const AddBroker = () => {
     setLoading(true);
     
     try {
-      const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers/register", {
+      const response = await fetch(`${API_BASE_URL}/brokers/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -49,7 +49,6 @@ const AddBroker = () => {
       } else {
         notify("Broker Added Successfully");
         console.log("BROKER REGISTERED:", data);
-        // Reset form after successful submission
         setBrokerValue(initData);
       }
     } catch (error) {
@@ -59,7 +58,6 @@ const AddBroker = () => {
       setLoading(false);
     }
   };
-
 
   return (
     <div>

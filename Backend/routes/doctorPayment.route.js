@@ -2,16 +2,14 @@ const express = require('express');
 const router = express.Router();
 const DoctorPayment = require('../models/doctorPayment.model');
 const axios = require('axios');
+require('dotenv').config();
 
-// POST: Save or update payment for a doctor
 router.post('/', async (req, res) => {
   try {
     const { doctorName, paymentAmount, dateFilter, customDateRange } = req.body;
-
-    // Fetch records to calculate total revenue
     const [appointmentsResponse, testOrdersResponse] = await Promise.all([
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments?doctorName=${doctorName}`),
-      axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?doctorName=${doctorName}`),
+      axios.get(`${process.env.API_BASE_URL}/appointments?doctorName=${doctorName}`),
+      axios.get(`${process.env.API_BASE_URL}/testorders?doctorName=${doctorName}`),
     ]);
 
     const doctorTestOrders = testOrdersResponse.data.filter((order) => order.doctorName === doctorName);
@@ -58,7 +56,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET: Retrieve payments for a doctor
 router.get('/:doctorName', async (req, res) => {
   try {
     const { doctorName } = req.params;

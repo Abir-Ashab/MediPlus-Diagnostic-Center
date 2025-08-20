@@ -2,14 +2,13 @@ const express = require('express');
 const router = express.Router();
 const BrokerPayment = require('../models/brokerPayment.model')
 const axios = require('axios');
+require('dotenv').config();
 
-// POST: Save or update payment for a broker
 router.post('/', async (req, res) => {
   try {
     const { brokerName, paymentAmount, dateFilter, customDateRange } = req.body;
 
-    // Fetch records to calculate total revenue
-    const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
+    const testOrdersResponse = await axios.get(`${process.env.API_BASE_URL}/testorders?brokerName=${brokerName}`);
 
     const brokerTestOrders = testOrdersResponse.data.filter((order) => order.brokerName === brokerName);
     const formattedTestOrders = brokerTestOrders.map((order) => ({
@@ -50,7 +49,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET: Retrieve payments for a broker
 router.get('/:brokerName', async (req, res) => {
   try {
     const { brokerName } = req.params;

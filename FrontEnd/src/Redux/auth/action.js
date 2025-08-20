@@ -1,12 +1,13 @@
 import * as types from "./types";
 import axios from "axios";
+import { API_BASE_URL } from "../../api";
 
 //login user
 export const NurseLogin = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.LOGIN_NURSE_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/login",
+      `${API_BASE_URL}/nurses/login`,
       data
     );
     dispatch({
@@ -33,7 +34,7 @@ export const DoctorLogin = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.LOGIN_DOCTOR_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors/login",
+      "${API_BASE_URL}/doctors/login",
       data
     );
     console.log(res.data);
@@ -61,7 +62,7 @@ export const AdminLogin = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.LOGIN_ADMIN_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/admin/login",
+      `${API_BASE_URL}/admin/login`,
       data
     );
     console.log(res.data);
@@ -89,7 +90,7 @@ export const DoctorRegister = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.REGISTER_DOCTOR_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors/register",
+      "${API_BASE_URL}/doctors/register",
       data
     );
     // console.log(res);
@@ -118,7 +119,7 @@ export const NurseRegister = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.REGISTER_NURSE_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/register",
+      `${API_BASE_URL}/nurses/register`,
       data
     );
     // console.log(res);
@@ -147,7 +148,7 @@ export const AdminRegister = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.REGISTER_ADMIN_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/admin/register",
+      `${API_BASE_URL}/admin/register`,
       data
     );
     // console.log(res);
@@ -176,7 +177,7 @@ export const AmbulanceRegister = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.REGISTER_AMBULANCE_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/ambulances/add",
+      `${API_BASE_URL}/ambulances/add`,
       data
     );
     console.log(res);
@@ -215,7 +216,7 @@ export const UpdateNurse = (data, id) => async (dispatch) => {
   try {
     dispatch({ type: types.EDIT_NURSE_REQUEST });
     const res = await axios.patch(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/${id}`,
+      `${API_BASE_URL}/nurses/${id}`,
       data
     );
     console.log(res);
@@ -230,7 +231,7 @@ export const UpdateDoctor = (data, id) => async (dispatch) => {
   try {
     dispatch({ type: types.EDIT_DOCTOR_REQUEST });
     const res = await axios.patch(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/doctors/${id}`,
+      `${API_BASE_URL}/doctors/${id}`,
       data
     );
     console.log(res);
@@ -245,7 +246,7 @@ export const SendPassword = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.EDIT_DOCTOR_REQUEST });
     const res = await axios.post(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/admin/password`,
+      `${API_BASE_URL}/admin/password`,
       data
     );
     // console.log(res);
@@ -260,7 +261,7 @@ export const forgetPassword = (data) => async (dispatch) => {
   try {
     dispatch({ type: types.FORGET_PASSWORD_REQUEST });
     const res = await axios.post(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/admin/forgot`,
+      `${API_BASE_URL}/admin/forgot`,
       data
     );
     // console.log(res);

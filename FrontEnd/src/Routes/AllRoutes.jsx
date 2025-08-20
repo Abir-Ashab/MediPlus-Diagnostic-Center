@@ -15,7 +15,6 @@ import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/T
 import AdminDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Admin_Dashboard";
 import TestManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/TestManagement";
 import RevenueManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/RevenueManagement";
-import DatabaseSeeder from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/DatabaseSeeder";
 
 const AllRoutes = () => {
   return (
@@ -37,7 +36,6 @@ const AllRoutes = () => {
         <Route path="/appointments" element={<Check_Appointment />} />
         <Route path="/test-management" element={<TestManagement />} />
         <Route path="/revenue-management" element={<RevenueManagement />} />
-        {/* <Route path="/database-seeder" element={<DatabaseSeeder />} /> */}
       </Routes>
     </>
   );
