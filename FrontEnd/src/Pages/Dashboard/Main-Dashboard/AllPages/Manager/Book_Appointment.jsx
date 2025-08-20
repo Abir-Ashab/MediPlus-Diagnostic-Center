@@ -558,6 +558,7 @@ const Book_Appointment = () => {
                   <TestSelectionForm
                     selectedTests={selectedTests}
                     testData={testData}
+                    setTestData={setTestData}
                     testsList={testsList}
                     handleTestSelect={handleTestSelect}
                     deselectTest={deselectTest}

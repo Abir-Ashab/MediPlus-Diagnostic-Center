@@ -15,8 +15,22 @@ const TestSelectionForm = ({
   removeTest,
   handleTestDataChange,
   handleTestPriceChange,
-  updateTestPrice
+  updateTestPrice,
+  setTestData 
 }) => {
+  React.useEffect(() => {
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const twoHoursLater = new Date(today.getTime() + 2 * 60 * 60 * 1000);
+    const timeStr = twoHoursLater.toTimeString().slice(0,5); 
+    if (!testData.date || !testData.time) {
+      setTestData(prev => ({
+        ...prev,
+        date: prev.date || dateStr,
+        time: prev.time || timeStr
+      }));
+    }
+  }, [testData.date, testData.time, setTestData]);
   return (
     <>
       <Card className="mb-6 shadow-sm border border-gray-200">
@@ -46,7 +60,6 @@ const TestSelectionForm = ({
         />
       </Card>
 
-      {/* Selected Tests with Editable Prices */}
       {selectedTests.some(test => test.testId !== "") && (
         <Card className="mb-6 shadow-sm border border-gray-200">
           <div className="flex items-center gap-3 mb-4">

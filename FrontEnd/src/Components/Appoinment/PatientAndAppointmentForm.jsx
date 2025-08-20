@@ -154,28 +154,6 @@ const PatientAndAppointmentForm = ({
           </div>
         </div>
       </Card>
-
-      <Card className="mb-6 shadow-sm border border-gray-200">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Schedule Information</h3>
-          <span className="text-sm text-gray-500 ml-2">(Date required for all services)</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-      <Input
-        type="date"
-        name="date"
-        value={appointmentData.date}
-        onChange={handleModeSpecificChange}
-        required
-        className="border-gray-200 focus:ring-indigo-500"
-        min={new Date().toISOString().split('T')[0]}
-      />
-          </div>
-        </div>
-      </Card>
     </>
   );
 };
