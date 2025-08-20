@@ -29,6 +29,8 @@ const Book_Appointment = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState(null);
+  const [existingPatientID, setExistingPatientID] = useState(null);
+  const [previousDue, setPreviousDue] = useState(0);
 
   const [commonData, setCommonData] = useState({
     patientName: "",
@@ -113,6 +115,38 @@ const Book_Appointment = () => {
     };
     fetchBrokers();
   }, []);
+
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      if (commonData.mobile.length === 11) {
+        try {
+          const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?mobile=${commonData.mobile}`);
+          const prevOrders = response.data;
+          if (prevOrders.length > 0) {
+            prevOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const latest = prevOrders[0];
+            setCommonData(prev => ({
+              ...prev,
+              patientName: latest.patientName,
+              age: latest.age,
+              gender: latest.gender,
+              email: latest.email || "",
+              address: latest.address || "",
+            }));
+            setExistingPatientID(latest.patientID);
+            const totalPrevDue = prevOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+            setPreviousDue(totalPrevDue);
+          } else {
+            setExistingPatientID(null);
+            setPreviousDue(0);
+          }
+        } catch (error) {
+          console.error("Error fetching patient data:", error);
+        }
+      }
+    };
+    fetchPatientData();
+  }, [commonData.mobile]);
 
   // Calculate base total and apply VAT
   useEffect(() => {
@@ -380,7 +414,24 @@ const Book_Appointment = () => {
 
     setLoading(true);
     try {
-      const patientData = {
+      const patientInfo = {
+        patientName: commonData.patientName,
+        age: commonData.age,
+        gender: commonData.gender,
+        mobile: commonData.mobile,
+        email: commonData.email,
+        address: commonData.address,
+      };
+
+      let patientID;
+      if (existingPatientID) {
+        patientID = existingPatientID;
+      } else {
+        const patientResponse = await dispatch(AddPatients({...patientInfo, patientId: Date.now()}));
+        patientID = patientResponse.id;
+      }
+
+      const testOrderData = {
         ...commonData,
         date: testData.date,
         time: testData.time,
@@ -391,13 +442,10 @@ const Book_Appointment = () => {
         discountAmount: discountAmount,
         totalAmount: finalTotal,
         paidAmount: paidAmount,
-        dueAmount: dueAmount,
+        dueAmount: finalTotal - paidAmount,
         orderType: 'test',
+        patientID,
       };
-
-      const patientResponse = await dispatch(AddPatients({ ...patientData, patientId: Date.now() }));
-
-      const testOrderData = { ...patientData, patientID: patientResponse.id };
       
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
       setLoading(false);
@@ -595,6 +643,7 @@ const Book_Appointment = () => {
                     setDiscountAmount={setDiscountAmount}
                     HandleTestOrderSubmit={HandleTestOrderSubmit}
                     deselectTest={deselectTest}
+                    previousDue={previousDue}
                   />
                 )}
 

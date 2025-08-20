@@ -28,9 +28,6 @@ const testOrderSchema = new mongoose.Schema(
     email: {
       type: String,
     },
-    disease: {
-      type: String,
-    },
     address: {
       type: String,
     },

@@ -23,7 +23,8 @@ const FinancialSummaryForm = ({
   setVatRate,
   setDiscountAmount,
   HandleTestOrderSubmit,
-  deselectTest
+  deselectTest,
+  previousDue
 }) => {
   return (
     <div className="space-y-8">
@@ -177,12 +178,12 @@ const FinancialSummaryForm = ({
 
             {/* Due Amount */}
             <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl p-6 border border-red-200/50">
-              <div className="text-2xl font-bold text-red-600 mb-3">৳{dueAmount.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-600 mb-3">৳{(dueAmount + previousDue).toFixed(2)}</div>
               <div className="text-sm text-red-700 mb-4">Due Amount</div>
               <div className={`h-12 rounded-xl flex items-center px-4 font-medium ${
-                dueAmount <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                (dueAmount + previousDue) <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
               }`}>
-                {dueAmount <= 0 ? (
+                {(dueAmount + previousDue) <= 0 ? (
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4" />
                     <span>Fully Paid</span>
@@ -194,6 +195,9 @@ const FinancialSummaryForm = ({
                   </div>
                 )}
               </div>
+              {previousDue > 0 && (
+                <div className="text-xs text-red-500 mt-2">Includes previous due ৳{previousDue}</div>
+              )}
             </div>
           </div>
         </div>
@@ -269,7 +273,7 @@ const FinancialSummaryForm = ({
               type="primary"
               onClick={HandleTestOrderSubmit}
               disabled={loading || !selectedTests.some(test => test.testId !== "") || !testData.date}
-              className="w-full h-14 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-0 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full h-14 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-0 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               loading={loading}
             >
               {loading ? 'Creating Test Order...' : 'Create Test Order'}
