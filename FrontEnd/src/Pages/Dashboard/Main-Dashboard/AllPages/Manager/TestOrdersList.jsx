@@ -7,18 +7,43 @@ import { useSelector } from "react-redux";
 import { usePrintReport } from "../../../../../Components/PrintReport";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { TestCategories, TestsList } from "./MixedObjectData";
-import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter, Edit } from 'lucide-react';
+import PrintTestReport from "../../../../../Components/PrintReport/PrintTestReport";
+import {
+  Search,
+  Eye,
+  Trash2,
+  Calendar,
+  User,
+  Phone,
+  MapPin,
+  Heart,
+  DollarSign,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  UserCheck,
+  Building,
+  Filter,
+  Edit,
+} from "lucide-react";
 import moment from "moment";
 
 const TestOrdersList = () => {
   const { data: { user } = {} } = useSelector((state) => state.auth || {});
-  
   const { printReport } = usePrintReport();
+
   const getCurrentUserName = () => {
-    if (!user) return 'System';
-    return user.nurseName || user.doctorName || user.adminName || user.name || 'Unknown User';
+    if (!user) return "System";
+    return (
+      user.nurseName ||
+      user.doctorName ||
+      user.adminName ||
+      user.name ||
+      "Unknown User"
+    );
   };
-  
+
   const [testOrders, setTestOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -36,7 +61,9 @@ const TestOrdersList = () => {
   const fetchTestOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
+      const response = await axios.get(
+        "https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders"
+      );
       setTestOrders(response.data);
       setLoading(false);
     } catch (error) {
@@ -56,9 +83,12 @@ const TestOrdersList = () => {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}/status`, {
-        status: newStatus,
-      });
+      await axios.patch(
+        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}/status`,
+        {
+          status: newStatus,
+        }
+      );
       toast.success(`Order status updated to ${newStatus}`);
       fetchTestOrders();
     } catch (error) {
@@ -69,7 +99,9 @@ const TestOrdersList = () => {
 
   const deleteTestOrder = async (orderId) => {
     try {
-      await axios.delete(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}`);
+      await axios.delete(
+        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${orderId}`
+      );
       toast.success("Test order deleted successfully");
       setIsConfirmDeleteOpen(false);
       setOrderToDelete(null);
@@ -84,16 +116,21 @@ const TestOrdersList = () => {
     try {
       const formattedData = {
         ...formData,
-        date: formData.date ? moment(formData.date).format('YYYY-MM-DD') : undefined,
-        time: formData.time ? moment(formData.time).format('HH:mm') : undefined,
+        date: formData.date ? moment(formData.date).format("YYYY-MM-DD") : undefined,
+        time: formData.time ? moment(formData.time).format("HH:mm") : undefined,
         totalAmount: formData.baseAmount
-          ? Number(formData.baseAmount) + (Number(formData.baseAmount) * Number(formData.vatRate || 1) / 100) - Number(formData.discountAmount || 0)
+          ? Number(formData.baseAmount) +
+            (Number(formData.baseAmount) * Number(formData.vatRate || 1)) / 100 -
+            Number(formData.discountAmount || 0)
           : formData.totalAmount,
         dueAmount: formData.totalAmount
           ? Number(formData.totalAmount) - Number(formData.paidAmount || 0)
           : formData.dueAmount,
       };
-      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`, formattedData);
+      await axios.put(
+        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`,
+        formattedData
+      );
       toast.success("Test order updated successfully");
       setIsEditModalVisible(false);
       setSelectedOrder(null);
@@ -109,11 +146,15 @@ const TestOrdersList = () => {
     printReport(order);
   };
 
-  const filteredOrders = testOrders?.filter((order) =>
-    order.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order.mobile && typeof order.mobile === 'string' && order.mobile.includes(searchQuery)) ||
-    order.doctorName?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOrders = testOrders?.filter(
+    (order) =>
+      order.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.mobile &&
+        typeof order.mobile === "string" &&
+        order.mobile.includes(searchQuery)) ||
+      order.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.brokerName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const sortedOrders = filteredOrders?.sort((a, b) => {
@@ -142,14 +183,14 @@ const TestOrdersList = () => {
       patientName: order.patientName,
       age: order.age,
       gender: order.gender,
-      email: order.email || '',
+      email: order.email || "",
       mobile: order.mobile,
-      disease: order.disease || '',
-      doctorName: order.doctorName || '',
-      brokerName: order.brokerName || '',
-      address: order.address || '',
-      date: moment(order.date).format('YYYY-MM-DD'),
-      time: moment(order.time, 'HH:mm'),
+      disease: order.disease || "",
+      doctorName: order.doctorName || "",
+      brokerName: order.brokerName || "",
+      address: order.address || "",
+      date: moment(order.date).format("YYYY-MM-DD"),
+      time: moment(order.time, "HH:mm"),
       baseAmount: order.baseAmount || 0,
       vatRate: order.vatRate || 1,
       vatAmount: order.vatAmount || 0,
@@ -219,10 +260,25 @@ const TestOrdersList = () => {
 
   return (
     <div>
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar onCollapse={setSidebarCollapsed} />
-        <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`}>
+        <div
+          className={`flex-1 p-6 transition-all duration-300 ${
+            sidebarCollapsed ? "ml-20" : "ml-0"
+          }`}
+        >
           <div className="flex-1 p-6 ml-40">
             <div>
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
@@ -233,18 +289,18 @@ const TestOrdersList = () => {
                         <Calendar className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Test Orders Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Test Orders</h1>
                         <p className="text-gray-600">View and manage all test orders</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
                       <Search className="w-5 h-5 text-gray-400" />
                       <Input
-                        placeholder="Search by name, email, mobile or doctor"
+                        placeholder="Search by name, email, mobile, doctor, or broker"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="border-none bg-transparent focus:ring-0 focus:border-none"
-                        style={{ width: 300, boxShadow: 'none' }}
+                        style={{ width: 300, boxShadow: "none" }}
                       />
                     </div>
                     <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
@@ -267,7 +323,9 @@ const TestOrdersList = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-600 text-sm">Total Orders</p>
-                      <p className="text-2xl font-bold text-gray-900">{testOrders?.length || 0}</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {testOrders?.length || 0}
+                      </p>
                     </div>
                     <div className="p-3 bg-blue-100 rounded-full">
                       <Calendar className="w-6 h-6 text-blue-600" />
@@ -278,7 +336,9 @@ const TestOrdersList = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-600 text-sm">Filtered Results</p>
-                      <p className="text-2xl font-bold text-gray-900">{filteredOrders?.length || 0}</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {filteredOrders?.length || 0}
+                      </p>
                     </div>
                     <div className="p-3 bg-green-100 rounded-full">
                       <Search className="w-6 h-6 text-green-600" />
@@ -289,7 +349,9 @@ const TestOrdersList = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-600 text-sm">Current Page</p>
-                      <p className="text-2xl font-bold text-gray-900">{currentPage} of {totalPages}</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {currentPage} of {totalPages}
+                      </p>
                     </div>
                     <div className="p-3 bg-purple-100 rounded-full">
                       <FileText className="w-6 h-6 text-purple-600" />
@@ -312,7 +374,9 @@ const TestOrdersList = () => {
                           <Calendar className="w-12 h-12 text-gray-400" />
                         </div>
                         <p className="text-gray-600 text-lg">No test orders found</p>
-                        <p className="text-gray-500 text-sm mt-2">Try adjusting your search criteria</p>
+                        <p className="text-gray-500 text-sm mt-2">
+                          Try adjusting your search criteria
+                        </p>
                       </div>
                     ) : (
                       <>
@@ -320,27 +384,53 @@ const TestOrdersList = () => {
                           <table className="w-full">
                             <thead>
                               <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="text-left p-4 font-semibold text-gray-700">Patient</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Contact</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Tests</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Doctor</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Schedule</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Due Amount</th>
-                                <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Patient
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Contact
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Tests
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Doctor
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Broker
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Schedule
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Status
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Due Amount
+                                </th>
+                                <th className="text-left p-4 font-semibold text-gray-700">
+                                  Actions
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
                               {currentOrders?.map((order) => (
-                                <tr key={order._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <tr
+                                  key={order._id}
+                                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                                >
                                   <td className="p-4">
                                     <div className="flex items-center gap-3">
                                       <div className="p-2 bg-blue-100 rounded-full">
                                         <User className="w-4 h-4 text-blue-600" />
                                       </div>
                                       <div>
-                                        <p className="font-medium text-gray-900">{order.patientName}</p>
-                                        <p className="text-sm text-gray-600">{order.age} years, {order.gender}</p>
+                                        <p className="font-medium text-gray-900">
+                                          {order.patientName}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                          {order.age} years, {order.gender}
+                                        </p>
                                       </div>
                                     </div>
                                   </td>
@@ -348,57 +438,96 @@ const TestOrdersList = () => {
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-2">
                                         <Phone className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm text-gray-700">{order.mobile}</span>
+                                        <span className="text-sm text-gray-700">
+                                          {order.mobile}
+                                        </span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <MapPin className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm text-gray-700">{order.email || 'N/A'}</span>
+                                        <span className="text-sm text-gray-700">
+                                          {order.email || "N/A"}
+                                        </span>
                                       </div>
                                     </div>
                                   </td>
                                   <td className="p-4">
                                     <div className="space-y-1">
-                                      {order.tests && order.tests.map((test, i) => (
-                                        <div key={i} className="flex justify-between items-center">
-                                          <span className="text-sm text-gray-700">{test.testName}</span>
-                                          <span className="text-sm text-gray-700">৳{test.testPrice}</span>
-                                        </div>
-                                      ))}
+                                      {order.tests &&
+                                        order.tests.map((test, i) => (
+                                          <div
+                                            key={i}
+                                            className="flex justify-between items-center"
+                                          >
+                                            <span className="text-sm text-gray-700">
+                                              {test.testName}
+                                            </span>
+                                            <span className="text-sm text-gray-700">
+                                              ৳{test.testPrice}
+                                            </span>
+                                          </div>
+                                        ))}
                                     </div>
                                   </td>
                                   <td className="p-4">
                                     <div className="flex items-center gap-2">
                                       <UserCheck className="w-4 h-4 text-green-500" />
-                                      <span className="text-sm text-gray-700">{order.doctorName || 'N/A'}</span>
+                                      <span className="text-sm text-gray-700">
+                                        {order.doctorName || "N/A"}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-4">
+                                    <div className="flex items-center gap-2">
+                                      <Building className="w-4 h-4 text-indigo-500" />
+                                      <span className="text-sm text-gray-700">
+                                        {order.brokerName || "N/A"}
+                                      </span>
                                     </div>
                                   </td>
                                   <td className="p-4">
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-2">
                                         <Calendar className="w-4 h-4 text-blue-500" />
-                                        <span className="text-sm text-gray-700">{new Date(order.date).toLocaleDateString()}</span>
+                                        <span className="text-sm text-gray-700">
+                                          {new Date(order.date).toLocaleDateString()}
+                                        </span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <Clock className="w-4 h-4 text-purple-500" />
-                                        <span className="text-sm text-gray-700">{order.time}</span>
+                                        <span className="text-sm text-gray-700">
+                                          {order.time}
+                                        </span>
                                       </div>
                                     </div>
                                   </td>
                                   <td className="p-4">
                                     <button
                                       onClick={() => {
-                                        const statuses = ["Pending", "In Progress", "Completed", "Cancelled"];
-                                        const currentIndex = statuses.findIndex(s => s.toLowerCase() === (order.status || "pending").toLowerCase());
+                                        const statuses = [
+                                          "Pending",
+                                          "In Progress",
+                                          "Completed",
+                                          "Cancelled",
+                                        ];
+                                        const currentIndex = statuses.findIndex(
+                                          (s) =>
+                                            s.toLowerCase() ===
+                                            (order.status || "pending").toLowerCase()
+                                        );
                                         const nextIndex = (currentIndex + 1) % statuses.length;
                                         updateOrderStatus(order._id, statuses[nextIndex]);
                                       }}
-                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${getStatusColor(order.status)}`}
+                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${getStatusColor(
+                                        order.status
+                                      )}`}
                                     >
                                       {order.status || "Pending"}
                                     </button>
                                   </td>
                                   <td className="p-4">
-                                    <span className="text-sm text-gray-700">৳{order.dueAmount || 0}</span>
+                                    <span className="text-sm text-gray-700">
+                                      ৳{order.dueAmount || 0}
+                                    </span>
                                   </td>
                                   <td className="p-4">
                                     <div className="flex gap-2">
@@ -423,6 +552,7 @@ const TestOrdersList = () => {
                                         <FileText className="w-4 h-4" />
                                         Print
                                       </button>
+                                      <PrintTestReport order={order} />
                                       <button
                                         onClick={() => {
                                           setOrderToDelete(order);
@@ -443,15 +573,22 @@ const TestOrdersList = () => {
 
                         <div className="md:hidden">
                           {currentOrders?.map((order) => (
-                            <div key={order._id} className="p-4 border-b border-gray-100 last:border-b-0">
+                            <div
+                              key={order._id}
+                              className="p-4 border-b border-gray-100 last:border-b-0"
+                            >
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-3">
                                   <div className="p-2 bg-blue-100 rounded-full">
                                     <User className="w-5 h-5 text-blue-600" />
                                   </div>
                                   <div>
-                                    <h3 className="font-medium text-gray-900">{order.patientName}</h3>
-                                    <p className="text-sm text-gray-600">{order.age} years, {order.gender}</p>
+                                    <h3 className="font-medium text-gray-900">
+                                      {order.patientName}
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                      {order.age} years, {order.gender}
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -473,6 +610,7 @@ const TestOrdersList = () => {
                                   >
                                     <FileText className="w-4 h-4" />
                                   </button>
+                                  <PrintTestReport order={order} />
                                   <button
                                     onClick={() => {
                                       setOrderToDelete(order);
@@ -491,15 +629,27 @@ const TestOrdersList = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Heart className="w-4 h-4 text-red-500" />
-                                  <span className="text-sm text-gray-700">{order.disease || 'N/A'}</span>
+                                  <span className="text-sm text-gray-700">
+                                    {order.disease || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Building className="w-4 h-4 text-indigo-500" />
+                                  <span className="text-sm text-gray-700">
+                                    {order.brokerName || "N/A"}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Calendar className="w-4 h-4 text-blue-500" />
-                                  <span className="text-sm text-gray-700">{new Date(order.date).toLocaleDateString()}</span>
+                                  <span className="text-sm text-gray-700">
+                                    {new Date(order.date).toLocaleDateString()}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="w-4 h-4 text-yellow-500" />
-                                  <span className="text-sm text-gray-700">Due: ৳{order.dueAmount || 0}</span>
+                                  <span className="text-sm text-gray-700">
+                                    Due: ৳{order.dueAmount || 0}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -510,7 +660,9 @@ const TestOrdersList = () => {
                           <div className="p-4 border-t border-gray-200 bg-gray-50">
                             <div className="flex items-center justify-between">
                               <div className="text-sm text-gray-700">
-                                Showing {startIndex + 1} to {Math.min(endIndex, sortedOrders?.length || 0)} of {sortedOrders?.length || 0} results
+                                Showing {startIndex + 1} to{" "}
+                                {Math.min(endIndex, sortedOrders?.length || 0)} of{" "}
+                                {sortedOrders?.length || 0} results
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
@@ -522,19 +674,21 @@ const TestOrdersList = () => {
                                   Previous
                                 </button>
                                 <div className="flex gap-1">
-                                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                    <button
-                                      key={page}
-                                      onClick={() => handlePageChange(page)}
-                                      className={`px-3 py-2 rounded-lg transition-colors ${
-                                        currentPage === page
-                                          ? 'bg-blue-600 text-white'
-                                          : 'bg-white border border-gray-300 hover:bg-gray-50'
-                                      }`}
-                                    >
-                                      {page}
-                                    </button>
-                                  ))}
+                                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                    (page) => (
+                                      <button
+                                        key={page}
+                                        onClick={() => handlePageChange(page)}
+                                        className={`px-3 py-2 rounded-lg transition-colors ${
+                                          currentPage === page
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-white border border-gray-300 hover:bg-gray-50"
+                                        }`}
+                                      >
+                                        {page}
+                                      </button>
+                                    )
+                                  )}
                                 </div>
                                 <button
                                   onClick={handleNextPage}
@@ -562,8 +716,12 @@ const TestOrdersList = () => {
                     <FileText className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Test Order Details</h3>
-                    <p className="text-sm text-gray-600">Complete test order information</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Test Order Details
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Complete test order information
+                    </p>
                   </div>
                 </div>
               }
@@ -613,7 +771,9 @@ const TestOrdersList = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Name:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.patientName}</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.patientName}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Age:</span>
@@ -621,21 +781,29 @@ const TestOrdersList = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Gender:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.gender}</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.gender}
+                          </span>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Mobile:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.mobile}</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.mobile}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Email:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.email || 'N/A'}</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.email || "N/A"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Address:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.address || 'N/A'}</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.address || "N/A"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -649,15 +817,21 @@ const TestOrdersList = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Disease:</span>
-                        <span className="font-medium text-gray-900">{selectedOrder.disease || 'N/A'}</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedOrder.disease || "N/A"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Doctor:</span>
-                        <span className="font-medium text-gray-900">{selectedOrder.doctorName || 'N/A'}</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedOrder.doctorName || "N/A"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Broker:</span>
-                        <span className="font-medium text-gray-900">{selectedOrder.brokerName || 'N/A'}</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedOrder.brokerName || "N/A"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -673,8 +847,12 @@ const TestOrdersList = () => {
                           <thead>
                             <tr className="bg-purple-100">
                               <th className="text-left p-2 font-medium text-gray-700">#</th>
-                              <th className="text-left p-2 font-medium text-gray-700">Test Name</th>
-                              <th className="text-left p-2 font-medium text-gray-700">Price</th>
+                              <th className="text-left p-2 font-medium text-gray-700">
+                                Test Name
+                              </th>
+                              <th className="text-left p-2 font-medium text-gray-700">
+                                Price
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -702,38 +880,54 @@ const TestOrdersList = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Base Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.baseAmount || 0}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.baseAmount || 0}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">VAT Rate:</span>
-                          <span className="font-medium text-gray-900">{selectedOrder.vatRate || 1}%</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.vatRate || 1}%
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">VAT Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.vatAmount || 0}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.vatAmount || 0}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Discount Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.discountAmount || 0}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.discountAmount || 0}
+                          </span>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Total Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.totalAmount}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.totalAmount}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Paid Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.paidAmount || 0}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.paidAmount || 0}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Due Amount:</span>
-                          <span className="font-medium text-gray-900">৳{selectedOrder.dueAmount || 0}</span>
+                          <span className="font-medium text-gray-900">
+                            ৳{selectedOrder.dueAmount || 0}
+                          </span>
                         </div>
                         {selectedOrder.hospitalRevenue !== undefined && (
                           <div className="flex justify-between">
                             <span className="text-gray-600">Hospital Revenue:</span>
-                            <span className="font-medium text-gray-900">৳{selectedOrder.hospitalRevenue.toFixed(0)}</span>
+                            <span className="font-medium text-gray-900">
+                              ৳{selectedOrder.hospitalRevenue.toFixed(0)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -748,7 +942,9 @@ const TestOrdersList = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Date:</span>
-                        <span className="font-medium text-gray-900">{new Date(selectedOrder.date).toLocaleDateString()}</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(selectedOrder.date).toLocaleDateString()}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Time:</span>
@@ -757,10 +953,13 @@ const TestOrdersList = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
                         <select
-                          value={selectedOrder.status || 'Pending'}
+                          value={selectedOrder.status || "Pending"}
                           onChange={(e) => {
                             updateOrderStatus(selectedOrder._id, e.target.value);
-                            setSelectedOrder({ ...selectedOrder, status: e.target.value });
+                            setSelectedOrder({
+                              ...selectedOrder,
+                              status: e.target.value,
+                            });
                           }}
                           className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
@@ -783,7 +982,9 @@ const TestOrdersList = () => {
                     <Edit className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Edit Test Order</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Edit Test Order
+                    </h3>
                     <p className="text-sm text-gray-600">Update test order details</p>
                   </div>
                 </div>
@@ -818,7 +1019,9 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Name
+                        </label>
                         <Input
                           name="patientName"
                           value={formData.patientName || ""}
@@ -827,7 +1030,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Age
+                        </label>
                         <Input
                           type="number"
                           name="age"
@@ -836,7 +1041,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Gender
+                        </label>
                         <Select
                           name="gender"
                           value={formData.gender || ""}
@@ -850,7 +1057,9 @@ const TestOrdersList = () => {
                         </Select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Mobile
+                        </label>
                         <Input
                           name="mobile"
                           value={formData.mobile || ""}
@@ -859,7 +1068,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Email
+                        </label>
                         <Input
                           type="email"
                           name="email"
@@ -868,7 +1079,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Address
+                        </label>
                         <Input.TextArea
                           name="address"
                           value={formData.address || ""}
@@ -886,7 +1099,9 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Disease</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Disease
+                        </label>
                         <Input
                           name="disease"
                           value={formData.disease || ""}
@@ -894,7 +1109,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Doctor Name
+                        </label>
                         <Input
                           name="doctorName"
                           value={formData.doctorName || ""}
@@ -902,7 +1119,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Broker Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Broker Name
+                        </label>
                         <Input
                           name="brokerName"
                           value={formData.brokerName || ""}
@@ -919,7 +1138,9 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date
+                        </label>
                         <DatePicker
                           value={formData.date ? moment(formData.date) : null}
                           onChange={handleDateChange}
@@ -928,9 +1149,11 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Time
+                        </label>
                         <TimePicker
-                          value={formData.time ? moment(formData.time, 'HH:mm') : null}
+                          value={formData.time ? moment(formData.time, "HH:mm") : null}
                           onChange={handleTimeChange}
                           className="w-full"
                           format="HH:mm"
@@ -946,7 +1169,9 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Base Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Base Amount
+                        </label>
                         <Input
                           type="number"
                           name="baseAmount"
@@ -955,7 +1180,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">VAT Rate (%)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          VAT Rate (%)
+                        </label>
                         <Input
                           type="number"
                           name="vatRate"
@@ -964,7 +1191,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">VAT Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          VAT Amount
+                        </label>
                         <Input
                           type="number"
                           name="vatAmount"
@@ -973,7 +1202,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Discount Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Discount Amount
+                        </label>
                         <Input
                           type="number"
                           name="discountAmount"
@@ -982,7 +1213,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Total Amount
+                        </label>
                         <Input
                           type="number"
                           name="totalAmount"
@@ -991,7 +1224,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Paid Amount
+                        </label>
                         <Input
                           type="number"
                           name="paidAmount"
@@ -1000,17 +1235,21 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Due Amount</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Due Amount
+                        </label>
                         <Input
                           type="number"
                           name="dueAmount"
                           value={formData.dueAmount || ""}
                           onChange={handleInputChange}
-                          disabled // Due amount is calculated, not editable
+                          disabled
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Revenue</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Hospital Revenue
+                        </label>
                         <Input
                           type="number"
                           name="hospitalRevenue"
@@ -1019,7 +1258,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Revenue</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Doctor Revenue
+                        </label>
                         <Input
                           type="number"
                           name="doctorRevenue"
@@ -1028,7 +1269,9 @@ const TestOrdersList = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Broker Revenue</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Broker Revenue
+                        </label>
                         <Input
                           type="number"
                           name="brokerRevenue"
@@ -1080,7 +1323,7 @@ const TestOrdersList = () => {
             >
               <div className="space-y-4">
                 <p className="text-gray-600 text-center">
-                  Are you sure you want to delete the test order for{' '}
+                  Are you sure you want to delete the test order for{" "}
                   <span className="font-semibold">{orderToDelete?.patientName}</span>?
                 </p>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
