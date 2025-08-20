@@ -13,7 +13,7 @@ const AdminDashboard = () => {
   const [nurses, setNurses] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [admins, setAdmins] = useState([]);
-  const [testOrders, setTestOrders] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [activeTab, setActiveTab] = useState("doctors");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("view"); // view, edit
@@ -41,7 +41,6 @@ const AdminDashboard = () => {
         fetchBrokers(),
         fetchNurses(),
         fetchAdmins(),
-        fetchAllTestOrders(),
       ]);
     } catch (error) {
       toast.error("Error fetching data");
@@ -85,15 +84,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchAllTestOrders = async () => {
-    try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
-      setTestOrders(response.data);
-    } catch (error) {
-      console.error("Error fetching test orders:", error);
-    }
-  };
-
   const handleDelete = async (record, userType) => {
     try {
       let endpoint = "";
@@ -116,8 +106,8 @@ const AdminDashboard = () => {
           endpoint = "admin";
           idField = record._id;
           break;
-        case "testorder":
-          endpoint = "testOrders";
+        case "appointment":
+          endpoint = "appointments";
           idField = record._id;
           break;
         default:
@@ -154,10 +144,6 @@ const AdminDashboard = () => {
           break;
         case "admin":
           endpoint = "admin";
-          idField = selectedRecord._id;
-          break;
-        case "testOrders":
-          endpoint = "testOrders";
           idField = selectedRecord._id;
           break;
         default:
@@ -313,18 +299,6 @@ const AdminDashboard = () => {
     { key: "mobile", label: "Mobile", render: (record) => record.mobile },
     { key: "education", label: "Education", render: (record) => record.education },
     { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "admin") },
-  ];
-
-  const testorderColumns = [
-    { key: "patientName", label: "Patient Name", render: (record) => record.patientName },
-    { key: "age", label: "Age", render: (record) => record.age },
-    { key: "gender", label: "Gender", render: (record) => record.gender },
-    { key: "disease", label: "Disease", render: (record) => record.disease },
-    { key: "doctorName", label: "Doctor", render: (record) => record.doctorName },
-    { key: "date", label: "Date", render: (record) => record.date },
-    { key: "time", label: "Time", render: (record) => record.time },
-    { key: "totalAmount", label: "Total Amount", render: (record) => `₹${record.totalAmount}` },
-    { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "testorder") },
   ];
 
   const renderEditForm = () => {
@@ -730,30 +704,9 @@ const AdminDashboard = () => {
               <div><strong>Education:</strong> {selectedRecord.education}</div>
             </div>
           );
-        case "testorder":
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><strong>Patient ID:</strong> {selectedRecord.patientID}</div>
-              <div><strong>Patient Name:</strong> {selectedRecord.patientName}</div>
-              <div><strong>Age:</strong> {selectedRecord.age}</div>
-              <div><strong>Gender:</strong> {selectedRecord.gender}</div>
-              <div><strong>Email:</strong> {selectedRecord.email}</div>
-              <div><strong>Mobile:</strong> {selectedRecord.mobile}</div>
-              <div><strong>Disease:</strong> {selectedRecord.disease}</div>
-              <div><strong>Doctor:</strong> {selectedRecord.doctorName}</div>
-              <div><strong>Broker:</strong> {selectedRecord.brokerName}</div>
-              <div><strong>Address:</strong> {selectedRecord.address}</div>
-              <div><strong>Date:</strong> {selectedRecord.date}</div>
-              <div><strong>Time:</strong> {selectedRecord.time}</div>
-              <div><strong>Total Amount:</strong> ₹{selectedRecord.totalAmount}</div>
-              <div><strong>Hospital Revenue:</strong> ₹{selectedRecord.hospitalRevenue}</div>
-              <div><strong>Doctor Revenue:</strong> ₹{selectedRecord.doctorRevenue}</div>
-              <div><strong>Broker Revenue:</strong> ₹{selectedRecord.brokerRevenue}</div>
-            </div>
-          );
         default:
           return null;
-      }
+      } 
     };
 
     return (
@@ -872,21 +825,11 @@ const AdminDashboard = () => {
                     </svg>
                     Admins ({admins.length})
                   </button>
-                  <button
-                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "testOrders" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
-                    onClick={() => setActiveTab("testOrders")}
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Test Orders ({testOrders.length})
-                  </button>
                 </div>
                 {activeTab === "doctors" && renderTable(doctorColumns, doctors)}
                 {activeTab === "nurses" && renderTable(nurseColumns, nurses)}
                 {activeTab === "brokers" && renderTable(brokerColumns, brokers)}
                 {activeTab === "admins" && renderTable(adminColumns, admins)}
-                {activeTab === "testOrders" && renderTable(testorderColumns, testOrders)}
               </div>
             )}
           </div>

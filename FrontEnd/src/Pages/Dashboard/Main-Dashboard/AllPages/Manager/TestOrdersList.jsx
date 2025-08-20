@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Modal, Button, Input, Spin } from "antd";
+import { Modal, Button, Input, Spin, Select, DatePicker, TimePicker } from "antd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useSelector } from "react-redux";
 import { usePrintReport } from "../../../../../Components/PrintReport";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { TestCategories, TestsList } from "./MixedObjectData";
-import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter } from 'lucide-react';
+import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter, Edit } from 'lucide-react';
+import moment from "moment";
 
 const TestOrdersList = () => {
   const { data: { user } = {} } = useSelector((state) => state.auth || {});
@@ -22,12 +23,14 @@ const TestOrdersList = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("schedule"); // "schedule" or "created"
+  const [sortBy, setSortBy] = useState("schedule");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [formData, setFormData] = useState({});
   const itemsPerPage = 10;
 
   const fetchTestOrders = async () => {
@@ -77,6 +80,31 @@ const TestOrdersList = () => {
     }
   };
 
+  const handleEdit = async () => {
+    try {
+      const formattedData = {
+        ...formData,
+        date: formData.date ? moment(formData.date).format('YYYY-MM-DD') : undefined,
+        time: formData.time ? moment(formData.time).format('HH:mm') : undefined,
+        totalAmount: formData.baseAmount
+          ? Number(formData.baseAmount) + (Number(formData.baseAmount) * Number(formData.vatRate || 1) / 100) - Number(formData.discountAmount || 0)
+          : formData.totalAmount,
+        dueAmount: formData.totalAmount
+          ? Number(formData.totalAmount) - Number(formData.paidAmount || 0)
+          : formData.dueAmount,
+      };
+      await axios.put(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`, formattedData);
+      toast.success("Test order updated successfully");
+      setIsEditModalVisible(false);
+      setSelectedOrder(null);
+      setFormData({});
+      fetchTestOrders();
+    } catch (error) {
+      console.error("Error updating test order:", error);
+      toast.error("Failed to update test order");
+    }
+  };
+
   const handlePrintReport = (order) => {
     printReport(order);
   };
@@ -92,7 +120,6 @@ const TestOrdersList = () => {
     if (sortBy === "schedule") {
       return new Date(a.date) - new Date(b.date);
     } else {
-      // Sort by creation time (most recent first)
       const dateA = new Date(a.createdAt || a._id);
       const dateB = new Date(b.createdAt || b._id);
       return dateB - dateA;
@@ -109,9 +136,43 @@ const TestOrdersList = () => {
     setIsModalVisible(true);
   };
 
+  const handleEditClick = (order) => {
+    setSelectedOrder(order);
+    setFormData({
+      patientName: order.patientName,
+      age: order.age,
+      gender: order.gender,
+      email: order.email || '',
+      mobile: order.mobile,
+      disease: order.disease || '',
+      doctorName: order.doctorName || '',
+      brokerName: order.brokerName || '',
+      address: order.address || '',
+      date: moment(order.date).format('YYYY-MM-DD'),
+      time: moment(order.time, 'HH:mm'),
+      baseAmount: order.baseAmount || 0,
+      vatRate: order.vatRate || 1,
+      vatAmount: order.vatAmount || 0,
+      discountAmount: order.discountAmount || 0,
+      paidAmount: order.paidAmount || 0,
+      totalAmount: order.totalAmount,
+      dueAmount: order.dueAmount || 0,
+      hospitalRevenue: order.hospitalRevenue,
+      doctorRevenue: order.doctorRevenue,
+      brokerRevenue: order.brokerRevenue,
+    });
+    setIsEditModalVisible(true);
+  };
+
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedOrder(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalVisible(false);
+    setSelectedOrder(null);
+    setFormData({});
   };
 
   const handlePageChange = (page) => {
@@ -128,6 +189,19 @@ const TestOrdersList = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleDateChange = (date) => {
+    setFormData({ ...formData, date });
+  };
+
+  const handleTimeChange = (time) => {
+    setFormData({ ...formData, time });
   };
 
   const getStatusColor = (status) => {
@@ -252,6 +326,7 @@ const TestOrdersList = () => {
                                 <th className="text-left p-4 font-semibold text-gray-700">Doctor</th>
                                 <th className="text-left p-4 font-semibold text-gray-700">Schedule</th>
                                 <th className="text-left p-4 font-semibold text-gray-700">Status</th>
+                                <th className="text-left p-4 font-semibold text-gray-700">Due Amount</th>
                                 <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
                               </tr>
                             </thead>
@@ -323,6 +398,9 @@ const TestOrdersList = () => {
                                     </button>
                                   </td>
                                   <td className="p-4">
+                                    <span className="text-sm text-gray-700">৳{order.dueAmount || 0}</span>
+                                  </td>
+                                  <td className="p-4">
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => handleViewDetails(order)}
@@ -330,6 +408,13 @@ const TestOrdersList = () => {
                                       >
                                         <Eye className="w-4 h-4" />
                                         View
+                                      </button>
+                                      <button
+                                        onClick={() => handleEditClick(order)}
+                                        className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors text-sm font-medium"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                        Edit
                                       </button>
                                       <button
                                         onClick={() => handlePrintReport(order)}
@@ -377,6 +462,12 @@ const TestOrdersList = () => {
                                     <Eye className="w-4 h-4" />
                                   </button>
                                   <button
+                                    onClick={() => handleEditClick(order)}
+                                    className="p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
                                     onClick={() => handlePrintReport(order)}
                                     className="p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
                                   >
@@ -405,6 +496,10 @@ const TestOrdersList = () => {
                                 <div className="flex items-center gap-2">
                                   <Calendar className="w-4 h-4 text-blue-500" />
                                   <span className="text-sm text-gray-700">{new Date(order.date).toLocaleDateString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="w-4 h-4 text-yellow-500" />
+                                  <span className="text-sm text-gray-700">Due: ৳{order.dueAmount || 0}</span>
                                 </div>
                               </div>
                             </div>
@@ -487,6 +582,16 @@ const TestOrdersList = () => {
                   Delete Order
                 </Button>,
                 <Button
+                  key="edit"
+                  onClick={() => {
+                    handleEditClick(selectedOrder);
+                    setIsModalVisible(false);
+                  }}
+                  className="bg-green-100 hover:bg-green-200 border-green-300 text-green-700"
+                >
+                  Edit Order
+                </Button>,
+                <Button
                   key="back"
                   onClick={handleCloseModal}
                   className="bg-gray-100 hover:bg-gray-200 border-gray-300"
@@ -550,6 +655,10 @@ const TestOrdersList = () => {
                         <span className="text-gray-600">Doctor:</span>
                         <span className="font-medium text-gray-900">{selectedOrder.doctorName || 'N/A'}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Broker:</span>
+                        <span className="font-medium text-gray-900">{selectedOrder.brokerName || 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -592,21 +701,39 @@ const TestOrdersList = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="flex justify-between">
+                          <span className="text-gray-600">Base Amount:</span>
+                          <span className="font-medium text-gray-900">৳{selectedOrder.baseAmount || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">VAT Rate:</span>
+                          <span className="font-medium text-gray-900">{selectedOrder.vatRate || 1}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">VAT Amount:</span>
+                          <span className="font-medium text-gray-900">৳{selectedOrder.vatAmount || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Discount Amount:</span>
+                          <span className="font-medium text-gray-900">৳{selectedOrder.discountAmount || 0}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
                           <span className="text-gray-600">Total Amount:</span>
                           <span className="font-medium text-gray-900">৳{selectedOrder.totalAmount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Paid Amount:</span>
+                          <span className="font-medium text-gray-900">৳{selectedOrder.paidAmount || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Due Amount:</span>
+                          <span className="font-medium text-gray-900">৳{selectedOrder.dueAmount || 0}</span>
                         </div>
                         {selectedOrder.hospitalRevenue !== undefined && (
                           <div className="flex justify-between">
                             <span className="text-gray-600">Hospital Revenue:</span>
                             <span className="font-medium text-gray-900">৳{selectedOrder.hospitalRevenue.toFixed(0)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {selectedOrder.doctorRevenue !== undefined && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Doctor Revenue:</span>
-                            <span className="font-medium text-gray-900">৳{selectedOrder.doctorRevenue.toFixed(0)}</span>
                           </div>
                         )}
                       </div>
@@ -642,6 +769,272 @@ const TestOrdersList = () => {
                           <option value="Completed">Completed</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Modal>
+
+            <Modal
+              title={
+                <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Edit className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Edit Test Order</h3>
+                    <p className="text-sm text-gray-600">Update test order details</p>
+                  </div>
+                </div>
+              }
+              open={isEditModalVisible}
+              onCancel={handleCloseEditModal}
+              footer={[
+                <Button
+                  key="cancel"
+                  onClick={handleCloseEditModal}
+                  className="bg-gray-100 hover:bg-gray-200 border-gray-300"
+                >
+                  Cancel
+                </Button>,
+                <Button
+                  key="submit"
+                  onClick={handleEdit}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Update
+                </Button>,
+              ]}
+              width={800}
+              className="custom-modal"
+            >
+              {selectedOrder && (
+                <div className="space-y-6 pt-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="w-5 h-5 text-blue-600" />
+                      <h4 className="font-semibold text-gray-900">Patient Information</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <Input
+                          name="patientName"
+                          value={formData.patientName || ""}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <Input
+                          type="number"
+                          name="age"
+                          value={formData.age || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <Select
+                          name="gender"
+                          value={formData.gender || ""}
+                          onChange={(value) => setFormData({ ...formData, gender: value })}
+                          className="w-full"
+                        >
+                          <Select.Option value="">Select Gender</Select.Option>
+                          <Select.Option value="Male">Male</Select.Option>
+                          <Select.Option value="Female">Female</Select.Option>
+                          <Select.Option value="Other">Other</Select.Option>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                        <Input
+                          name="mobile"
+                          value={formData.mobile || ""}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <Input
+                          type="email"
+                          name="email"
+                          value={formData.email || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <Input.TextArea
+                          name="address"
+                          value={formData.address || ""}
+                          onChange={handleInputChange}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Heart className="w-5 h-5 text-green-600" />
+                      <h4 className="font-semibold text-gray-900">Medical Information</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Disease</label>
+                        <Input
+                          name="disease"
+                          value={formData.disease || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
+                        <Input
+                          name="doctorName"
+                          value={formData.doctorName || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Broker Name</label>
+                        <Input
+                          name="brokerName"
+                          value={formData.brokerName || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-5 h-5 text-indigo-600" />
+                      <h4 className="font-semibold text-gray-900">Order Schedule</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <DatePicker
+                          value={formData.date ? moment(formData.date) : null}
+                          onChange={handleDateChange}
+                          className="w-full"
+                          format="YYYY-MM-DD"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                        <TimePicker
+                          value={formData.time ? moment(formData.time, 'HH:mm') : null}
+                          onChange={handleTimeChange}
+                          className="w-full"
+                          format="HH:mm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-5 h-5 text-yellow-600" />
+                      <h4 className="font-semibold text-gray-900">Financial Information</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Base Amount</label>
+                        <Input
+                          type="number"
+                          name="baseAmount"
+                          value={formData.baseAmount || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">VAT Rate (%)</label>
+                        <Input
+                          type="number"
+                          name="vatRate"
+                          value={formData.vatRate || 1}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">VAT Amount</label>
+                        <Input
+                          type="number"
+                          name="vatAmount"
+                          value={formData.vatAmount || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Discount Amount</label>
+                        <Input
+                          type="number"
+                          name="discountAmount"
+                          value={formData.discountAmount || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                        <Input
+                          type="number"
+                          name="totalAmount"
+                          value={formData.totalAmount || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
+                        <Input
+                          type="number"
+                          name="paidAmount"
+                          value={formData.paidAmount || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Due Amount</label>
+                        <Input
+                          type="number"
+                          name="dueAmount"
+                          value={formData.dueAmount || ""}
+                          onChange={handleInputChange}
+                          disabled // Due amount is calculated, not editable
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Revenue</label>
+                        <Input
+                          type="number"
+                          name="hospitalRevenue"
+                          value={formData.hospitalRevenue || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Revenue</label>
+                        <Input
+                          type="number"
+                          name="doctorRevenue"
+                          value={formData.doctorRevenue || ""}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Broker Revenue</label>
+                        <Input
+                          type="number"
+                          name="brokerRevenue"
+                          value={formData.brokerRevenue || ""}
+                          onChange={handleInputChange}
+                        />
                       </div>
                     </div>
                   </div>

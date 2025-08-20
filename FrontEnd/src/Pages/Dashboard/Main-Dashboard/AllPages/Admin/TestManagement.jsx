@@ -15,7 +15,7 @@ const TestManagement = () => {
   const [categories, setCategories] = useState([]);
   const [filteredTests, setFilteredTests] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTest, setEditingTest] = useState(null);
   const [form] = Form.useForm();
@@ -402,7 +402,7 @@ const TestManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
                   <Select
                     value={selectedCategory}
-                    onChange={setSelectedCategory}
+                    onChange={val => setSelectedCategory(val === undefined ? undefined : val)}
                     className="w-full"
                     placeholder="All Categories"
                     allowClear

@@ -13,10 +13,12 @@ const testOrderSchema = new mongoose.Schema(
     age: {
       type: Number,
       required: true,
+      min: 0,
     },
     gender: {
       type: String,
       required: true,
+      enum: ["Male", "Female", "Other"],
     },
     mobile: {
       type: String,
@@ -40,6 +42,7 @@ const testOrderSchema = new mongoose.Schema(
         testPrice: {
           type: Number,
           required: true,
+          min: 0,
         },
         testResult: {
           type: String,
@@ -55,75 +58,92 @@ const testOrderSchema = new mongoose.Schema(
     },
     baseAmount: {
       type: Number,
+      min: 0,
     },
     vatRate: {
       type: Number,
-      default: 1, // 1% default VAT
+      default: 1,
+      min: 0,
     },
     vatAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     discountAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     totalAmount: {
       type: Number,
       required: true,
+      min: 0,
     },
     paidAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     dueAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     hospitalRevenue: {
       type: Number,
       required: true,
+      min: 0,
     },
     doctorRevenue: {
       type: Number,
       default: 0,
+      min: 0,
     },
     brokerRevenue: {
       type: Number,
       default: 0,
+      min: 0,
     },
     lastPaymentDate: {
       type: Date,
-      default: null
+      default: null,
     },
     lastPaymentAmount: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0,
     },
     totalPaymentsMade: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0,
     },
-    paymentHistory: [{
-      paymentDate: {
-        type: Date,
-        default: Date.now
+    paymentHistory: [
+      {
+        paymentDate: {
+          type: Date,
+          default: Date.now,
+        },
+        paymentAmount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        previousRevenue: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        newRevenue: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
       },
-      paymentAmount: {
-        type: Number,
-        required: true
-      },
-      previousRevenue: {
-        type: Number,
-        required: true
-      },
-      newRevenue: {
-        type: Number,
-        required: true
-      }
-    }],
+    ],
     date: {
-      type: String,
+      type: String, // Consider changing to Date
     },
     time: {
       type: String,
@@ -154,6 +174,54 @@ const testOrderSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
+
+// Pre-save middleware for calculations
+testOrderSchema.pre("save", async function (next) {
+  try {
+    const testOrder = this;
+
+    // Calculate vatAmount and totalAmount
+    if (testOrder.baseAmount && !testOrder.isModified("vatAmount")) {
+      testOrder.vatAmount = (testOrder.baseAmount * testOrder.vatRate) / 100;
+    }
+    if (testOrder.baseAmount && !testOrder.isModified("totalAmount")) {
+      testOrder.totalAmount = testOrder.baseAmount + testOrder.vatAmount - (testOrder.discountAmount || 0);
+    }
+    if (!testOrder.isModified("dueAmount")) {
+      testOrder.dueAmount = testOrder.totalAmount - (testOrder.paidAmount || 0);
+    }
+
+    // Aggregate dueAmount for the patient
+    if (testOrder.patientID) {
+      const previousOrders = await TestOrderModel.find({
+        patientID: testOrder.patientID,
+        _id: { $ne: testOrder._id }, // Exclude current order
+      });
+      const previousDueAmount = previousOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+      testOrder.dueAmount = testOrder.totalAmount - (testOrder.paidAmount || 0) + previousDueAmount;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Post-save middleware to update broker's totalCommission
+testOrderSchema.post("save", async function (doc) {
+  try {
+    if (doc.brokerName && doc.brokerRevenue > 0) {
+      const BrokerModel = mongoose.model("broker");
+      const broker = await BrokerModel.findOne({ name: doc.brokerName });
+      if (broker) {
+        broker.totalCommission = (broker.totalCommission || 0) + doc.brokerRevenue;
+        await broker.save();
+      }
+    }
+  } catch (error) {
+    console.error("Error updating broker commission:", error);
+  }
+});
 
 const TestOrderModel = mongoose.model("testorder", testOrderSchema);
 
