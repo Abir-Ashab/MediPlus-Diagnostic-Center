@@ -5,7 +5,6 @@ const PatientModel = require("../models/Patient.model");
 const { DoctorModel } = require("../models/Doctor.model");
 const { BrokerModel } = require("../models/Brokers.model");
 
-// Helper function to recalculate dueAmount for all patient orders
 const recalculatePatientDueAmounts = async (patientID) => {
   const orders = await TestOrderModel.find({ patientID });
   let totalDue = 0;
@@ -16,7 +15,6 @@ const recalculatePatientDueAmounts = async (patientID) => {
   }
 };
 
-// Create a new test order
 router.post("/", async (req, res) => {
   try {
     const {
