@@ -19,6 +19,7 @@ const brokerSchema = mongoose.Schema({
   mobile: {
     type: Number,
     minlength: 10,
+    unique: true,
   },
 
   email: {
