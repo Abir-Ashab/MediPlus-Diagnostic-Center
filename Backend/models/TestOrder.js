@@ -122,36 +122,6 @@ const testOrderSchema = new mongoose.Schema(
         required: true
       }
     }],
-    lastBrokerPaymentDate: {
-      type: Date,
-      default: null
-    },
-    lastBrokerPaymentAmount: {
-      type: Number,
-      default: 0
-    },
-    totalBrokerPaymentsMade: {
-      type: Number,
-      default: 0
-    },
-    brokerPaymentHistory: [{
-      paymentDate: {
-        type: Date,
-        default: Date.now
-      },
-      paymentAmount: {
-        type: Number,
-        required: true
-      },
-      previousRevenue: {
-        type: Number,
-        required: true
-      },
-      newRevenue: {
-        type: Number,
-        required: true
-      }
-    }],
     date: {
       type: String,
     },

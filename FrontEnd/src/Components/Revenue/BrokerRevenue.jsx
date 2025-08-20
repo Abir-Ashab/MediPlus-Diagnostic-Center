@@ -22,7 +22,6 @@ const BrokerRevenue = ({
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const commissionPercentages = {
     VACCINATION: 20,
@@ -78,12 +77,6 @@ const BrokerRevenue = ({
 
   // Function to calculate broker revenue for an order
   const calculateBrokerRevenue = (order) => {
-    // First check if there's a stored brokerRevenue (after payments)
-    if (order.brokerRevenue !== undefined && order.brokerRevenue !== null) {
-      return order.brokerRevenue;
-    }
-    
-    // If no stored value, calculate it from tests
     let brokerRev = 0;
     (order.tests || []).forEach(test => {
       let perc = testsMap[test.testName.toLowerCase()] || 0;
@@ -98,7 +91,7 @@ const BrokerRevenue = ({
     return brokerRev;
   };
 
-  // Fetch all test orders (refresh when payment is made)
+  // Fetch all test orders
   useEffect(() => {
     const fetchAllTestOrders = async () => {
       try {
@@ -113,7 +106,7 @@ const BrokerRevenue = ({
       }
     };
     fetchAllTestOrders();
-  }, [refreshKey]);
+  }, []);
 
   // Compute filtered test orders
   const filteredTestOrders = useMemo(
@@ -130,12 +123,12 @@ const BrokerRevenue = ({
       if (!brokerMap[brokerName]) {
         brokerMap[brokerName] = { _id: brokerName, totalRevenue: 0, appointments: 0 };
       }
-      const brokerRev = calculateBrokerRevenue(order);
+      const brokerRev = order.brokerRevenue || calculateBrokerRevenue(order);
       brokerMap[brokerName].totalRevenue += brokerRev;
       brokerMap[brokerName].appointments += 1;
     });
     return Object.values(brokerMap);
-  }, [filteredTestOrders, testsMap, refreshKey]);
+  }, [filteredTestOrders, testsMap]);
 
   const totalBrokerRevenue = computedBrokers.reduce((sum, b) => sum + b.totalRevenue, 0);
   const totalRecords = filteredTestOrders.length;
@@ -167,7 +160,7 @@ const BrokerRevenue = ({
     if (computedBrokers.length > 0) {
       fetchPayments();
     }
-  }, [computedBrokers, brokerDateFilter, refreshKey]);
+  }, [computedBrokers, brokerDateFilter]);
 
   // Handle payment input change
   const handlePaymentChange = (brokerId, payment) => {
@@ -178,73 +171,37 @@ const BrokerRevenue = ({
     }));
   };
 
-  // Save payment to backend and update test orders
+  // Save payment to backend
   const handleSavePayment = async (brokerId) => {
-    if (!brokerId || !brokerDateFilter) {
-      toast.error("Broker name or date filter is missing", {
-        position: "top-right",
-        autoClose: 4000,
-      });
-      return;
-    }
-
     setSaveLoading((prev) => ({ ...prev, [brokerId]: true }));
-    const paymentAmount = Number(brokerPayments[brokerId]) || 0;
-
-    if (isNaN(paymentAmount) || paymentAmount <= 0) {
-      toast.error("Payment amount must be greater than 0", {
-        position: "top-right",
-        autoClose: 4000,
-      });
-      setSaveLoading((prev) => ({ ...prev, [brokerId]: false }));
-      return;
-    }
-
-    // Prepare payload
-    const payload = {
-      brokerName: brokerId,
-      paymentAmount,
-      dateFilter: brokerDateFilter,
-    };
-
-    // Only include customDateRange if dateFilter is 'custom' and it has valid values
-    if (brokerDateFilter === 'custom' && brokerCustomDateRange.start && brokerCustomDateRange.end) {
-      payload.customDateRange = {
-        start: brokerCustomDateRange.start,
-        end: brokerCustomDateRange.end,
-      };
-    }
+    const paymentAmount = brokerPayments[brokerId] || 0;
 
     try {
-      console.log("Sending broker payment payload:", payload);
-      
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments`, payload);
-
-      console.log("Broker payment response:", response.data);
-
-      // Update local state
+      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments`, {
+        brokerName: brokerId,
+        paymentAmount,
+        dateFilter: brokerDateFilter,
+        customDateRange: brokerDateFilter === 'custom' ? brokerCustomDateRange : {},
+      });
+      if (response.data.message === 'Payment cannot exceed total revenue') {
+        toast.error("Payment cannot exceed total revenue!", {
+          position: "top-right",
+          autoClose: 4000,
+        });
+        setSaveLoading((prev) => ({ ...prev, [brokerId]: false }));
+        return;
+      }
       setBrokerPayments((prev) => ({
         ...prev,
-        [brokerId]: response.data.payment?.paymentAmount || 0,
+        [brokerId]: response.data.paymentAmount || 0,
       }));
-
-      // Force refresh of test orders data
-      setRefreshKey(prev => prev + 1);
-
-      toast.success(`Payment saved successfully! Updated ${response.data.ordersUpdated} orders.`, {
+      toast.success("Payment saved successfully!", {
         position: "top-right",
         autoClose: 3000,
       });
-      
-      // Show detailed info about the payment processing
-      if (response.data.updatedOrders && response.data.updatedOrders.length > 0) {
-        console.log("Orders updated:", response.data.updatedOrders);
-      }
-
     } catch (error) {
-      console.error("Error saving broker payment:", error);
-      const errorMessage = error.response?.data?.message || "Failed to save payment";
-      toast.error(errorMessage, {
+      console.error("Error saving payment:", error.message, error.response?.data, error.response?.status);
+      toast.error(`Failed to save payment: ${error.message}`, {
         position: "top-right",
         autoClose: 4000,
       });
@@ -265,32 +222,34 @@ const BrokerRevenue = ({
       const payment = Number(paymentData.paymentAmount) || 0;
 
       const filteredRecords = filteredTestOrders.filter((order) => order.brokerName === brokerName);
-      const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateBrokerRevenue(order), 0);
+      const totalRevenue = filteredRecords.reduce((sum, order) => sum + (order.brokerRevenue || calculateBrokerRevenue(order)), 0);
 
       const data = filteredRecords.map((order) => {
-        const recordRevenue = calculateBrokerRevenue(order);
+        const recordRevenue = order.brokerRevenue || calculateBrokerRevenue(order);
+        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
+        const dueAmount = recordRevenue - paymentShare;
         return {
           "Patient Name": order.patientName,
           Date: order.date,
           Type: "Test Order",
           "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          "Due Revenue": recordRevenue.toFixed(2),
-          "Last Payment": order.lastBrokerPaymentDate ? new Date(order.lastBrokerPaymentDate).toLocaleDateString() : "N/A",
-          "Last Payment Amount": order.lastBrokerPaymentAmount ? order.lastBrokerPaymentAmount.toFixed(2) : "0.00",
+          Revenue: recordRevenue.toFixed(2),
+          "Payment Share": paymentShare.toFixed(2),
+          "Due Amount": dueAmount.toFixed(2),
         };
       });
 
       data.push({
         "Patient Name": "Total",
-        "Due Revenue": totalRevenue.toFixed(2),
-        "Last Payment Amount": payment.toFixed(2),
+        Revenue: totalRevenue.toFixed(2),
+        "Payment Share": payment.toFixed(2),
+        "Due Amount": (totalRevenue - payment).toFixed(2),
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Broker_${brokerName}`);
-      XLSX.writeFile(wb, `broker_${brokerName}_revenue_due.xlsx`);
-      
+      XLSX.writeFile(wb, `broker_${brokerName}_monthly_revenue.xlsx`);
       toast.success("Report exported successfully!", {
         position: "top-right",
         autoClose: 3000,
@@ -320,9 +279,7 @@ const BrokerRevenue = ({
           recordType: "Test Order",
           tests: order.tests,
           totalAmount: order.totalAmount || 0,
-          brokerRevenue: calculateBrokerRevenue(order),
-          lastBrokerPaymentDate: order.lastBrokerPaymentDate,
-          lastBrokerPaymentAmount: order.lastBrokerPaymentAmount || 0,
+          brokerRevenue: order.brokerRevenue || calculateBrokerRevenue(order),
         }))
     : [];
 
@@ -331,9 +288,8 @@ const BrokerRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Due Revenue</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Total Broker Revenue</h3>
           <p className="text-2xl font-bold text-orange-600">{totalBrokerRevenue.toFixed(0)} Taka</p>
-          <p className="text-xs text-gray-500 mt-1">Remaining amount after payments</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
@@ -433,7 +389,7 @@ const BrokerRevenue = ({
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Due Revenue Distribution by Broker</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Broker</h3>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -460,17 +416,15 @@ const BrokerRevenue = ({
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Broker Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {computedBrokers.map((broker, index) => {
-            if (!broker._id) return null;
-            
-            return (
+          {computedBrokers.map((broker, index) => (
+            broker._id && (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="font-medium text-gray-900">{broker._id}</div>
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-orange-600">
-                        {broker.totalRevenue.toFixed(0)} Taka (Due)
+                        {(broker.totalRevenue - (brokerPayments[broker._id] || 0)).toFixed(0)} Taka (Due)
                       </div>
                       <div className="text-sm text-gray-600">Records: {broker.appointments}</div>
                     </div>
@@ -480,7 +434,6 @@ const BrokerRevenue = ({
                         <input
                           type="number"
                           min="0"
-                          max={broker.totalRevenue}
                           value={brokerPayments[broker._id] || ""}
                           onChange={(e) => handlePaymentChange(broker._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -493,9 +446,6 @@ const BrokerRevenue = ({
                         >
                           {saveLoading[broker._id] ? 'Saving...' : 'Save Payment'}
                         </button>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Max: {broker.totalRevenue.toFixed(0)} Taka
                       </div>
                     </div>
                     <button
@@ -517,8 +467,8 @@ const BrokerRevenue = ({
                   Avg: {broker.appointments > 0 ? (broker.totalRevenue / broker.appointments).toFixed(0) : 0} Taka
                 </div>
               </div>
-            );
-          })}
+            )
+          ))}
         </div>
       </div>
 
@@ -536,8 +486,7 @@ const BrokerRevenue = ({
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
                 <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
                 <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Due Revenue</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Last Payment</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
               </tr>
             </thead>
             <tbody>
@@ -555,14 +504,6 @@ const BrokerRevenue = ({
                     <td className="p-3 text-right border-b border-gray-200 font-bold text-orange-600">
                       {record.brokerRevenue.toFixed(0)} Taka
                     </td>
-                    <td className="p-3 text-right border-b border-gray-200 text-sm text-gray-600">
-                      {record.lastBrokerPaymentAmount > 0 ? `${record.lastBrokerPaymentAmount.toFixed(0)} Taka` : 'N/A'}
-                      {record.lastBrokerPaymentDate && (
-                        <div className="text-xs">
-                          {new Date(record.lastBrokerPaymentDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -575,12 +516,6 @@ const BrokerRevenue = ({
                   {displayRecords
                     .slice(0, 10)
                     .reduce((sum, record) => sum + record.brokerRevenue, 0)
-                    .toFixed(0)} Taka
-                </td>
-                <td className="p-3 text-right font-bold text-gray-600">
-                  {displayRecords
-                    .slice(0, 10)
-                    .reduce((sum, record) => sum + record.lastBrokerPaymentAmount, 0)
                     .toFixed(0)} Taka
                 </td>
               </tr>

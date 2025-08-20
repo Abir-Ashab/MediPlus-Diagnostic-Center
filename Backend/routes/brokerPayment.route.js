@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const BrokerPayment = require('../models/brokerPayment.model'); // Assuming you have a BrokerPayment model
-const TestOrderModel = require("../models/TestOrder");
+const BrokerPayment = require('../models/brokerPayment.model')
 const axios = require('axios');
 
 // POST: Save or update payment for a broker
@@ -9,9 +8,9 @@ router.post('/', async (req, res) => {
   try {
     const { brokerName, paymentAmount, dateFilter, customDateRange } = req.body;
 
-    // Fetch test orders to calculate total revenue
+    // Fetch records to calculate total revenue
     const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
-    
+
     const brokerTestOrders = testOrdersResponse.data.filter((order) => order.brokerName === brokerName);
     const formattedTestOrders = brokerTestOrders.map((order) => ({
       brokerRevenue: order.brokerRevenue || 0,
@@ -44,25 +43,9 @@ router.post('/', async (req, res) => {
       await payment.save();
     }
 
-    // Update test orders to reduce broker revenue
-    const revenueUpdatePayload = {
-      paymentAmount,
-      dateFilter,
-      customDateRange
-    };
-
-    const revenueResponse = await axios.patch(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/brokers/${brokerName}/reduce-revenue`,
-      revenueUpdatePayload
-    );
-
-    res.status(200).json({
-      payment,
-      ordersUpdated: revenueResponse.data.ordersUpdated,
-      updatedOrders: revenueResponse.data.updatedOrders
-    });
+    res.status(200).json(payment);
   } catch (error) {
-    console.error('Error saving broker payment:', error);
+    console.error('Error saving payment:', error);
     res.status(500).json({ message: 'Failed to save payment' });
   }
 });
@@ -78,7 +61,7 @@ router.get('/:brokerName', async (req, res) => {
     const payments = await BrokerPayment.find(query);
     res.status(200).json(payments);
   } catch (error) {
-    console.error('Error fetching broker payments:', error);
+    console.error('Error fetching payments:', error);
     res.status(500).json({ message: 'Failed to fetch payments' });
   }
 });
