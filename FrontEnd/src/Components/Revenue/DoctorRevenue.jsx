@@ -252,7 +252,6 @@ const DoctorRevenue = ({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
       XLSX.writeFile(wb, `doctor_${doctorName}_revenue_due.xlsx`);
-      toast.success("Report exported successfully!");
     } catch (error) {
       console.error("Error exporting doctor revenue:", error);
       toast.error("Failed to export doctor revenue");

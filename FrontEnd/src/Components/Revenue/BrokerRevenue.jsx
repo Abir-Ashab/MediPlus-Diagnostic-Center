@@ -250,10 +250,6 @@ const BrokerRevenue = ({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Broker_${brokerName}`);
       XLSX.writeFile(wb, `broker_${brokerName}_monthly_revenue.xlsx`);
-      toast.success("Report exported successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
     } catch (error) {
       console.error("Error exporting broker revenue:", error.message, error.response?.data, error.response?.status);
       toast.error(`Failed to export broker revenue: ${error.message}`, {
