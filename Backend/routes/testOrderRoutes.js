@@ -3,7 +3,7 @@ const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
 const PatientModel = require("../models/Patient.model");
 const { DoctorModel } = require("../models/Doctor.model");
-const { BrokerModel } = require("../models/Broker.model");
+const { BrokerModel } = require("../models/Brokers.model");
 
 // Helper function to recalculate dueAmount for all patient orders
 const recalculatePatientDueAmounts = async (patientID) => {
