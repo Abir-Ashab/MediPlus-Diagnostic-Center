@@ -4,7 +4,6 @@ const BrokerPayment = require('../models/brokerPayment.model');
 const TestOrderModel = require('../models/TestOrder');
 const axios = require('axios');
 
-// POST: Save or update payment for a broker and reduce broker revenue from test orders
 router.post('/', async (req, res) => {
   try {
     const { brokerName, paymentAmount, dateFilter, customDateRange } = req.body;
@@ -258,6 +257,90 @@ router.get('/summary/:brokerName', async (req, res) => {
   } catch (error) {
     console.error('Error fetching broker summary:', error);
     res.status(500).json({ message: 'Failed to fetch broker summary' });
+  }
+});
+
+// PATCH: Initialize broker revenue for existing orders (one-time migration)
+router.patch('/initialize-broker-revenue', async (req, res) => {
+  try {
+    // This route can be called once to initialize brokerRevenue for existing orders
+    const testOrders = await TestOrderModel.find({ 
+      brokerName: { $exists: true, $ne: null, $ne: "" },
+      $or: [
+        { brokerRevenue: { $exists: false } },
+        { brokerRevenue: null },
+        { brokerRevenue: 0 }
+      ]
+    });
+
+    console.log(`Found ${testOrders.length} orders to initialize`);
+
+    // Commission percentages (same as frontend)
+    const commissionPercentages = {
+      VACCINATION: 20,
+      HORMONE: 20,
+      HISTOPATHOLOGY: 50,
+      XRAY: 30,
+      CARDIAC: 30,
+      ULTRASOUND: 20,
+      OTHERS: 50,
+      HAEMATOLOGY: 50,
+      IMMUNOLOGY: 0,
+      CANCER_MARKER: 0,
+      BIOCHEMICAL: 0,
+      MICROBIOLOGY: 0,
+      HEPATITIS: 0,
+      URINE: 0,
+      CARDIOLOGY: 0,
+      STOOL: 0
+    };
+
+    const getTestCategory = (testName) => {
+      if (!testName) return 'HISTOPATHOLOGY';
+      const lowerName = testName.toLowerCase();
+      if (lowerName.includes('vaccine')) return 'VACCINATION';
+      if (lowerName.includes('echo')) return 'CARDIAC';
+      if (lowerName.includes('ecg') || lowerName.includes('e.c.g') || lowerName.includes('e.t.t-stress')) return 'CARDIAC';
+      if (lowerName.includes('x-ray') || lowerName.includes('p/a view') || lowerName.includes('b/v') || lowerName.includes('lat.') || lowerName.includes('p.n.s.') || lowerName.includes('opg') || lowerName.includes('ba-') || lowerName.includes('ivu') || lowerName.includes('retrograde')) return 'XRAY';
+      if (lowerName.includes('usg') || lowerName.includes('kub') || lowerName.includes('abdomen') || lowerName.includes('pelvic') || lowerName.includes('hbs') || lowerName.includes('genito-urinary')) return 'ULTRASOUND';
+      if (lowerName.includes('thyroid') || lowerName.includes('t3') || lowerName.includes('t4') || lowerName.includes('ft3') || lowerName.includes('ft4') || lowerName.includes('tsh') || lowerName.includes('prolactin') || lowerName.includes('estradiol') || lowerName.includes('lh') || lowerName.includes('progesterone') || lowerName.includes('fsh') || lowerName.includes('testosterone') || lowerName.includes('cortisol') || lowerName.includes('growth hormone') || lowerName.includes('hba1c') || lowerName.includes('vitamin d') || lowerName.includes('ca-')) return 'HORMONE';
+      return 'HISTOPATHOLOGY';
+    };
+
+    let updatedCount = 0;
+    
+    for (const order of testOrders) {
+      let brokerRev = 0;
+      
+      (order.tests || []).forEach(test => {
+        const cat = getTestCategory(test.testName);
+        const perc = (cat === 'CARDIAC' && ['ECHOCARDIOGRAM-2D & M-MODE', 'Video Endoscopy'].includes(test.testName)) 
+          ? 20 
+          : commissionPercentages[cat] || 0;
+        
+        if (perc > 0) {
+          brokerRev += (test.testPrice || 0) * (perc / 100);
+        }
+      });
+
+      if (brokerRev > 0) {
+        await TestOrderModel.findByIdAndUpdate(order._id, {
+          brokerRevenue: brokerRev,
+          hospitalRevenue: (order.totalAmount || 0) - (order.doctorRevenue || 0) - brokerRev
+        });
+        updatedCount++;
+      }
+    }
+
+    res.status(200).json({
+      message: "Broker revenue initialized successfully",
+      totalOrders: testOrders.length,
+      updatedOrders: updatedCount
+    });
+
+  } catch (error) {
+    console.error('Error initializing broker revenue:', error);
+    res.status(500).json({ message: 'Failed to initialize broker revenue', error: error.message });
   }
 });
 
