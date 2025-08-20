@@ -72,7 +72,6 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {/* Dashboard Section */}
             {user?.userType === "nurse" && (
               <Link 
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
@@ -128,10 +127,10 @@ const Sidebar = ({ onCollapse }) => {
                 >
                   Book Appointments
                 </span>
-              </Link>
+              </Link> 
             )}
 
-            {user?.userType === "nurse" && (
+            {/* {user?.userType === "nurse" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/appointments"
@@ -148,7 +147,7 @@ const Sidebar = ({ onCollapse }) => {
                   Appointments
                 </span>
               </Link>
-            )}
+            )} */}
             
             {user?.userType === "nurse" && (
               <Link
@@ -169,7 +168,6 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-                        {/* User Management Section */}
             {(user?.userType === "nurse" || user?.userType === "admin") && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
@@ -246,7 +244,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {user?.userType === "admin" && (
+            {/* {user?.userType === "admin" && (
               <Link 
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/revenue-management"
@@ -261,25 +259,6 @@ const Sidebar = ({ onCollapse }) => {
                   `}
                 >
                   Revenue Management
-                </span>
-              </Link>
-            )}
-
-            {/* {user?.userType === "admin" && (
-              <Link 
-                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
-                to="/database-seeder"
-              >
-                <div className="flex items-center justify-center w-8 h-8">
-                  <FaDatabase className="text-xl text-purple-400 group-hover:text-purple-300" />
-                </div>
-                <span 
-                  className={`
-                    ml-3 font-medium transition-all duration-300
-                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
-                  `}
-                >
-                  Database Seeder
                 </span>
               </Link>
             )} */}
@@ -303,7 +282,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {(user?.userType === "nurse" || user?.userType === "admin") && (
+            {(user?.userType === "admin") && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/revenue"

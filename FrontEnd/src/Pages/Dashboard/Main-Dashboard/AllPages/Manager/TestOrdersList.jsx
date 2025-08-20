@@ -10,7 +10,6 @@ import { TestCategories, TestsList } from "./MixedObjectData";
 import { Search, Eye, Trash2, Calendar, User, Phone, MapPin, Heart, DollarSign, Clock, ChevronLeft, ChevronRight, FileText, UserCheck, Building, Filter } from 'lucide-react';
 
 const TestOrdersList = () => {
-  // Get current user from Redux store with safe destructuring
   const { data: { user } = {} } = useSelector((state) => state.auth || {});
   
   const { printReport } = usePrintReport();

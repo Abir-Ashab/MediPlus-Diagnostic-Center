@@ -73,6 +73,40 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Update test order details
+router.put("/:id", async (req, res) => {
+  try {
+    const { patientName, age, gender, email, mobile, disease, doctorName, brokerName, address, date, time, totalAmount, hospitalRevenue, doctorRevenue, brokerRevenue } = req.body;
+
+    const testOrder = await TestOrderModel.findById(req.params.id);
+    if (!testOrder) {
+      return res.status(404).json({ message: "Test order not found" });
+    }
+
+    // Update fields
+    testOrder.patientName = patientName || testOrder.patientName;
+    testOrder.age = age || testOrder.age;
+    testOrder.gender = gender || testOrder.gender;
+    testOrder.email = email || testOrder.email;
+    testOrder.mobile = mobile || testOrder.mobile;
+    testOrder.disease = disease || testOrder.disease;
+    testOrder.doctorName = doctorName || testOrder.doctorName;
+    testOrder.brokerName = brokerName || testOrder.brokerName;
+    testOrder.address = address || testOrder.address;
+    testOrder.date = date || testOrder.date;
+    testOrder.time = time || testOrder.time;
+    testOrder.totalAmount = totalAmount || testOrder.totalAmount;
+    testOrder.hospitalRevenue = hospitalRevenue || testOrder.hospitalRevenue;
+    testOrder.doctorRevenue = doctorRevenue || testOrder.doctorRevenue;
+    testOrder.brokerRevenue = brokerRevenue || testOrder.brokerRevenue;
+
+    const updatedTestOrder = await testOrder.save();
+    res.status(200).json(updatedTestOrder);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // Update a test order status
 router.patch("/:id/status", async (req, res) => {
   try {
