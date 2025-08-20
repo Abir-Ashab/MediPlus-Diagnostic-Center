@@ -1,16 +1,17 @@
-// routes/testOrderRoutes.js
 const express = require("express");
 const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
 const PatientModel = require("../models/Patient.model"); // Assuming you have a Patient model
 const { DoctorModel } = require("../models/Doctor.model");
+const TestModel = require("../models/Test"); // Assuming this is the correct path to your Test model
 
-// Create a new test order with dynamic revenue calculation
+// Create a new test order with dynamic revenue calculation for doctor and broker
 router.post("/", async (req, res) => {
   try {
-    const { doctorName, totalAmount, orderType, ...otherData } = req.body;
+    const { doctorName, brokerName, totalAmount, orderType, tests, ...otherData } = req.body;
     
     let doctorRevenue = 0;
+    let brokerRevenue = 0;
     let hospitalRevenue = totalAmount;
     
     // If doctor is specified, calculate commission based on order type
@@ -19,7 +20,6 @@ router.post("/", async (req, res) => {
       if (doctor) {
         if (orderType === 'appointment') {
           // For appointments, doctor gets their consultation fee (remuneration)
-          // The consultation fee should already be included in totalAmount
           doctorRevenue = doctor.remuneration || 0;
           hospitalRevenue = totalAmount - doctorRevenue;
         } else {
@@ -32,13 +32,28 @@ router.post("/", async (req, res) => {
       }
     }
     
+    // If broker is specified, calculate commission based on tests
+    if (brokerName && brokerName !== "" && tests && Array.isArray(tests)) {
+      for (const test of tests) {
+        const testName = test.testName;
+        const testDoc = await TestModel.findOne({ title: { $regex: new RegExp(`^${testName}$`, 'i') } });
+        if (testDoc && testDoc.brokerCommissionPercentage > 0) {
+          brokerRevenue += ((test.testPrice || 0) * testDoc.brokerCommissionPercentage) / 100;
+        }
+      }
+      hospitalRevenue -= brokerRevenue;
+    }
+    
     const testOrderData = {
       ...otherData,
       doctorName,
+      brokerName,
       totalAmount,
       doctorRevenue,
+      brokerRevenue,
       hospitalRevenue,
-      orderType: orderType || 'test'
+      orderType: orderType || 'test',
+      tests
     };
     
     const newTestOrder = new TestOrderModel(testOrderData);
@@ -103,7 +118,7 @@ router.patch("/:id/results", async (req, res) => {
       return res.status(404).json({ message: "Test order not found" });
     }
     
-    // Find the test by its name and update the result
+    // Find the test by its ID and update the result
     const testIndex = testOrder.tests.findIndex(test => test._id.toString() === testId);
     if (testIndex === -1) {
       return res.status(404).json({ message: "Test not found in this order" });
@@ -172,7 +187,141 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Update doctor revenue after payment
+// Update broker revenue after payment
+router.patch("/brokers/:brokerName/reduce-revenue", async (req, res) => {
+  try {
+    const { brokerName } = req.params;
+    const { paymentAmount, dateFilter, customDateRange } = req.body;
+
+    if (!brokerName || paymentAmount === undefined) {
+      return res.status(400).json({ message: "Broker name and payment amount are required" });
+    }
+
+    // Build date query based on filter
+    let dateQuery = {};
+    const now = new Date();
+    
+    switch (dateFilter) {
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: weekStart, $lte: weekEnd };
+        break;
+        
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: monthStart, $lte: monthEnd };
+        break;
+        
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31);
+        yearEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: yearStart, $lte: yearEnd };
+        break;
+        
+      case 'custom':
+        if (customDateRange && customDateRange.start && customDateRange.end) {
+          const startDate = new Date(customDateRange.start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(customDateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          dateQuery.createdAt = { $gte: startDate, $lte: endDate };
+        }
+        break;
+        
+      default: // 'all' or any other value
+        // No date filter
+        break;
+    }
+
+    // Find test orders for this broker within the date range
+    const query = { 
+      brokerName: brokerName,
+      brokerRevenue: { $gt: 0 }, // Only orders with pending revenue
+      ...dateQuery 
+    };
+
+    const testOrders = await TestOrderModel.find(query).sort({ createdAt: 1 });
+
+    if (testOrders.length === 0) {
+      return res.status(404).json({ message: "No pending revenue found for this broker in the specified period" });
+    }
+
+    // Calculate total pending revenue
+    const totalPendingRevenue = testOrders.reduce((sum, order) => sum + (order.brokerRevenue || 0), 0);
+    
+    if (paymentAmount > totalPendingRevenue) {
+      return res.status(400).json({ 
+        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(2)})` 
+      });
+    }
+
+    // Distribute the payment across orders proportionally
+    let remainingPayment = paymentAmount;
+    const updatedOrders = [];
+
+    for (const order of testOrders) {
+      if (remainingPayment <= 0) break;
+
+      const orderRevenue = order.brokerRevenue || 0;
+      const paymentForThisOrder = Math.min(remainingPayment, orderRevenue);
+      
+      const newBrokerRevenue = orderRevenue - paymentForThisOrder;
+      const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
+
+      // Update the order with payment tracking
+      const updatedOrder = await TestOrderModel.findByIdAndUpdate(
+        order._id,
+        {
+          brokerRevenue: newBrokerRevenue,
+          hospitalRevenue: newHospitalRevenue,
+          lastBrokerPaymentDate: new Date(),
+          lastBrokerPaymentAmount: paymentForThisOrder,
+          totalBrokerPaymentsMade: (order.totalBrokerPaymentsMade || 0) + paymentForThisOrder,
+          $push: {
+            brokerPaymentHistory: {
+              paymentDate: new Date(),
+              paymentAmount: paymentForThisOrder,
+              previousRevenue: orderRevenue,
+              newRevenue: newBrokerRevenue
+            }
+          }
+        },
+        { new: true }
+      );
+
+      updatedOrders.push(updatedOrder);
+      remainingPayment -= paymentForThisOrder;
+    }
+
+    res.status(200).json({
+      message: "Broker revenue updated successfully",
+      paymentProcessed: paymentAmount,
+      ordersUpdated: updatedOrders.length,
+      remainingPayment: remainingPayment,
+      updatedOrders: updatedOrders.map(order => ({
+        orderId: order._id,
+        patientName: order.patientName,
+        previousRevenue: testOrders.find(o => o._id.toString() === order._id.toString())?.brokerRevenue || 0,
+        newRevenue: order.brokerRevenue,
+        paymentApplied: (testOrders.find(o => o._id.toString() === order._id.toString())?.brokerRevenue || 0) - order.brokerRevenue
+      }))
+    });
+
+  } catch (error) {
+    console.error("Error updating broker revenue:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update doctor revenue after payment (unchanged from original)
 router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
   try {
     const { doctorName } = req.params;
@@ -309,7 +458,7 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
 // Get revenue distribution report
 router.get("/reports/revenue", async (req, res) => {
   try {
-    const { startDate, endDate, doctorName } = req.query;
+    const { startDate, endDate, doctorName, brokerName } = req.query;
     
     let query = {};
     
@@ -326,6 +475,11 @@ router.get("/reports/revenue", async (req, res) => {
       query.doctorName = doctorName;
     }
     
+    // Broker filter
+    if (brokerName && brokerName !== "") {
+      query.brokerName = brokerName;
+    }
+    
     const testOrders = await TestOrderModel.find(query);
     
     // Calculate totals
@@ -333,12 +487,14 @@ router.get("/reports/revenue", async (req, res) => {
       acc.totalRevenue += order.totalAmount || 0;
       acc.hospitalRevenue += order.hospitalRevenue || 0;
       acc.doctorRevenue += order.doctorRevenue || 0;
+      acc.brokerRevenue += order.brokerRevenue || 0;
       acc.totalOrders += 1;
       return acc;
     }, {
       totalRevenue: 0,
       hospitalRevenue: 0,
       doctorRevenue: 0,
+      brokerRevenue: 0,
       totalOrders: 0
     });
     
@@ -359,9 +515,27 @@ router.get("/reports/revenue", async (req, res) => {
       }
     });
     
+    // Group by broker
+    const brokerBreakdown = {};
+    testOrders.forEach(order => {
+      if (order.brokerName && order.brokerName !== "") {
+        if (!brokerBreakdown[order.brokerName]) {
+          brokerBreakdown[order.brokerName] = {
+            totalRevenue: 0,
+            commission: 0,
+            orders: 0
+          };
+        }
+        brokerBreakdown[order.brokerName].totalRevenue += order.totalAmount || 0;
+        brokerBreakdown[order.brokerName].commission += order.brokerRevenue || 0;
+        brokerBreakdown[order.brokerName].orders += 1;
+      }
+    });
+    
     res.status(200).json({
       summary,
       doctorBreakdown,
+      brokerBreakdown,
       orders: testOrders
     });
   } catch (error) {
@@ -384,9 +558,9 @@ router.get("/doctors/commission", async (req, res) => {
   }
 });
 
+// Get broker-wise revenue
 router.get("/revenue/broker", async (req, res) => {
   try {
-    // Get broker-wise revenue
     const brokerRevenue = await TestOrderModel.aggregate([
       { $match: { brokerName: { $ne: null, $ne: "" } } },
       {

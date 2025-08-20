@@ -76,10 +76,26 @@ const BrokerRevenue = ({
     fetchTests();
   }, []);
 
-  // Function to calculate broker revenue for an order (now uses the stored brokerRevenue from DB)
+  // Function to calculate broker revenue for an order
   const calculateBrokerRevenue = (order) => {
-    // Use the brokerRevenue from the database (which will be reduced after payments)
-    return order.brokerRevenue || 0;
+    // First check if there's a stored brokerRevenue (after payments)
+    if (order.brokerRevenue !== undefined && order.brokerRevenue !== null) {
+      return order.brokerRevenue;
+    }
+    
+    // If no stored value, calculate it from tests
+    let brokerRev = 0;
+    (order.tests || []).forEach(test => {
+      let perc = testsMap[test.testName.toLowerCase()] || 0;
+      if (perc === 0) {
+        const cat = getTestCategory(test.testName);
+        perc = (cat === 'CARDIAC' && ['ECHOCARDIOGRAM-2D & M-MODE', 'Video Endoscopy'].includes(test.testName)) ? 20 : commissionPercentages[cat] || 0;
+      }
+      if (perc > 0) {
+        brokerRev += (test.testPrice || 0) * (perc / 100);
+      }
+    });
+    return brokerRev;
   };
 
   // Fetch all test orders (refresh when payment is made)
