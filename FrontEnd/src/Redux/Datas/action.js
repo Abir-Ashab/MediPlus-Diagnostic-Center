@@ -357,24 +357,6 @@ export const GetPatients = () => async (dispatch) => {
   }
 };
 
-// GET ALL DATA
-export const GetAllData = () => async (dispatch) => {
-  try {
-    dispatch({ type: types.GET_ALLDATA_REQUEST });
-    const res = await axios.get(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/hospitals`
-    );
-    console.log(res.data);
-    dispatch({
-      type: types.GET_ALLDATA_SUCCESS,
-      payload: res.data,
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// GET ALL APPOINTMENT DETAILS
 export const GetAllAppointment = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_APPOINTMENT_DETAILS_REQUEST });

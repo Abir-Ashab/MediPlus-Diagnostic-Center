@@ -7,7 +7,7 @@ import { RiEmpathizeLine, RiAdminLine } from "react-icons/ri";
 import { BsFillBookmarkCheckFill } from "react-icons/bs";
 import Sidebar from "./Sidebar";
 import { useDispatch, useSelector } from "react-redux";
-import { GetAllData, GetPatients } from "../../../../Redux/Datas/action";
+import { GetPatients } from "../../../../Redux/Datas/action";
 
 const FrontPage = () => {
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ const FrontPage = () => {
   const [agents, setAgents] = useState([]);
   const [managers, setmanagers] = useState([]);
   const [admins, setAdmins] = useState([]);
-  const [appointments, setAppointments] = useState([]);
+  const [testorders, settestorders] = useState([]);
   const [patients, setPatientsList] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -33,7 +33,6 @@ const FrontPage = () => {
 
   useEffect(() => {
     dispatch(GetPatients());
-    dispatch(GetAllData());
     fetchAllData();
   }, [dispatch]);
 
@@ -44,7 +43,7 @@ const FrontPage = () => {
       fetchAgents(),
       fetchmanagers(),
       fetchAdmins(),
-      fetchAppointments(),
+      fetchtestorders(),
     ]);
     setLoading(false);
   };
@@ -93,13 +92,13 @@ const FrontPage = () => {
     }
   };
 
-  const fetchAppointments = async () => {
+  const fetchtestorders = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments");
-      setAppointments(response.data);
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
+      settestorders(response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      console.error("Error fetching testorders:", error);
       return [];
     }
   };
@@ -225,7 +224,7 @@ const FrontPage = () => {
         ];
         data = admins;
         break;
-      case "appointment":
+      case "testorder":
         columns = [
           { title: "Patient Name", dataIndex: "patientName", key: "patientName" },
           { title: "Age", dataIndex: "age", key: "age" },
@@ -239,13 +238,13 @@ const FrontPage = () => {
             title: "Actions", 
             key: "actions", 
             render: (_, record) => (
-              <Button type="primary" onClick={() => viewDetails(record, "appointment")}>
+              <Button type="primary" onClick={() => viewDetails(record, "testorder")}>
                 View Details
               </Button>
             )
           },
         ];
-        data = appointments; 
+        data = testorders; 
         break;
       case "patient":
         columns = [
@@ -403,11 +402,11 @@ const FrontPage = () => {
             </Descriptions>
           </div>
         );
-      case "appointment":
+      case "testorder":
         return (
           <div>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <h2>Appointment Details for {record.patientName}</h2>
+              <h2>Test Orders Details for {record.patientName}</h2>
               <p>Date: {record.date} | Time: {record.time}</p>
             </div>
             <Descriptions bordered column={2}>
@@ -510,13 +509,13 @@ const FrontPage = () => {
       onClick: () => showModal("Admin Details", "admin")
     },
     {
-      title: "Appointment",
-      count: appointments.length || data?.appointment || 0,
+      title: "Test Orders",
+      count: testorders.length || data?.testorder || 0,
       icon: <BsFillBookmarkCheckFill className="text-4xl" />,
       bgColor: "bg-gradient-to-br from-teal-500 to-teal-600",
       iconBg: "bg-teal-100",
       iconColor: "text-teal-600",
-      onClick: () => showModal("Appointment Details", "appointment")
+      onClick: () => showModal("testorder Details", "testorder")
     }
   ];
   
