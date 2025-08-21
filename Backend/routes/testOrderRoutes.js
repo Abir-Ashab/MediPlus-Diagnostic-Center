@@ -3,7 +3,7 @@ const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
 const PatientModel = require("../models/Patient.model");
 const { DoctorModel } = require("../models/Doctor.model");
-const AgentModel = require("../models/Agents.model");
+const { AgentModel } = require("../models/Agents.model");
 
 const recalculatePatientDueAmounts = async (patientID) => {
   const orders = await TestOrderModel.find({ patientID });

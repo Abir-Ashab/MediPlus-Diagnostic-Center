@@ -22,37 +22,7 @@ const AgentRevenue = ({
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
-
-  const commissionPercentages = {
-    VACCINATION: 20,
-    HORMONE: 20,
-    HISTOPATHOLOGY: 50,
-    XRAY: 30,
-    CARDIAC: 30, // Default for ECG; Echo tests override to 20%
-    ULTRASOUND: 20,
-    OTHERS: 50,
-    HAEMATOLOGY: 50,
-    IMMUNOLOGY: 0,
-    CANCER_MARKER: 0,
-    BIOCHEMICAL: 0,
-    MICROBIOLOGY: 0,
-    HEPATITIS: 0,
-    URINE: 0,
-    CARDIOLOGY: 0,
-    STOOL: 0
-  };
-
-  const getTestCategory = (testName) => {
-    if (!testName) return 'HISTOPATHOLOGY';
-    const lowerName = testName.toLowerCase();
-    if (lowerName.includes('vaccine')) return 'VACCINATION';
-    if (lowerName.includes('echo')) return 'CARDIAC';
-    if (lowerName.includes('ecg') || lowerName.includes('e.c.g') || lowerName.includes('e.t.t-stress')) return 'CARDIAC';
-    if (lowerName.includes('x-ray') || lowerName.includes('p/a view') || lowerName.includes('b/v') || lowerName.includes('lat.') || lowerName.includes('p.n.s.') || lowerName.includes('opg') || lowerName.includes('ba-') || lowerName.includes('ivu') || lowerName.includes('retrograde')) return 'XRAY';
-    if (lowerName.includes('usg') || lowerName.includes('kub') || lowerName.includes('abdomen') || lowerName.includes('pelvic') || lowerName.includes('hbs') || lowerName.includes('genito-urinary')) return 'ULTRASOUND';
-    if (lowerName.includes('thyroid') || lowerName.includes('t3') || lowerName.includes('t4') || lowerName.includes('ft3') || lowerName.includes('ft4') || lowerName.includes('tsh') || lowerName.includes('prolactin') || lowerName.includes('estradiol') || lowerName.includes('lh') || lowerName.includes('progesterone') || lowerName.includes('fsh') || lowerName.includes('testosterone') || lowerName.includes('cortisol') || lowerName.includes('growth hormone') || lowerName.includes('hba1c') || lowerName.includes('vitamin d') || lowerName.includes('ca-')) return 'HORMONE';
-    return 'HISTOPATHOLOGY';
-  };
+  const [commissionOverrides, setCommissionOverrides] = useState({});
 
   // Fetch all tests for commissions
   useEffect(() => {
@@ -75,20 +45,43 @@ const AgentRevenue = ({
     fetchTests();
   }, []);
 
-  // Function to calculate agent revenue for an order
-  const calculateAgentRevenue = (order) => {
-    let agentRev = 0;
-    (order.tests || []).forEach(test => {
-      let perc = testsMap[test.testName.toLowerCase()] || 0;
-      if (perc === 0) {
-        const cat = getTestCategory(test.testName);
-        perc = (cat === 'CARDIAC' && ['ECHOCARDIOGRAM-2D & M-MODE', 'Video Endoscopy'].includes(test.testName)) ? 20 : commissionPercentages[cat] || 0;
-      }
-      if (perc > 0) {
-        agentRev += (test.testPrice || 0) * (perc / 100);
-      }
+
+  // Compute filtered test orders (move this up before any use)
+  const filteredTestOrders = useMemo(
+    () => filterRecordsByDateRange(allTestOrders, agentDateFilter, agentCustomDateRange),
+    [allTestOrders, agentDateFilter, agentCustomDateRange, filterRecordsByDateRange]
+  );
+
+  // Aggregate test-wise data for selected agent
+  const getTestWiseData = (orders) => {
+    const testMap = {};
+    orders.forEach(order => {
+      (order.tests || []).forEach(test => {
+        const key = test.testName.toLowerCase();
+        if (!testMap[key]) {
+          testMap[key] = {
+            testName: test.testName,
+            price: test.testPrice || 0,
+            count: 0,
+            commission: commissionOverrides[key] !== undefined ? commissionOverrides[key] : (testsMap[key] || 0),
+          };
+        }
+        testMap[key].count += 1;
+      });
     });
-    return agentRev;
+    return Object.values(testMap);
+  };
+
+  // For table and export: test-wise data for selected agent
+  const testWiseData = useMemo(() => {
+    if (!selectedAgent) return [];
+    const agentOrders = filteredTestOrders.filter(order => order.agentName === selectedAgent);
+    return getTestWiseData(agentOrders);
+  }, [filteredTestOrders, selectedAgent, commissionOverrides, testsMap]);
+
+  // Handle commission % change
+  const handleCommissionChange = (key, value) => {
+    setCommissionOverrides(prev => ({ ...prev, [key]: Number(value) }));
   };
 
   // Fetch all test orders
@@ -108,11 +101,6 @@ const AgentRevenue = ({
     fetchAllTestOrders();
   }, []);
 
-  // Compute filtered test orders
-  const filteredTestOrders = useMemo(
-    () => filterRecordsByDateRange(allTestOrders, agentDateFilter, agentCustomDateRange),
-    [allTestOrders, agentDateFilter, agentCustomDateRange, filterRecordsByDateRange]
-  );
 
   // Compute agents data
   const computedAgents = useMemo(() => {
@@ -123,7 +111,7 @@ const AgentRevenue = ({
       if (!agentMap[agentName]) {
         agentMap[agentName] = { _id: agentName, totalRevenue: 0, appointments: 0 };
       }
-      const agentRev = order.agentRevenue || calculateAgentRevenue(order);
+      const agentRev = order.agentRevenue;
       agentMap[agentName].totalRevenue += agentRev;
       agentMap[agentName].appointments += 1;
     });
@@ -210,56 +198,38 @@ const AgentRevenue = ({
     }
   };
 
-  // Export agent data
+  // Export agent data (test-wise commission)
   const handleExportAgent = async (agentName) => {
     if (exportLoading) return;
     setExportLoading(true);
     try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments/${agentName}`, {
-        params: { dateFilter: agentDateFilter },
-      });
-      const paymentData = paymentResponse.data.find((p) => p.dateFilter === agentDateFilter) || {};
-      const payment = Number(paymentData.paymentAmount) || 0;
-
-      const filteredRecords = filteredTestOrders.filter((order) => order.agentName === agentName);
-      const totalRevenue = filteredRecords.reduce((sum, order) => sum + (order.agentRevenue || calculateAgentRevenue(order)), 0);
-
-      const data = filteredRecords.map((order) => {
-        const recordRevenue = order.agentRevenue || calculateAgentRevenue(order);
-        const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
-        const dueAmount = recordRevenue - paymentShare;
-        return {
-          "Patient Name": order.patientName,
-          Date: order.date,
-          Type: "Test Order",
-          "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          Revenue: recordRevenue.toFixed(2),
-          "Payment Share": paymentShare.toFixed(2),
-          "Due Amount": dueAmount.toFixed(2),
-        };
-      });
-
+      const data = testWiseData.map(row => ({
+        "Test Name": row.testName,
+        "Count": row.count,
+        "Price": row.price,
+        "Commission %": row.commission,
+        "Total Commission": ((row.price * row.count * row.commission) / 100).toFixed(2),
+      }));
+      // Add total row
+      const totalCommission = data.reduce((sum, row) => sum + Number(row["Total Commission"]), 0);
       data.push({
-        "Patient Name": "Total",
-        Revenue: totalRevenue.toFixed(2),
-        "Payment Share": payment.toFixed(2),
-        "Due Amount": (totalRevenue - payment).toFixed(2),
+        "Test Name": "Total",
+        "Count": '',
+        "Price": '',
+        "Commission %": '',
+        "Total Commission": totalCommission.toFixed(2),
       });
-
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Agent_${agentName}`);
-      XLSX.writeFile(wb, `agent_${agentName}_monthly_revenue.xlsx`);
+      XLSX.writeFile(wb, `agent_${agentName}_commission_report.xlsx`);
       toast.success("Report exported successfully!", {
         position: "top-right",
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error exporting agent revenue:", error.message, error.response?.data, error.response?.status);
-      toast.error(`Failed to export agent revenue: ${error.message}`, {
-        position: "top-right",
-        autoClose: 4000,
-      });
+      console.error("Error exporting agent commission:", error);
+      toast.error("Failed to export agent commission");
     } finally {
       setExportLoading(false);
     }
@@ -279,7 +249,7 @@ const AgentRevenue = ({
           recordType: "Test Order",
           tests: order.tests,
           totalAmount: order.totalAmount || 0,
-          agentRevenue: order.agentRevenue || calculateAgentRevenue(order),
+          agentRevenue: order.agentRevenue,
         }))
     : [];
 
@@ -472,60 +442,53 @@ const AgentRevenue = ({
         </div>
       </div>
 
-      {/* Records Table */}
+      {/* Test-wise Commission Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Records for {selectedAgent || 'Select a Agent'}
+          Test-wise Commission for {selectedAgent || 'Select an Agent'}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-100">
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Name</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Count</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Price</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Commission %</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Commission</th>
               </tr>
             </thead>
             <tbody>
-              {displayRecords
-                .slice(0, 10)
-                .map((record, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-3 border-b border-gray-200">{record.patientName}</td>
-                    <td className="p-3 border-b border-gray-200">{record.date}</td>
-                    <td className="p-3 border-b border-gray-200">{record.recordType || 'N/A'}</td>
-                    <td className="p-3 border-b border-gray-200">
-                      {record.tests?.map((test) => test.testName).join(", ") || 'N/A'}
-                    </td>
-                    <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
-                    <td className="p-3 text-right border-b border-gray-200 font-bold text-orange-600">
-                      {record.agentRevenue.toFixed(0)} Taka
-                    </td>
-                  </tr>
-                ))}
+              {testWiseData.map((row, idx) => (
+                <tr key={row.testName} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="p-3 border-b border-gray-200">{row.testName}</td>
+                  <td className="p-3 text-right border-b border-gray-200">{row.count}</td>
+                  <td className="p-3 text-right border-b border-gray-200">{row.price}</td>
+                  <td className="p-3 text-right border-b border-gray-200">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={row.commission}
+                      onChange={e => handleCommissionChange(row.testName.toLowerCase(), e.target.value)}
+                      className="w-16 p-1 border border-gray-300 rounded-md text-right"
+                    />
+                  </td>
+                  <td className="p-3 text-right border-b border-gray-200 font-bold text-orange-600">
+                    {((row.price * row.count * row.commission) / 100).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
               <tr className="bg-gray-100">
-                <td colSpan="5" className="p-3 text-right font-bold">
-                  Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
-                </td>
+                <td className="p-3 text-right font-bold" colSpan="4">Total:</td>
                 <td className="p-3 text-right font-bold text-orange-600">
-                  {displayRecords
-                    .slice(0, 10)
-                    .reduce((sum, record) => sum + record.agentRevenue, 0)
-                    .toFixed(0)} Taka
+                  {testWiseData.reduce((sum, row) => sum + (row.price * row.count * row.commission) / 100, 0).toFixed(2)}
                 </td>
               </tr>
             </tfoot>
           </table>
-          {displayRecords.length > 10 && (
-            <p className="text-center text-gray-600 mt-4">
-              Showing 10 of {displayRecords.length} records
-            </p>
-          )}
         </div>
       </div>
     </div>

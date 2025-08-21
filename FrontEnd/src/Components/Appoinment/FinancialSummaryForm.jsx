@@ -241,7 +241,6 @@ const FinancialSummaryForm = ({
               ))}
             </div>
 
-            {/* Selected Tests List */}
             <div className="mb-6">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Selected Tests:</h4>
               <div className="max-h-40 overflow-y-auto space-y-2 bg-gray-50 rounded-xl p-4">

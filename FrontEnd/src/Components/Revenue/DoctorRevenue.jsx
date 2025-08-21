@@ -23,6 +23,7 @@ const DoctorRevenue = ({
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
   const [refreshKey, setRefreshKey] = useState(0); // Add this to force refresh after payment
+  const [commissionOverrides, setCommissionOverrides] = useState({});
 
   // Fetch all tests for commissions
   useEffect(() => {
@@ -42,10 +43,43 @@ const DoctorRevenue = ({
     fetchTests();
   }, []);
 
-  // Function to calculate doctor revenue for an order (now uses the stored doctorRevenue from DB)
-  const calculateDoctorRevenue = (order) => {
-    // Use the doctorRevenue from the database (which will be reduced after payments)
-    return order.doctorRevenue || 0;
+
+  // Compute filtered test orders (move this up before any use)
+  const filteredTestOrders = useMemo(
+    () => filterRecordsByDateRange(allTestOrders, doctorDateFilter, doctorCustomDateRange),
+    [allTestOrders, doctorDateFilter, doctorCustomDateRange, filterRecordsByDateRange]
+  );
+
+  // Aggregate test-wise data for selected doctor
+  const getTestWiseData = (orders) => {
+    const testMap = {};
+    orders.forEach(order => {
+      (order.tests || []).forEach(test => {
+        const key = test.testName.toLowerCase();
+        if (!testMap[key]) {
+          testMap[key] = {
+            testName: test.testName,
+            price: test.testPrice || 0,
+            count: 0,
+            commission: commissionOverrides[key] !== undefined ? commissionOverrides[key] : (testsMap[key] || 0),
+          };
+        }
+        testMap[key].count += 1;
+      });
+    });
+    return Object.values(testMap);
+  };
+
+  // For table and export: test-wise data for selected doctor
+  const testWiseData = useMemo(() => {
+    if (!selectedDoctor) return [];
+    const doctorOrders = filteredTestOrders.filter(order => order.doctorName === selectedDoctor);
+    return getTestWiseData(doctorOrders);
+  }, [filteredTestOrders, selectedDoctor, commissionOverrides, testsMap]);
+
+  // Handle commission % change
+  const handleCommissionChange = (key, value) => {
+    setCommissionOverrides(prev => ({ ...prev, [key]: Number(value) }));
   };
 
   // Fetch all test orders (refresh when payment is made)
@@ -62,11 +96,6 @@ const DoctorRevenue = ({
     fetchAllTestOrders();
   }, [refreshKey]); // Add refreshKey as dependency
 
-  // Compute filtered test orders
-  const filteredTestOrders = useMemo(
-    () => filterRecordsByDateRange(allTestOrders, doctorDateFilter, doctorCustomDateRange),
-    [allTestOrders, doctorDateFilter, doctorCustomDateRange, filterRecordsByDateRange]
-  );
 
   // Compute doctors data
   const computedDoctors = useMemo(() => {
@@ -77,7 +106,7 @@ const DoctorRevenue = ({
       if (!doctorMap[doctorName]) {
         doctorMap[doctorName] = { _id: doctorName, totalRevenue: 0, appointments: 0 };
       }
-      const drRev = calculateDoctorRevenue(order);
+      const drRev = order.doctorRevenue;
       doctorMap[doctorName].totalRevenue += drRev;
       doctorMap[doctorName].appointments += 1;
     });
@@ -214,47 +243,34 @@ const DoctorRevenue = ({
     }
   };
 
-  // Export doctor data
+  // Export doctor data (test-wise commission)
   const handleExportDoctor = async (doctorName) => {
     if (exportLoading) return;
     setExportLoading(true);
     try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments/${doctorName}`, {
-        params: { dateFilter: doctorDateFilter },
-      });
-      const paymentData = paymentResponse.data.find((p) => p.dateFilter === doctorDateFilter) || {};
-      const payment = Number(paymentData.paymentAmount) || 0;
-
-      const filteredRecords = filteredTestOrders.filter((order) => order.doctorName === doctorName);
-
-      const totalRevenue = filteredRecords.reduce((sum, order) => sum + calculateDoctorRevenue(order), 0);
-
-      const data = filteredRecords.map((order) => {
-        const recordRevenue = calculateDoctorRevenue(order);
-        return {
-          "Patient Name": order.patientName,
-          Date: order.date,
-          Type: "Test Order",
-          "Test Details": order.tests?.map((test) => test.testName).join(", ") || "N/A",
-          "Due Revenue": recordRevenue.toFixed(2), // Now shows the remaining due amount
-          "Last Payment": order.lastPaymentDate ? new Date(order.lastPaymentDate).toLocaleDateString() : "N/A",
-          "Last Payment Amount": order.lastPaymentAmount ? order.lastPaymentAmount.toFixed(2) : "0.00",
-        };
-      });
-
+      const data = testWiseData.map(row => ({
+        "Test Name": row.testName,
+        "Count": row.count,
+        "Price": row.price,
+        "Commission %": row.commission,
+        "Total Commission": ((row.price * row.count * row.commission) / 100).toFixed(2),
+      }));
+      // Add total row
+      const totalCommission = data.reduce((sum, row) => sum + Number(row["Total Commission"]), 0);
       data.push({
-        "Patient Name": "Total",
-        "Due Revenue": totalRevenue.toFixed(2),
-        "Last Payment Amount": payment.toFixed(2),
+        "Test Name": "Total",
+        "Count": '',
+        "Price": '',
+        "Commission %": '',
+        "Total Commission": totalCommission.toFixed(2),
       });
-
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `Doctor_${doctorName}`);
-      XLSX.writeFile(wb, `doctor_${doctorName}_revenue_due.xlsx`);
+      XLSX.writeFile(wb, `doctor_${doctorName}_commission_report.xlsx`);
     } catch (error) {
-      console.error("Error exporting doctor revenue:", error);
-      toast.error("Failed to export doctor revenue");
+      console.error("Error exporting doctor commission:", error);
+      toast.error("Failed to export doctor commission");
     } finally {
       setExportLoading(false);
     }
@@ -274,7 +290,7 @@ const DoctorRevenue = ({
           recordType: "Test Order",
           tests: order.tests,
           totalAmount: order.totalAmount || 0,
-          doctorRevenue: calculateDoctorRevenue(order),
+          doctorRevenue: order.doctorRevenue,
           lastPaymentDate: order.lastPaymentDate,
           lastPaymentAmount: order.lastPaymentAmount || 0,
         }))
@@ -461,75 +477,53 @@ const DoctorRevenue = ({
         </div>
       </div>
 
-      {/* Records Table */}
+      {/* Test-wise Commission Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Records for Dr. {selectedDoctor || 'Select a Doctor'}
+          Test-wise Commission for Dr. {selectedDoctor || 'Select a Doctor'}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-100">
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
-                <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Details</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Due Revenue</th>
-                <th className="p-3 text-right text-sm font-semibold text-gray-700">Last Payment</th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">Test Name</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Count</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Price</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Commission %</th>
+                <th className="p-3 text-right text-sm font-semibold text-gray-700">Total Commission</th>
               </tr>
             </thead>
             <tbody>
-              {displayRecords
-                .slice(0, 10)
-                .map((record, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-3 border-b border-gray-200">{record.patientName}</td>
-                    <td className="p-3 border-b border-gray-200">{record.date}</td>
-                    <td className="p-3 border-b border-gray-200">{record.recordType || 'N/A'}</td>
-                    <td className="p-3 border-b border-gray-200">
-                      {record.tests?.map((test) => test.testName).join(", ") || 'N/A'}
-                    </td>
-                    <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
-                    <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
-                      {record.doctorRevenue.toFixed(0)} Taka
-                    </td>
-                    <td className="p-3 text-right border-b border-gray-200 text-sm text-gray-600">
-                      {record.lastPaymentAmount > 0 ? `${record.lastPaymentAmount.toFixed(0)} Taka` : 'N/A'}
-                      {record.lastPaymentDate && (
-                        <div className="text-xs">
-                          {new Date(record.lastPaymentDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+              {testWiseData.map((row, idx) => (
+                <tr key={row.testName} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="p-3 border-b border-gray-200">{row.testName}</td>
+                  <td className="p-3 text-right border-b border-gray-200">{row.count}</td>
+                  <td className="p-3 text-right border-b border-gray-200">{row.price}</td>
+                  <td className="p-3 text-right border-b border-gray-200">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={row.commission}
+                      onChange={e => handleCommissionChange(row.testName.toLowerCase(), e.target.value)}
+                      className="w-16 p-1 border border-gray-300 rounded-md text-right"
+                    />
+                  </td>
+                  <td className="p-3 text-right border-b border-gray-200 font-bold text-purple-600">
+                    {((row.price * row.count * row.commission) / 100).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
               <tr className="bg-gray-100">
-                <td colSpan="5" className="p-3 text-right font-bold">
-                  Total ({displayRecords.length > 10 ? `showing 10 of ${displayRecords.length}` : displayRecords.length}):
-                </td>
+                <td className="p-3 text-right font-bold" colSpan="4">Total:</td>
                 <td className="p-3 text-right font-bold text-purple-600">
-                  {displayRecords
-                    .slice(0, 10)
-                    .reduce((sum, record) => sum + record.doctorRevenue, 0)
-                    .toFixed(0)} Taka
-                </td>
-                <td className="p-3 text-right font-bold text-gray-600">
-                  {displayRecords
-                    .slice(0, 10)
-                    .reduce((sum, record) => sum + record.lastPaymentAmount, 0)
-                    .toFixed(0)} Taka
+                  {testWiseData.reduce((sum, row) => sum + (row.price * row.count * row.commission) / 100, 0).toFixed(2)}
                 </td>
               </tr>
             </tfoot>
           </table>
-          {displayRecords.length > 10 && (
-            <p className="text-center text-gray-600 mt-4">
-              Showing 10 of {displayRecords.length} records
-            </p>
-          )}
         </div>
       </div>
     </>
