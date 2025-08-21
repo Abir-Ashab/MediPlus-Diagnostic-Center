@@ -1,5 +1,5 @@
 const express = require("express");
-const { managerModel } = require("../models/manager.model");
+const { managerModel } = require("../models/Manager.model");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 

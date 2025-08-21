@@ -3,7 +3,7 @@ const { AdminModel } = require("../models/Admin.model");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const { managerModel } = require("../models/manager.model");
+const { managerModel } = require("../models/Manager.model");
 const { DoctorModel } = require("../models/Doctor.model");
 const { PatientModel } = require("../models/Patient.model");
 const sgMail = require('@sendgrid/mail');
