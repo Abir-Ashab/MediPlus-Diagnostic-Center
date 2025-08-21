@@ -200,7 +200,7 @@ const AgentRevenue = ({
 
       setAgentPayments((prev) => ({
         ...prev,
-        [agentId]: paymentAmount,
+        [agentId]: "",
       }));
 
       setRefreshKey(prev => prev + 1);
@@ -427,7 +427,7 @@ const AgentRevenue = ({
                           value={agentPayments[agent._id] || ""}
                           onChange={(e) => handlePaymentChange(agent._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          placeholder="Enter payment"
+                          placeholder="Pay"
                         />
                         <button
                           onClick={() => handleSavePayment(agent._id)}

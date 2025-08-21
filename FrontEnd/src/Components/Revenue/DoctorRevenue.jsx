@@ -144,10 +144,10 @@ const DoctorRevenue = ({
 
   // Handle payment input change
   const handlePaymentChange = (doctorId, payment) => {
-    const paymentAmount = Math.max(Number(payment) || 0, 0);
+    // Always store as string for controlled input
     setDoctorPayments((prev) => ({
       ...prev,
-      [doctorId]: paymentAmount,
+      [doctorId]: payment,
     }));
   };
 
@@ -159,14 +159,14 @@ const DoctorRevenue = ({
     }
 
     setSaveLoading((prev) => ({ ...prev, [doctorId]: true }));
-    const paymentAmount = Number(doctorPayments[doctorId]) || 0;
 
+    // Parse as number for validation and backend
+    const paymentAmount = Number(doctorPayments[doctorId]);
     if (isNaN(paymentAmount) || paymentAmount < 0) {
       toast.error("Invalid payment amount");
       setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
       return;
     }
-
     if (paymentAmount === 0) {
       toast.error("Payment amount must be greater than 0");
       setSaveLoading((prev) => ({ ...prev, [doctorId]: false }));
@@ -216,9 +216,10 @@ const DoctorRevenue = ({
       console.log("Revenue update response:", revenueResponse.data); // Debug log
 
       // Update local state
+      // Always clear the payment input after saving
       setDoctorPayments((prev) => ({
         ...prev,
-        [doctorId]: paymentResponse.data.paymentAmount || 0,
+        [doctorId]: "",
       }));
 
       // Force refresh of test orders data
@@ -436,10 +437,10 @@ const DoctorRevenue = ({
                           type="number"
                           min="0"
                           max={doctor.totalRevenue}
-                          value={doctorPayments[doctor._id] || ""}
+                          value={typeof doctorPayments[doctor._id] === "string" ? doctorPayments[doctor._id] : ""}
                           onChange={(e) => handlePaymentChange(doctor._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          placeholder="Enter payment"
+                          placeholder="Pay"
                         />
                         <button
                           onClick={() => handleSavePayment(doctor._id)}
