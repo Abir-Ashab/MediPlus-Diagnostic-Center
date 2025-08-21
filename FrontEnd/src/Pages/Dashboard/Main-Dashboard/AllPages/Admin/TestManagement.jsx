@@ -495,8 +495,16 @@ const TestManagement = () => {
             label="Doctor Commission (%)"
             name="doctorCommissionPercentage"
             rules={[
-              { required: false },
-              { type: 'number', min: 0, max: 100, message: 'Must be between 0 and 100' }
+              {
+                validator: (_, value) => {
+                  if (value === undefined || value === null || value === "") return Promise.resolve();
+                  const num = Number(value);
+                  if (isNaN(num) || num < 0 || num > 100) {
+                    return Promise.reject(new Error('Must be between 0 and 100'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
             <Input type="number" step="1" placeholder="Enter doctor commission percentage" />
@@ -505,8 +513,16 @@ const TestManagement = () => {
             label="Broker Commission (%)"
             name="brokerCommissionPercentage"
             rules={[
-              { required: false },
-              { type: 'number', min: 0, max: 100, message: 'Must be between 0 and 100' }
+              {
+                validator: (_, value) => {
+                  if (value === undefined || value === null || value === "") return Promise.resolve();
+                  const num = Number(value);
+                  if (isNaN(num) || num < 0 || num > 100) {
+                    return Promise.reject(new Error('Must be between 0 and 100'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
             <Input type="number" step="1" placeholder="Enter broker commission percentage" />

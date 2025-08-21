@@ -95,7 +95,7 @@ router.get("/:id", async (req, res) => {
 // Create a new test
 router.post("/", async (req, res) => {
   try {
-    const { testId, title, price, category, description, doctorCommissionPercentage } = req.body;
+  const { testId, title, price, category, description, doctorCommissionPercentage, brokerCommissionPercentage } = req.body;
     
     if (!testId || !title || !price || !category) {
       return res.status(400).json({ message: "Test ID, title, price, and category are required" });
@@ -112,7 +112,8 @@ router.post("/", async (req, res) => {
       price,
       category,
       description: description || "",
-      doctorCommissionPercentage: doctorCommissionPercentage || undefined // Let pre-save handle default
+      doctorCommissionPercentage: doctorCommissionPercentage || undefined, // Let pre-save handle default
+      brokerCommissionPercentage: brokerCommissionPercentage || undefined // Let pre-save handle default
     });
     
     await newTest.save();
@@ -126,12 +127,12 @@ router.post("/", async (req, res) => {
 // Update a test
 router.put("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
-    const { title, price, category, description, isActive, doctorCommissionPercentage } = req.body;
+  const { id } = req.params;
+  const { title, price, category, description, isActive, doctorCommissionPercentage, brokerCommissionPercentage } = req.body;
     
     const updatedTest = await TestModel.findByIdAndUpdate(
       id,
-      { title, price, category, description, isActive, doctorCommissionPercentage, updatedAt: Date.now() },
+      { title, price, category, description, isActive, doctorCommissionPercentage, brokerCommissionPercentage, updatedAt: Date.now() },
       { new: true }
     );
     
