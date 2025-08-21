@@ -259,28 +259,23 @@ const TestOrdersList = () => {
   };
 
   return (
-    <div>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
+    <>
+      <ToastContainer 
+        position="top-right" 
+        autoClose={5000} 
+        hideProgressBar={false} 
+        newestOnTop={false} 
+        closeOnClick 
+        rtl={false} 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover 
+        theme="light" 
       />
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar onCollapse={setSidebarCollapsed} />
-        <div
-          className={`flex-1 p-6 transition-all duration-300 ${
-            sidebarCollapsed ? "ml-20" : "ml-0"
-          }`}
-        >
+        <div className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0'}`} style={{overflowX: 'hidden'}}>
           <div className="flex-1 p-6 ml-40">
-            <div>
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -380,7 +375,7 @@ const TestOrdersList = () => {
                       </div>
                     ) : (
                       <>
-                        <div className="hidden md:block overflow-x-auto">
+                        <div className="hidden md:block overflow-x-auto" style={{maxWidth: '100vw'}}>
                           <table className="w-full">
                             <thead>
                               <tr className="bg-gray-50 border-b border-gray-200">
@@ -531,13 +526,7 @@ const TestOrdersList = () => {
                                   </td>
                                   <td className="p-4">
                                     <div className="flex gap-2">
-                                      <button
-                                        onClick={() => handleViewDetails(order)}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors text-sm font-medium"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                        View
-                                      </button>
+                                      {/* View button removed to reduce table width */}
                                       <button
                                         onClick={() => handleEditClick(order)}
                                         className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors text-sm font-medium"
@@ -592,12 +581,7 @@ const TestOrdersList = () => {
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleViewDetails(order)}
-                                    className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
+                                  {/* View button removed to reduce table width */}
                                   <button
                                     onClick={() => handleEditClick(order)}
                                     className="p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
@@ -707,7 +691,7 @@ const TestOrdersList = () => {
                   </>
                 )}
               </div>
-            </div>
+
 
             <Modal
               title={
@@ -1336,7 +1320,7 @@ const TestOrdersList = () => {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
