@@ -28,14 +28,16 @@ router.post("/", async (req, res) => {
       paidAmount,
       totalAmount,
       orderType,
+      tests = [],
       ...otherData
     } = req.body;
 
     let doctorRevenue = 0;
     let hospitalRevenue = totalAmount || baseAmount;
     let agentRevenue = 0;
+    let updatedTests = Array.isArray(tests) ? [...tests] : [];
 
-    // Calculate doctor revenue
+    // Calculate doctor revenue (unchanged)
     if (doctorName) {
       const doctor = await DoctorModel.findOne({ docName: doctorName });
       if (doctor) {
@@ -51,11 +53,16 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Calculate agent revenue
-    if (agentName) {
+    // Calculate agent commission per test (dynamic)
+    if (agentName && updatedTests.length > 0) {
       const agent = await AgentModel.findOne({ name: agentName });
-      if (agent && agent.commissionRate > 0) {
-        agentRevenue = (totalAmount * agent.commissionRate) / 100;
+      if (agent) {
+        // If frontend provides per-test commission, use it; else use agent.commissionRate
+        updatedTests = updatedTests.map(test => {
+          let commission = typeof test.agentCommission === 'number' ? test.agentCommission : (agent.commissionRate || 0);
+          return { ...test, agentCommission: commission };
+        });
+        agentRevenue = updatedTests.reduce((sum, t) => sum + ((t.testPrice || 0) * (t.agentCommission || 0) / 100), 0);
         hospitalRevenue -= agentRevenue;
       }
     }
@@ -76,6 +83,7 @@ router.post("/", async (req, res) => {
       hospitalRevenue,
       agentRevenue,
       orderType: orderType || "test",
+      tests: updatedTests,
     };
 
     const newTestOrder = new TestOrderModel(testOrderData);

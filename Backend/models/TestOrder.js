@@ -46,6 +46,16 @@ const testOrderSchema = new mongoose.Schema(
           type: String,
           default: "Pending",
         },
+        doctorCommission: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+        agentCommission: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
       },
     ],
     doctorName: {
@@ -205,15 +215,19 @@ testOrderSchema.pre("save", async function (next) {
   }
 });
 
-// Post-save middleware to update agent's totalCommission
+// Post-save middleware to update agent's totalCommission dynamically (test-wise)
 testOrderSchema.post("save", async function (doc) {
   try {
-    if (doc.agentName && doc.agentRevenue > 0) {
-      const AgentModel = mongoose.model("agent");
-      const agent = await AgentModel.findOne({ name: doc.agentName });
-      if (agent) {
-        agent.totalCommission = (agent.totalCommission || 0) + doc.agentRevenue;
-        await agent.save();
+    if (doc.agentName && doc.tests && doc.tests.length > 0) {
+      // Sum up agent commission for all tests in this order
+      const totalAgentCommission = doc.tests.reduce((sum, t) => sum + ((t.testPrice || 0) * (t.agentCommission || 0) / 100), 0);
+      if (totalAgentCommission > 0) {
+        const AgentModel = mongoose.model("agent");
+        const agent = await AgentModel.findOne({ name: doc.agentName });
+        if (agent) {
+          agent.totalCommission = (agent.totalCommission || 0) + totalAgentCommission;
+          await agent.save();
+        }
       }
     }
   } catch (error) {
