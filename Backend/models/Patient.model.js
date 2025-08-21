@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
-const brokerSchema = mongoose.Schema({
+const agentSchema = mongoose.Schema({
   userType: {
     type: String,
-    default: "broker",
+    default: "agent",
   },
 
-  brokerID: {
+  agentID: {
     type: Number,
     required: true,
   },
@@ -79,6 +79,6 @@ const brokerSchema = mongoose.Schema({
   }
 });
 
-const BrokerModel = mongoose.model("broker", brokerSchema);
+const AgentModel = mongoose.model("agent", agentSchema);
 
-module.exports = { BrokerModel };
+module.exports = { AgentModel };

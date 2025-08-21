@@ -85,7 +85,7 @@ const TestManagement = () => {
         ...values,
         price: Number(values.price),
         doctorCommissionPercentage: Number(values.doctorCommissionPercentage) || undefined,
-        brokerCommissionPercentage: Number(values.brokerCommissionPercentage) || undefined
+        agentCommissionPercentage: Number(values.agentCommissionPercentage) || undefined
       };
       
       if (editingTest) {
@@ -151,7 +151,7 @@ const TestManagement = () => {
       description: test.description,
       isActive: test.isActive,
       doctorCommissionPercentage: test.doctorCommissionPercentage,
-      brokerCommissionPercentage: test.brokerCommissionPercentage,
+      agentCommissionPercentage: test.agentCommissionPercentage,
     });
     setIsModalVisible(true);
   };
@@ -262,11 +262,11 @@ const TestManagement = () => {
       render: (perc) => `${perc}%`
     },
     {
-      title: 'Broker Commission (%)',
-      dataIndex: 'brokerCommissionPercentage',
-      key: 'brokerCommissionPercentage',
+      title: 'Agent Commission (%)',
+      dataIndex: 'agentCommissionPercentage',
+      key: 'agentCommissionPercentage',
       width: 120,
-      sorter: (a, b) => a.brokerCommissionPercentage - b.brokerCommissionPercentage,
+      sorter: (a, b) => a.agentCommissionPercentage - b.agentCommissionPercentage,
       render: (perc) => `${perc}%`
     },
     {
@@ -510,8 +510,8 @@ const TestManagement = () => {
             <Input type="number" step="1" placeholder="Enter doctor commission percentage" />
           </Form.Item>
           <Form.Item
-            label="Broker Commission (%)"
-            name="brokerCommissionPercentage"
+            label="Agent Commission (%)"
+            name="agentCommissionPercentage"
             rules={[
               {
                 validator: (_, value) => {
@@ -525,7 +525,7 @@ const TestManagement = () => {
               }
             ]}
           >
-            <Input type="number" step="1" placeholder="Enter broker commission percentage" />
+            <Input type="number" step="1" placeholder="Enter agent commission percentage" />
           </Form.Item>
           <Form.Item
             label="Category"
@@ -541,18 +541,11 @@ const TestManagement = () => {
             </Select>
           </Form.Item>
           <Form.Item
-            label="Description"
-            name="description"
-          >
-            <Input.TextArea rows={3} placeholder="Enter test description (optional)" />
-          </Form.Item>
-          <Form.Item
             label="Status"
             name="isActive"
-            valuePropName="checked"
             initialValue={true}
           >
-            <Select>
+            <Select defaultValue={true}>
               <Option value={true}>Active</Option>
               <Option value={false}>Inactive</Option>
             </Select>

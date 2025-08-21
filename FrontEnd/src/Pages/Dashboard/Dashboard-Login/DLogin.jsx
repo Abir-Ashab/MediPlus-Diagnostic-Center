@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { AdminLogin, forgetPassword, NurseLogin } from "../../../Redux/auth/action";
+import { AdminLogin, forgetPassword, managerLogin } from "../../../Redux/auth/action";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import banner from "../../../img/banner.png";
@@ -34,8 +34,8 @@ const DLogin = () => {
     setLoading(true);
     if (formvalue.ID && formvalue.password) {
       if (placement === "Manager") {
-        let data = { ...formvalue, nurseID: formvalue.ID };
-        dispatch(NurseLogin(data)).then((res) => {
+        let data = { ...formvalue, managerID: formvalue.ID };
+        dispatch(managerLogin(data)).then((res) => {
           setLoading(false);
           if (res.message === "Successful") {
             notify("Login Successful");
@@ -84,7 +84,7 @@ const DLogin = () => {
     }
     const data = {
       ...ForgetPassword,
-      type: ForgetPassword.type === "Manager" ? "nurse" : ForgetPassword.type,
+      type: ForgetPassword.type === "Manager" ? "manager" : ForgetPassword.type,
     };
     setforgetLoading(true);
     dispatch(forgetPassword(data)).then((res) => {

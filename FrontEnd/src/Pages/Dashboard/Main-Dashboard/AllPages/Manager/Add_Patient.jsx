@@ -65,7 +65,7 @@ const Add_Patient = () => {
     bloodGroup: "",
     DOB: "",
     password: "",
-    nurseID: data?.user._id,
+    managerID: data?.user._id,
     docID: "",
     details: "",
   };
@@ -158,7 +158,7 @@ const Add_Patient = () => {
     return <Navigate to={"/"} />;
   }
 
-  if (data?.user.userType !== "nurse") {
+  if (data?.user.userType !== "manager") {
     return <Navigate to={"/dashboard"} />;
   }
 

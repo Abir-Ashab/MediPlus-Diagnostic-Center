@@ -10,7 +10,7 @@ import { FaRegHospital, FaMapMarkedAlt, FaBirthdayCake } from "react-icons/fa";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, message, Modal } from "antd";
-import { UpdateDoctor, UpdateNurse } from "../../../../../Redux/auth/action";
+import { UpdateDoctor, Updatemanager } from "../../../../../Redux/auth/action";
 import { GetDoctorDetails } from "../../../../../Redux/Datas/action";
 import { Navigate } from "react-router-dom";
 
@@ -129,7 +129,7 @@ const Doctor_Profile = () => {
               >
                 <form className="inputForm">
                   <input
-                    name="nurseName"
+                    name="managerName"
                     value={formData.docName}
                     onChange={handleFormChange}
                     type="text"

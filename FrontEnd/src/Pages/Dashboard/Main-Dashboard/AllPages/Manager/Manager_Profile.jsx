@@ -8,7 +8,7 @@ import { FaRegHospital, FaMapMarkedAlt, FaBirthdayCake, FaUser } from "react-ico
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, message, Modal } from "antd";
-import { UpdateNurse } from "../../../../../Redux/auth/action";
+import { Updatemanager } from "../../../../../Redux/auth/action";
 
 const Manager_Profile = () => {
   const {
@@ -21,7 +21,7 @@ const Manager_Profile = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [formData, setFormData] = useState({
-    nurseName: user.nurseName,
+    managerName: user.managerName,
     age: user.age,
     gender: user.gender,
     bloodGroup: user.bloodGroup,
@@ -61,7 +61,7 @@ const Manager_Profile = () => {
   };
 
   const handleFormSubmit = () => {
-    dispatch(UpdateNurse(formData, user._id));
+    dispatch(Updatemanager(formData, user._id));
     success("user updated");
     handleOk();
   };
@@ -120,7 +120,7 @@ const Manager_Profile = () => {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-slate-500 font-medium">Full Name</p>
-                        <p className="font-bold text-slate-800 text-lg">{user?.nurseName || "N/A"}</p>
+                        <p className="font-bold text-slate-800 text-lg">{user?.managerName || "N/A"}</p>
                       </div>
                     </div>
 
@@ -271,8 +271,8 @@ const Manager_Profile = () => {
                   Full Name
                 </label>
                 <input
-                  name="nurseName"
-                  value={formData.nurseName}
+                  name="managerName"
+                  value={formData.managerName}
                   onChange={handleFormChange}
                   type="text"
                   placeholder="Enter full name"

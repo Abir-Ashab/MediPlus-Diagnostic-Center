@@ -1,17 +1,17 @@
 const mongoose = require("mongoose");
 
-const nurseSchema = mongoose.Schema({
+const managerSchema = mongoose.Schema({
   userType: {
     type: String,
-    default: "nurse",
+    default: "manager",
   },
 
-  nurseID: {
+  managerID: {
     type: Number,
     required: true,
   },
 
-  nurseName: {
+  managerName: {
     type: String,
   },
 
@@ -64,6 +64,6 @@ const nurseSchema = mongoose.Schema({
   },
 });
 
-const NurseModel = mongoose.model("nurse", nurseSchema);
+const managerModel = mongoose.model("manager", managerSchema);
 
-module.exports = { NurseModel };
+module.exports = { managerModel };

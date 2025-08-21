@@ -3,7 +3,7 @@ const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
 const PatientModel = require("../models/Patient.model");
 const { DoctorModel } = require("../models/Doctor.model");
-const { BrokerModel } = require("../models/Brokers.model");
+const { AgentModel } = require("../models/Agents.model");
 
 const recalculatePatientDueAmounts = async (patientID) => {
   const orders = await TestOrderModel.find({ patientID });
@@ -21,7 +21,7 @@ router.post("/", async (req, res) => {
       patientID,
       patientName,
       doctorName,
-      brokerName,
+      agentName,
       baseAmount,
       vatRate,
       discountAmount,
@@ -33,7 +33,7 @@ router.post("/", async (req, res) => {
 
     let doctorRevenue = 0;
     let hospitalRevenue = totalAmount || baseAmount;
-    let brokerRevenue = 0;
+    let agentRevenue = 0;
 
     // Calculate doctor revenue
     if (doctorName) {
@@ -51,12 +51,12 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Calculate broker revenue
-    if (brokerName) {
-      const broker = await BrokerModel.findOne({ name: brokerName });
-      if (broker && broker.commissionRate > 0) {
-        brokerRevenue = (totalAmount * broker.commissionRate) / 100;
-        hospitalRevenue -= brokerRevenue;
+    // Calculate agent revenue
+    if (agentName) {
+      const agent = await AgentModel.findOne({ name: agentName });
+      if (agent && agent.commissionRate > 0) {
+        agentRevenue = (totalAmount * agent.commissionRate) / 100;
+        hospitalRevenue -= agentRevenue;
       }
     }
 
@@ -65,7 +65,7 @@ router.post("/", async (req, res) => {
       patientID,
       patientName,
       doctorName,
-      brokerName,
+      agentName,
       baseAmount,
       vatRate: vatRate || 1,
       vatAmount: baseAmount ? (baseAmount * (vatRate || 1)) / 100 : 0,
@@ -74,7 +74,7 @@ router.post("/", async (req, res) => {
       paidAmount: paidAmount || 0,
       doctorRevenue,
       hospitalRevenue,
-      brokerRevenue,
+      agentRevenue,
       orderType: orderType || "test",
     };
 
@@ -120,7 +120,7 @@ router.put("/:id", async (req, res) => {
       mobile,
       disease,
       doctorName,
-      brokerName,
+      agentName,
       address,
       date,
       time,
@@ -132,7 +132,7 @@ router.put("/:id", async (req, res) => {
       totalAmount,
       hospitalRevenue,
       doctorRevenue,
-      brokerRevenue,
+      agentRevenue,
     } = req.body;
 
     const testOrder = await TestOrderModel.findById(req.params.id);
@@ -140,12 +140,12 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Test order not found" });
     }
 
-    // Calculate broker revenue if updated
-    let newBrokerRevenue = brokerRevenue || testOrder.brokerRevenue;
-    if (brokerName && brokerName !== testOrder.brokerName) {
-      const broker = await BrokerModel.findOne({ name: brokerName });
-      if (broker && broker.commissionRate > 0) {
-        newBrokerRevenue = (totalAmount * broker.commissionRate) / 100;
+    // Calculate agent revenue if updated
+    let newAgentRevenue = agentRevenue || testOrder.agentRevenue;
+    if (agentName && agentName !== testOrder.agentName) {
+      const agent = await AgentModel.findOne({ name: agentName });
+      if (agent && agent.commissionRate > 0) {
+        newAgentRevenue = (totalAmount * agent.commissionRate) / 100;
       }
     }
 
@@ -157,7 +157,7 @@ router.put("/:id", async (req, res) => {
     testOrder.mobile = mobile || testOrder.mobile;
     testOrder.disease = disease || testOrder.disease;
     testOrder.doctorName = doctorName || testOrder.doctorName;
-    testOrder.brokerName = brokerName || testOrder.brokerName;
+    testOrder.agentName = agentName || testOrder.agentName;
     testOrder.address = address || testOrder.address;
     testOrder.date = date || testOrder.date;
     testOrder.time = time || testOrder.time;
@@ -170,7 +170,7 @@ router.put("/:id", async (req, res) => {
     testOrder.dueAmount = (totalAmount || testOrder.totalAmount) - (paidAmount || testOrder.paidAmount);
     testOrder.hospitalRevenue = hospitalRevenue || testOrder.hospitalRevenue;
     testOrder.doctorRevenue = doctorRevenue || testOrder.doctorRevenue;
-    testOrder.brokerRevenue = newBrokerRevenue;
+    testOrder.agentRevenue = newAgentRevenue;
 
     const updatedTestOrder = await testOrder.save();
 
@@ -393,11 +393,11 @@ router.get("/reports/revenue", async (req, res) => {
         acc.totalRevenue += order.totalAmount || 0;
         acc.hospitalRevenue += order.hospitalRevenue || 0;
         acc.doctorRevenue += order.doctorRevenue || 0;
-        acc.brokerRevenue += order.brokerRevenue || 0;
+        acc.agentRevenue += order.agentRevenue || 0;
         acc.totalOrders += 1;
         return acc;
       },
-      { totalRevenue: 0, hospitalRevenue: 0, doctorRevenue: 0, brokerRevenue: 0, totalOrders: 0 }
+      { totalRevenue: 0, hospitalRevenue: 0, doctorRevenue: 0, agentRevenue: 0, totalOrders: 0 }
     );
     const doctorBreakdown = {};
     testOrders.forEach((order) => {
@@ -414,25 +414,25 @@ router.get("/reports/revenue", async (req, res) => {
         doctorBreakdown[order.doctorName].orders += 1;
       }
     });
-    const brokerBreakdown = {};
+    const agentBreakdown = {};
     testOrders.forEach((order) => {
-      if (order.brokerName && order.brokerName !== "") {
-        if (!brokerBreakdown[order.brokerName]) {
-          brokerBreakdown[order.brokerName] = {
+      if (order.agentName && order.agentName !== "") {
+        if (!agentBreakdown[order.agentName]) {
+          agentBreakdown[order.agentName] = {
             totalRevenue: 0,
             commission: 0,
             orders: 0,
           };
         }
-        brokerBreakdown[order.brokerName].totalRevenue += order.totalAmount || 0;
-        brokerBreakdown[order.brokerName].commission += order.brokerRevenue || 0;
-        brokerBreakdown[order.brokerName].orders += 1;
+        agentBreakdown[order.agentName].totalRevenue += order.totalAmount || 0;
+        agentBreakdown[order.agentName].commission += order.agentRevenue || 0;
+        agentBreakdown[order.agentName].orders += 1;
       }
     });
     res.status(200).json({
       summary,
       doctorBreakdown,
-      brokerBreakdown,
+      agentBreakdown,
       orders: testOrders,
     });
   } catch (error) {
@@ -450,15 +450,15 @@ router.get("/doctors/commission", async (req, res) => {
   }
 });
 
-// Get broker revenue
-router.get("/revenue/broker", async (req, res) => {
+// Get agent revenue
+router.get("/revenue/agent", async (req, res) => {
   try {
-    const brokerRevenue = await TestOrderModel.aggregate([
-      { $match: { brokerName: { $ne: null, $ne: "" } } },
+    const agentRevenue = await TestOrderModel.aggregate([
+      { $match: { agentName: { $ne: null, $ne: "" } } },
       {
         $group: {
-          _id: "$brokerName",
-          totalRevenue: { $sum: "$brokerRevenue" },
+          _id: "$agentName",
+          totalRevenue: { $sum: "$agentRevenue" },
           appointments: { $sum: 1 },
         },
       },
@@ -468,18 +468,18 @@ router.get("/revenue/broker", async (req, res) => {
       {
         $group: {
           _id: null,
-          totalBrokerRevenue: { $sum: "$brokerRevenue" },
-          totalAppointments: { $sum: { $cond: [{ $ne: ["$brokerName", ""] }, 1, 0] } },
+          totalAgentRevenue: { $sum: "$agentRevenue" },
+          totalAppointments: { $sum: { $cond: [{ $ne: ["$agentName", ""] }, 1, 0] } },
         },
       },
     ]);
     res.status(200).send({
-      brokers: brokerRevenue,
-      summary: totalResult[0] || { totalBrokerRevenue: 0, totalAppointments: 0 },
+      agents: agentRevenue,
+      summary: totalResult[0] || { totalAgentRevenue: 0, totalAppointments: 0 },
     });
   } catch (error) {
-    console.error("Error fetching broker revenue:", error);
-    res.status(400).send({ error: "Failed to fetch broker revenue" });
+    console.error("Error fetching agent revenue:", error);
+    res.status(400).send({ error: "Failed to fetch agent revenue" });
   }
 });
 

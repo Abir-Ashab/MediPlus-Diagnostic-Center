@@ -8,13 +8,13 @@ const doctorPaymentRoutes = require('./routes/doctorPayment.route');
 const adminRouter = require('./routes/Admins.Route');
 const appointmentRouter = require('./routes/Appointments.Route');
 const doctorRouter = require('./routes/Doctors.Route');
-const nurseRouter = require('./routes/Nurses.Route');
+const managerRouter = require('./routes/managers.Route');
 const patientRouter = require('./routes/Patients.Route');
 const reportRouter = require('./routes/Reports.Route');
-const brokerRoutes = require('./routes/Brokers.Route');
+const agentRoutes = require('./routes/Agents.Route');
 const testOrder = require('./routes/testOrderRoutes');
 const testsRouter = require('./routes/Tests.Route');
-const brokerPaymentRoutes = require('./routes/brokerPayment.route');
+const agentPaymentRoutes = require('./routes/agentPayment.route');
 
 const app = express();
 
@@ -29,13 +29,13 @@ app.use('/admin', adminRouter);
 app.use('/testorders', testOrder);
 app.use('/appointments', appointmentRouter);
 app.use('/doctors', doctorRouter);
-app.use('/nurses', nurseRouter);
+app.use('/managers', managerRouter);
 app.use('/patients', patientRouter);
 app.use('/reports', reportRouter);
-app.use('/brokers', brokerRoutes);
+app.use('/agents', agentRoutes);
 app.use('/tests', testsRouter);
 app.use('/doctorPayments', doctorPaymentRoutes);
-app.use('/brokerPayments', brokerPaymentRoutes);
+app.use('/agentPayments', agentPaymentRoutes);
 
 const seedOnStartup = async () => {
   try {

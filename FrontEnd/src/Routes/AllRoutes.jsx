@@ -10,7 +10,7 @@ import Book_Appointment from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager
 import Manager_Profile from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Manager_Profile";
 import FrontPage from "../Pages/Dashboard/Main-Dashboard/GlobalFiles/FrontPage";
 import RevenueDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Revenue_Dashboard";
-import AddBroker from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Add_Broker";
+import AddAgent from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Add_Agent";
 import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/TestOrdersList";
 import AdminDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Admin_Dashboard";
 import TestManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/TestManagement";
@@ -26,7 +26,7 @@ const AllRoutes = () => {
         <Route path="/testorders" element={<TestOrdersList />} />
         <Route path="/dashboard" element={<FrontPage />} />
         <Route path="/adddoctor" element={<AddDoctor />} />
-        <Route path="/addbroker" element={<AddBroker/>}/>
+        <Route path="/addagent" element={<AddAgent/>}/>
         <Route path="/addManager" element={<Add_Manager />} />
         <Route path="/admin" element={<Add_Admin />} />
         <Route path="/doctorprofile" element={<Doctor_Profile />} />

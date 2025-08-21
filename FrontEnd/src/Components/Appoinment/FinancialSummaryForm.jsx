@@ -232,7 +232,7 @@ const FinancialSummaryForm = ({
                   color: 'text-green-600' 
                 },
                 ...(commonData.doctorName ? [{ label: 'Referring Doctor', value: commonData.doctorName, color: 'text-blue-600' }] : []),
-                ...(commonData.brokerName ? [{ label: 'Broker', value: commonData.brokerName, color: 'text-orange-600' }] : [])
+                ...(commonData.agentName ? [{ label: 'Agent', value: commonData.agentName, color: 'text-orange-600' }] : [])
               ].map((item, index) => (
                 <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                   <span className="text-sm font-medium text-gray-600">{item.label}:</span>

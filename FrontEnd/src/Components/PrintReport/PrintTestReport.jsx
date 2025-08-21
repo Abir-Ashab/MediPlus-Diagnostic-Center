@@ -14,7 +14,7 @@ const PrintTestReport = ({ order }) => {
 
   const getCurrentUserName = () => {
     if (!user) return 'System';
-    return user.nurseName || user.doctorName || user.adminName || user.name || 'Unknown User';
+    return user.managerName || user.doctorName || user.adminName || user.name || 'Unknown User';
   };
 
   const handleOpenModal = () => {

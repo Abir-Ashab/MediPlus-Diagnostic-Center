@@ -51,7 +51,7 @@ const testOrderSchema = new mongoose.Schema(
     doctorName: {
       type: String,
     },
-    brokerName: {
+    agentName: {
       type: String,
     },
     baseAmount: {
@@ -98,7 +98,7 @@ const testOrderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    brokerRevenue: {
+    agentRevenue: {
       type: Number,
       default: 0,
       min: 0,
@@ -205,19 +205,19 @@ testOrderSchema.pre("save", async function (next) {
   }
 });
 
-// Post-save middleware to update broker's totalCommission
+// Post-save middleware to update agent's totalCommission
 testOrderSchema.post("save", async function (doc) {
   try {
-    if (doc.brokerName && doc.brokerRevenue > 0) {
-      const BrokerModel = mongoose.model("broker");
-      const broker = await BrokerModel.findOne({ name: doc.brokerName });
-      if (broker) {
-        broker.totalCommission = (broker.totalCommission || 0) + doc.brokerRevenue;
-        await broker.save();
+    if (doc.agentName && doc.agentRevenue > 0) {
+      const AgentModel = mongoose.model("agent");
+      const agent = await AgentModel.findOne({ name: doc.agentName });
+      if (agent) {
+        agent.totalCommission = (agent.totalCommission || 0) + doc.agentRevenue;
+        await agent.save();
       }
     }
   } catch (error) {
-    console.error("Error updating broker commission:", error);
+    console.error("Error updating agent commission:", error);
   }
 });
 

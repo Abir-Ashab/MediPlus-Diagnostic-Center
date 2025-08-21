@@ -5,7 +5,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HospitalRevenue from "../../../../../Components/Revenue/HospitalRevenue";
 import DoctorRevenue from "../../../../../Components/Revenue/DoctorRevenue";
-import BrokerRevenue from "../../../../../Components/Revenue/BrokerRevenue";
+import AgentRevenue from "../../../../../Components/Revenue/AgentRevenue";
 
 const RevenueDashboard = () => {
   const [activeTab, setActiveTab] = useState("hospital");
@@ -34,16 +34,16 @@ const RevenueDashboard = () => {
     filteredDoctorRecords: [],
   });
 
-  // Broker state
-  const [brokerDateFilter, setBrokerDateFilter] = useState("all");
-  const [brokerCustomDateRange, setBrokerCustomDateRange] = useState({ start: "", end: "" });
-  const [selectedBroker, setSelectedBroker] = useState("");
-  const [brokerData, setBrokerData] = useState({
-    brokers: [],
-    totalBrokerRevenue: 0,
+  // Agent state
+  const [agentDateFilter, setAgentDateFilter] = useState("all");
+  const [agentCustomDateRange, setAgentCustomDateRange] = useState({ start: "", end: "" });
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [agentData, setAgentData] = useState({
+    agents: [],
+    totalAgentRevenue: 0,
     totalAppointments: 0,
-    brokerAppointments: [],
-    filteredBrokerAppointments: [],
+    agentAppointments: [],
+    filteredAgentAppointments: [],
   });
 
   // Date filter helper functions
@@ -95,9 +95,9 @@ const RevenueDashboard = () => {
 
   // Apply filter for specific type
   const applyFilterForType = (filterType, setDataFunc, data, dataType) => {
-    let recordsKey = dataType === "doctor" ? "doctorRecords" : dataType === "broker" ? "brokerAppointments" : "records";
-    let filteredKey = dataType === "doctor" ? "filteredDoctorRecords" : dataType === "broker" ? "filteredBrokerAppointments" : "filteredRecords";
-    let customRange = dataType === "doctor" ? doctorCustomDateRange : dataType === "broker" ? brokerCustomDateRange : hospitalCustomDateRange;
+    let recordsKey = dataType === "doctor" ? "doctorRecords" : dataType === "agent" ? "agentAppointments" : "records";
+    let filteredKey = dataType === "doctor" ? "filteredDoctorRecords" : dataType === "agent" ? "filteredAgentAppointments" : "filteredRecords";
+    let customRange = dataType === "doctor" ? doctorCustomDateRange : dataType === "agent" ? agentCustomDateRange : hospitalCustomDateRange;
 
     if (!data[recordsKey] || data[recordsKey].length === 0) {
       toast.info(`No ${dataType} records to filter. Please select a ${dataType} first.`);
@@ -176,34 +176,34 @@ const RevenueDashboard = () => {
     }
   };
 
-  const handleBrokerDateFilterChange = (filterType) => {
-    setBrokerDateFilter(filterType);
+  const handleAgentDateFilterChange = (filterType) => {
+    setAgentDateFilter(filterType);
     if (filterType !== "custom") {
-      setBrokerCustomDateRange({ start: "", end: "" });
-      if (brokerData.brokerAppointments && brokerData.brokerAppointments.length > 0) {
-        applyFilterForType(filterType, setBrokerData, brokerData, "broker");
+      setAgentCustomDateRange({ start: "", end: "" });
+      if (agentData.agentAppointments && agentData.agentAppointments.length > 0) {
+        applyFilterForType(filterType, setAgentData, agentData, "agent");
       }
     }
   };
 
-  const applyBrokerDateFilter = () => {
-    if (brokerDateFilter === "custom" && (!brokerCustomDateRange.start || !brokerCustomDateRange.end)) {
+  const applyAgentDateFilter = () => {
+    if (agentDateFilter === "custom" && (!agentCustomDateRange.start || !agentCustomDateRange.end)) {
       toast.error("Please select both start and end dates");
       return;
     }
-    applyFilterForType(brokerDateFilter, setBrokerData, brokerData, "broker");
+    applyFilterForType(agentDateFilter, setAgentData, agentData, "agent");
   };
 
-  const resetBrokerFilters = () => {
-    setBrokerDateFilter("all");
-    setBrokerCustomDateRange({ start: "", end: "" });
-    setSelectedBroker("");
-    if (brokerData.brokerAppointments && brokerData.brokerAppointments.length > 0) {
-      applyFilterForType("all", setBrokerData, brokerData, "broker");
+  const resetAgentFilters = () => {
+    setAgentDateFilter("all");
+    setAgentCustomDateRange({ start: "", end: "" });
+    setSelectedAgent("");
+    if (agentData.agentAppointments && agentData.agentAppointments.length > 0) {
+      applyFilterForType("all", setAgentData, agentData, "agent");
     } else {
-      setBrokerData((prev) => ({
+      setAgentData((prev) => ({
         ...prev,
-        filteredBrokerAppointments: [],
+        filteredAgentAppointments: [],
       }));
     }
   };
@@ -246,21 +246,21 @@ const RevenueDashboard = () => {
     }
   };
 
-  // Handle broker selection
-  const handleBrokerSelect = async (brokerName) => {
-    setSelectedBroker(brokerName);
+  // Handle agent selection
+  const handleAgentSelect = async (agentName) => {
+    setSelectedAgent(agentName);
     try {
-      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
+      const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?agentName=${agentName}`);
       const appointments = response.data;
-      const filteredAppointments = filterRecordsByDateRange(appointments, brokerDateFilter, brokerCustomDateRange);
-      setBrokerData({
-        ...brokerData,
-        brokerAppointments: appointments,
-        filteredBrokerAppointments: filteredAppointments,
+      const filteredAppointments = filterRecordsByDateRange(appointments, agentDateFilter, agentCustomDateRange);
+      setAgentData({
+        ...agentData,
+        agentAppointments: appointments,
+        filteredAgentAppointments: filteredAppointments,
       });
     } catch (error) {
-      console.error("Error fetching broker appointments:", error);
-      toast.error("Failed to load broker appointments");
+      console.error("Error fetching agent appointments:", error);
+      toast.error("Failed to load agent appointments");
     }
   };
 
@@ -271,13 +271,13 @@ const RevenueDashboard = () => {
         setLoading(true);
 
         const [appointmentResponse, testOrderResponse, appointmentsRes] = await Promise.all([
-          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/hospital").catch(() => ({ data: { brokers: [], summary: {} } })),
+          axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments/revenue/hospital").catch(() => ({ data: { agents: [], summary: {} } })),
           axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders").catch(() => ({ data: [] })),
           axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/appointments").catch(() => ({ data: [] })),
         ]);
 
         // Process hospital data
-        const hospitalRevenue = (appointmentResponse.data.brokers || []).filter((broker) => broker._id !== null);
+        const hospitalRevenue = (appointmentResponse.data.agents || []).filter((agent) => agent._id !== null);
         let totalTestOrderRevenue = 0;
         let totalTestOrders = 0;
 
@@ -400,16 +400,16 @@ const RevenueDashboard = () => {
         });
 
 
-        const brokerResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/revenue/broker").catch(() => ({ data: { brokers: [], summary: {} } }));
+        const agentResponse = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/revenue/agent").catch(() => ({ data: { agents: [], summary: {} } }));
 
-        const filteredBrokers = (brokerResponse.data.brokers || []).filter((broker) => broker._id !== null);
+        const filteredAgents = (agentResponse.data.agents || []).filter((agent) => agent._id !== null);
         
-        setBrokerData({
-          brokers: filteredBrokers,
-          totalBrokerRevenue: brokerResponse.data.summary.totalBrokerRevenue || 0,
-          totalAppointments: filteredBrokers.reduce((sum, broker) => sum + broker.appointments, 0),
-          brokerAppointments: [],
-          filteredBrokerAppointments: [],
+        setAgentData({
+          agents: filteredAgents,
+          totalAgentRevenue: agentResponse.data.summary.totalAgentRevenue || 0,
+          totalAppointments: filteredAgents.reduce((sum, agent) => sum + agent.appointments, 0),
+          agentAppointments: [],
+          filteredAgentAppointments: [],
         });
 
         setLoading(false);
@@ -467,13 +467,13 @@ const RevenueDashboard = () => {
               </button>
               <button
                 className={`px-4 py-2 font-medium text-sm ${
-                  activeTab === 'broker' 
+                  activeTab === 'agent' 
                     ? 'border-b-2 border-blue-500 text-blue-600' 
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
-                onClick={() => setActiveTab('broker')}
+                onClick={() => setActiveTab('agent')}
               >
-                Broker Revenue
+                Agent Revenue
               </button>
             </div>
 
@@ -508,17 +508,17 @@ const RevenueDashboard = () => {
               />
             )}
 
-            {activeTab === 'broker' && (
-              <BrokerRevenue
-                brokerData={brokerData}
-                brokerDateFilter={brokerDateFilter}
-                brokerCustomDateRange={brokerCustomDateRange}
-                selectedBroker={selectedBroker}
-                setBrokerCustomDateRange={setBrokerCustomDateRange}
-                handleBrokerDateFilterChange={handleBrokerDateFilterChange}
-                applyBrokerDateFilter={applyBrokerDateFilter}
-                resetBrokerFilters={resetBrokerFilters}
-                handleBrokerSelect={handleBrokerSelect}
+            {activeTab === 'agent' && (
+              <AgentRevenue
+                agentData={agentData}
+                agentDateFilter={agentDateFilter}
+                agentCustomDateRange={agentCustomDateRange}
+                selectedAgent={selectedAgent}
+                setAgentCustomDateRange={setAgentCustomDateRange}
+                handleAgentDateFilterChange={handleAgentDateFilterChange}
+                applyAgentDateFilter={applyAgentDateFilter}
+                resetAgentFilters={resetAgentFilters}
+                handleAgentSelect={handleAgentSelect}
                 loading={loading}
                 filterRecordsByDateRange={filterRecordsByDateRange}
               />

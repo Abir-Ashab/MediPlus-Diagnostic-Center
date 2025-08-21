@@ -3,7 +3,7 @@ const { AdminModel } = require("../models/Admin.model");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const { NurseModel } = require("../models/Nurse.model");
+const { managerModel } = require("../models/manager.model");
 const { DoctorModel } = require("../models/Doctor.model");
 const { PatientModel } = require("../models/Patient.model");
 const sgMail = require('@sendgrid/mail');
@@ -130,9 +130,9 @@ router.post("/forgot", async (req, res) => {
   let user, userId, password;
 
   try {
-    if (type === "nurse") {
-      user = await NurseModel.find({ email });
-      userId = user[0]?.nurseID;
+    if (type === "manager") {
+      user = await managerModel.find({ email });
+      userId = user[0]?.managerID;
       password = user[0]?.password;
     } else if (type === "patient") {
       user = await PatientModel.find({ email });

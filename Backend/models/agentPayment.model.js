@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const brokerPaymentSchema = new mongoose.Schema({
-  brokerName: { type: String, required: true },
+const agentPaymentSchema = new mongoose.Schema({
+  agentName: { type: String, required: true },
   paymentAmount: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
@@ -13,4 +13,4 @@ const brokerPaymentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('BrokerPayment', brokerPaymentSchema);
+module.exports = mongoose.model('AgentPayment', agentPaymentSchema);

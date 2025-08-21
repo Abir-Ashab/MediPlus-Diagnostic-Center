@@ -29,15 +29,15 @@ router.post("/create", async (req, res) => {
     }
 
     // Calculate revenue distribution
-    let hospitalRevenue, doctorRevenue = 0, brokerRevenue = 0;
+    let hospitalRevenue, doctorRevenue = 0, agentRevenue = 0;
     
-    if (payload.brokerName) {
-      // If broker exists: 90% hospital, 5% doctor, 5% broker
+    if (payload.agentName) {
+      // If agent exists: 90% hospital, 5% doctor, 5% agent
       hospitalRevenue = payload.totalAmount * 0.9;
       doctorRevenue = payload.doctorName ? payload.totalAmount * 0.05 : 0;
-      brokerRevenue = payload.totalAmount * 0.05;
+      agentRevenue = payload.totalAmount * 0.05;
     } else {
-      // If no broker: 95% hospital, 5% doctor
+      // If no agent: 95% hospital, 5% doctor
       hospitalRevenue = payload.totalAmount * 0.95;
       doctorRevenue = payload.doctorName ? payload.totalAmount * 0.05 : 0;
     }
@@ -46,7 +46,7 @@ router.post("/create", async (req, res) => {
       ...payload,
       hospitalRevenue,
       doctorRevenue,
-      brokerRevenue
+      agentRevenue
     };
 
     const appointment = new AppointmentModel(appointmentData);
@@ -133,16 +133,16 @@ router.get("/revenue/doctor", async (req, res) => {
   }
 });
 
-// Get broker revenue statistics
-router.get("/revenue/broker", async (req, res) => {
+// Get agent revenue statistics
+router.get("/revenue/agent", async (req, res) => {
   try {
-    // Get broker-wise revenue
-    const brokerRevenue = await AppointmentModel.aggregate([
-      { $match: { brokerName: { $ne: null, $ne: "" } } },
+    // Get agent-wise revenue
+    const agentRevenue = await AppointmentModel.aggregate([
+      { $match: { agentName: { $ne: null, $ne: "" } } },
       {
         $group: {
-          _id: "$brokerName",
-          totalRevenue: { $sum: "$brokerRevenue" },
+          _id: "$agentName",
+          totalRevenue: { $sum: "$agentRevenue" },
           appointments: { $sum: 1 }
         }
       },
@@ -154,19 +154,19 @@ router.get("/revenue/broker", async (req, res) => {
       {
         $group: {
           _id: null,
-          totalBrokerRevenue: { $sum: "$brokerRevenue" },
-          totalAppointments: { $sum: { $cond: [{ $ne: ["$brokerName", ""] }, 1, 0] } }
+          totalAgentRevenue: { $sum: "$agentRevenue" },
+          totalAppointments: { $sum: { $cond: [{ $ne: ["$agentName", ""] }, 1, 0] } }
         }
       }
     ]);
 
     res.status(200).send({
-      brokers: brokerRevenue,
-      summary: totalResult[0] || { totalBrokerRevenue: 0, totalAppointments: 0 }
+      agents: agentRevenue,
+      summary: totalResult[0] || { totalAgentRevenue: 0, totalAppointments: 0 }
     });
   } catch (error) {
     console.log(error);
-    res.status(400).send({ error: "Failed to fetch broker revenue" });
+    res.status(400).send({ error: "Failed to fetch agent revenue" });
   }
 });
 
@@ -182,26 +182,26 @@ router.patch("/:appointmentId", async (req, res) => {
         return res.status(404).send({ msg: `Appointment with id ${id} not found` });
       }
 
-      // Use existing broker and doctor data if not provided in update
-      const brokerName = payload.brokerName !== undefined ? payload.brokerName : appointment.brokerName;
+      // Use existing agent and doctor data if not provided in update
+      const agentName = payload.agentName !== undefined ? payload.agentName : appointment.agentName;
       const doctorName = payload.doctorName !== undefined ? payload.doctorName : appointment.doctorName;
 
-      let hospitalRevenue, doctorRevenue = 0, brokerRevenue = 0;
+      let hospitalRevenue, doctorRevenue = 0, agentRevenue = 0;
       
-      if (brokerName) {
-        // If broker exists: 90% hospital, 5% doctor, 5% broker
+      if (agentName) {
+        // If agent exists: 90% hospital, 5% doctor, 5% agent
         hospitalRevenue = payload.totalAmount * 0.9;
         doctorRevenue = doctorName ? payload.totalAmount * 0.05 : 0;
-        brokerRevenue = payload.totalAmount * 0.05;
+        agentRevenue = payload.totalAmount * 0.05;
       } else {
-        // If no broker: 95% hospital, 5% doctor
+        // If no agent: 95% hospital, 5% doctor
         hospitalRevenue = payload.totalAmount * 0.95;
         doctorRevenue = doctorName ? payload.totalAmount * 0.05 : 0;
       }
 
       payload.hospitalRevenue = hospitalRevenue;
       payload.doctorRevenue = doctorRevenue;
-      payload.brokerRevenue = brokerRevenue;
+      payload.agentRevenue = agentRevenue;
     }
 
     const updatedAppointment = await AppointmentModel.findByIdAndUpdate({ _id: id }, payload, { new: true });

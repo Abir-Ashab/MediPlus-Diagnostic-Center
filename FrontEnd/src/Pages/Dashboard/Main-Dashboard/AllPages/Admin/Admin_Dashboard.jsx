@@ -9,8 +9,8 @@ import "react-toastify/dist/ReactToastify.css";
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
-  const [brokers, setBrokers] = useState([]);
-  const [nurses, setNurses] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [managers, setmanagers] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -38,8 +38,8 @@ const AdminDashboard = () => {
     try {
       await Promise.all([
         fetchDoctors(),
-        fetchBrokers(),
-        fetchNurses(),
+        fetchAgents(),
+        fetchmanagers(),
         fetchAdmins(),
       ]);
     } catch (error) {
@@ -57,21 +57,21 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchBrokers = async () => {
+  const fetchAgents = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
-      setBrokers(response.data);
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/agents");
+      setAgents(response.data);
     } catch (error) {
-      console.error("Error fetching brokers:", error);
+      console.error("Error fetching agents:", error);
     }
   };
 
-  const fetchNurses = async () => {
+  const fetchmanagers = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
-      setNurses(response.data);
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/managers");
+      setmanagers(response.data);
     } catch (error) {
-      console.error("Error fetching nurses:", error);
+      console.error("Error fetching managers:", error);
     }
   };
 
@@ -94,12 +94,12 @@ const AdminDashboard = () => {
           endpoint = "doctors";
           idField = record._id;
           break;
-        case "nurse":
-          endpoint = "nurses";
+        case "manager":
+          endpoint = "managers";
           idField = record._id;
           break;
-        case "broker":
-          endpoint = "brokers";
+        case "agent":
+          endpoint = "agents";
           idField = record._id;
           break;
         case "admin":
@@ -134,12 +134,12 @@ const AdminDashboard = () => {
           endpoint = "doctors";
           idField = selectedRecord._id;
           break;
-        case "nurse":
-          endpoint = "nurses";
+        case "manager":
+          endpoint = "managers";
           idField = selectedRecord._id;
           break;
-        case "broker":
-          endpoint = "brokers";
+        case "agent":
+          endpoint = "agents";
           idField = selectedRecord._id;
           break;
         case "admin":
@@ -248,7 +248,7 @@ const AdminDashboard = () => {
     { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "doctor") },
   ];
 
-  const nurseColumns = [
+  const managerColumns = [
     { key: "image", label: "Image", render: (record) => (
       <img
         src={record.image || "https://res.cloudinary.com/diverse/image/upload/v1674562453/diverse/oipm1ecb1yudf9eln7az.jpg"}
@@ -256,15 +256,15 @@ const AdminDashboard = () => {
         className="w-10 h-10 rounded-full"
       />
     )},
-    { key: "nurseID", label: "ID", render: (record) => record.nurseID },
-    { key: "nurseName", label: "Name", render: (record) => record.nurseName },
+    { key: "managerID", label: "ID", render: (record) => record.managerID },
+    { key: "managerName", label: "Name", render: (record) => record.managerName },
     { key: "email", label: "Email", render: (record) => record.email },
     { key: "mobile", label: "Mobile", render: (record) => record.mobile },
     { key: "education", label: "Education", render: (record) => record.education },
-    { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "nurse") },
+    { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "manager") },
   ];
 
-  const brokerColumns = [
+  const agentColumns = [
     { key: "image", label: "Image", render: (record) => (
       <img
         src={record.image || "https://res.cloudinary.com/diverse/image/upload/v1674562453/diverse/oipm1ecb1yudf9eln7az.jpg"}
@@ -272,7 +272,7 @@ const AdminDashboard = () => {
         className="w-10 h-10 rounded-full"
       />
     )},
-    { key: "brokerID", label: "ID", render: (record) => record.brokerID },
+    { key: "agentID", label: "ID", render: (record) => record.agentID },
     { key: "name", label: "Name", render: (record) => record.name },
     { key: "email", label: "Email", render: (record) => record.email },
     { key: "mobile", label: "Mobile", render: (record) => record.mobile },
@@ -282,7 +282,7 @@ const AdminDashboard = () => {
       </span>
     )},
     { key: "commissionRate", label: "Commission Rate", render: (record) => `${record.commissionRate || 0}%` },
-    { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "broker") },
+    { key: "actions", label: "Actions", render: (record) => getActionButtons(record, "agent") },
   ];
 
   const adminColumns = [
@@ -453,16 +453,16 @@ const AdminDashboard = () => {
             </div>
           </form>
         );
-      case "nurse":
+      case "manager":
         return (
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nurse Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">manager Name</label>
                 <input
                   type="text"
-                  name="nurseName"
-                  value={formData.nurseName || ""}
+                  name="managerName"
+                  value={formData.managerName || ""}
                   onChange={handleInputChange}
                   required
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -520,12 +520,12 @@ const AdminDashboard = () => {
             </div>
           </form>
         );
-      case "broker":
+      case "agent":
         return (
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Broker Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
                 <input
                   type="text"
                   name="name"
@@ -656,11 +656,11 @@ const AdminDashboard = () => {
               <div className="col-span-2"><strong>Details:</strong> {selectedRecord.details}</div>
             </div>
           );
-        case "nurse":
+        case "manager":
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><strong>Nurse ID:</strong> {selectedRecord.nurseID}</div>
-              <div><strong>Name:</strong> {selectedRecord.nurseName}</div>
+              <div><strong>manager ID:</strong> {selectedRecord.managerID}</div>
+              <div><strong>Name:</strong> {selectedRecord.managerName}</div>
               <div><strong>Email:</strong> {selectedRecord.email}</div>
               <div><strong>Mobile:</strong> {selectedRecord.mobile}</div>
               <div><strong>Age:</strong> {selectedRecord.age}</div>
@@ -672,10 +672,10 @@ const AdminDashboard = () => {
               <div className="col-span-2"><strong>Details:</strong> {selectedRecord.details}</div>
             </div>
           );
-        case "broker":
+        case "agent":
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><strong>Broker ID:</strong> {selectedRecord.brokerID}</div>
+              <div><strong>Agent ID:</strong> {selectedRecord.agentID}</div>
               <div><strong>Name:</strong> {selectedRecord.name}</div>
               <div><strong>Email:</strong> {selectedRecord.email}</div>
               <div><strong>Mobile:</strong> {selectedRecord.mobile}</div>
@@ -717,7 +717,7 @@ const AdminDashboard = () => {
           className="w-24 h-24 rounded-full mx-auto mb-4"
         />
         <h2 className="text-xl font-semibold text-gray-900">
-          {selectedRecord.docName || selectedRecord.nurseName || selectedRecord.name || selectedRecord.adminName || selectedRecord.patientName || "User"}
+          {selectedRecord.docName || selectedRecord.managerName || selectedRecord.name || selectedRecord.adminName || selectedRecord.patientName || "User"}
         </h2>
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">{getDescription()}</div>
       </div>
@@ -799,22 +799,22 @@ const AdminDashboard = () => {
                     Doctors ({doctors.length})
                   </button>
                   <button
-                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "nurses" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
-                    onClick={() => setActiveTab("nurses")}
+                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "managers" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+                    onClick={() => setActiveTab("managers")}
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    Managers ({nurses.length})
+                    Managers ({managers.length})
                   </button>
                   <button
-                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "brokers" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
-                    onClick={() => setActiveTab("brokers")}
+                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "agents" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+                    onClick={() => setActiveTab("agents")}
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Brokers ({brokers.length})
+                    Agents ({agents.length})
                   </button>
                   <button
                     className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "admins" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
@@ -827,8 +827,8 @@ const AdminDashboard = () => {
                   </button>
                 </div>
                 {activeTab === "doctors" && renderTable(doctorColumns, doctors)}
-                {activeTab === "nurses" && renderTable(nurseColumns, nurses)}
-                {activeTab === "brokers" && renderTable(brokerColumns, brokers)}
+                {activeTab === "managers" && renderTable(managerColumns, managers)}
+                {activeTab === "agents" && renderTable(agentColumns, agents)}
                 {activeTab === "admins" && renderTable(adminColumns, admins)}
               </div>
             )}

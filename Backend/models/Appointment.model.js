@@ -80,7 +80,7 @@ const appointmentSchema = mongoose.Schema({
     type: String
   },
 
-  brokerName: {
+  agentName: {
     type: String
   },
 
@@ -94,7 +94,7 @@ const appointmentSchema = mongoose.Schema({
     default: 0
   },
 
-  brokerRevenue: {
+  agentRevenue: {
     type: Number,
     default: 0
   },

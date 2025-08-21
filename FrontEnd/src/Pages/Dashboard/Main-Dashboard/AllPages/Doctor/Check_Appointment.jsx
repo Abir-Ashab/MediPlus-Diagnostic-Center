@@ -458,8 +458,8 @@ const Check_Appointment = () => {
                       <span className="font-medium text-gray-900">{selectedAppointment.doctorName || "Not Assigned"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Broker:</span>
-                      <span className="font-medium text-gray-900">{selectedAppointment.brokerName || "None"}</span>
+                      <span className="text-gray-600">Agent:</span>
+                      <span className="font-medium text-gray-900">{selectedAppointment.agentName || "None"}</span>
                     </div>
                   </div>
                 </div>
@@ -522,10 +522,10 @@ const Check_Appointment = () => {
                           <span className="font-medium text-gray-900">{selectedAppointment.doctorRevenue} Taka</span>
                         </div>
                       )}
-                      {selectedAppointment.brokerRevenue !== undefined && (
+                      {selectedAppointment.agentRevenue !== undefined && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Broker Revenue:</span>
-                          <span className="font-medium text-gray-900">{selectedAppointment.brokerRevenue} Taka</span>
+                          <span className="text-gray-600">Agent Revenue:</span>
+                          <span className="font-medium text-gray-900">{selectedAppointment.agentRevenue} Taka</span>
                         </div>
                       )}
                     </div>

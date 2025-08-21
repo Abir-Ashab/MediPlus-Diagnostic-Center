@@ -36,7 +36,7 @@ const TestOrdersList = () => {
   const getCurrentUserName = () => {
     if (!user) return "System";
     return (
-      user.nurseName ||
+      user.managerName ||
       user.doctorName ||
       user.adminName ||
       user.name ||
@@ -154,7 +154,7 @@ const TestOrdersList = () => {
         typeof order.mobile === "string" &&
         order.mobile.includes(searchQuery)) ||
       order.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.brokerName?.toLowerCase().includes(searchQuery.toLowerCase())
+      order.agentName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const sortedOrders = filteredOrders?.sort((a, b) => {
@@ -187,7 +187,7 @@ const TestOrdersList = () => {
       mobile: order.mobile,
       disease: order.disease || "",
       doctorName: order.doctorName || "",
-      brokerName: order.brokerName || "",
+      agentName: order.agentName || "",
       address: order.address || "",
       date: moment(order.date).format("YYYY-MM-DD"),
       time: moment(order.time, "HH:mm"),
@@ -200,7 +200,7 @@ const TestOrdersList = () => {
       dueAmount: order.dueAmount || 0,
       hospitalRevenue: order.hospitalRevenue,
       doctorRevenue: order.doctorRevenue,
-      brokerRevenue: order.brokerRevenue,
+      agentRevenue: order.agentRevenue,
     });
     setIsEditModalVisible(true);
   };
@@ -291,7 +291,7 @@ const TestOrdersList = () => {
                     <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
                       <Search className="w-5 h-5 text-gray-400" />
                       <Input
-                        placeholder="Search by name, email, mobile, doctor, or broker"
+                        placeholder="Search by name, email, mobile, doctor, or agent"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="border-none bg-transparent focus:ring-0 focus:border-none"
@@ -392,7 +392,7 @@ const TestOrdersList = () => {
                                   Doctor
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
-                                  Broker
+                                  Agent
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
                                   Schedule
@@ -475,7 +475,7 @@ const TestOrdersList = () => {
                                     <div className="flex items-center gap-2">
                                       <Building className="w-4 h-4 text-indigo-500" />
                                       <span className="text-sm text-gray-700">
-                                        {order.brokerName || "N/A"}
+                                        {order.agentName || "N/A"}
                                       </span>
                                     </div>
                                   </td>
@@ -620,7 +620,7 @@ const TestOrdersList = () => {
                                 <div className="flex items-center gap-2">
                                   <Building className="w-4 h-4 text-indigo-500" />
                                   <span className="text-sm text-gray-700">
-                                    {order.brokerName || "N/A"}
+                                    {order.agentName || "N/A"}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -812,9 +812,9 @@ const TestOrdersList = () => {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Broker:</span>
+                        <span className="text-gray-600">Agent:</span>
                         <span className="font-medium text-gray-900">
-                          {selectedOrder.brokerName || "N/A"}
+                          {selectedOrder.agentName || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -1104,11 +1104,11 @@ const TestOrdersList = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Broker Name
+                          Agent Name
                         </label>
                         <Input
-                          name="brokerName"
-                          value={formData.brokerName || ""}
+                          name="agentName"
+                          value={formData.agentName || ""}
                           onChange={handleInputChange}
                         />
                       </div>
@@ -1254,12 +1254,12 @@ const TestOrdersList = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Broker Revenue
+                          Agent Revenue
                         </label>
                         <Input
                           type="number"
-                          name="brokerRevenue"
-                          value={formData.brokerRevenue || ""}
+                          name="agentRevenue"
+                          value={formData.agentRevenue || ""}
                           onChange={handleInputChange}
                         />
                       </div>

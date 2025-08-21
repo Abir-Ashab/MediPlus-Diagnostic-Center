@@ -9,13 +9,13 @@ const PatientAndAppointmentForm = ({
   commonData,
   appointmentData,
   doctors,
-  brokers,
+  agents,
   availableTimeSlots,
   loadingDoctors,
-  loadingBrokers,
+  loadingAgents,
   handleCommonDataChange,
   handleDoctorChange,
-  handleBrokerChange,
+  handleAgentChange,
   handleModeSpecificChange,
   setCommonData,
   setAppointmentData
@@ -134,19 +134,19 @@ const PatientAndAppointmentForm = ({
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
             <Select
-              name="brokerName"
-              value={commonData.brokerName}
-              onChange={handleBrokerChange}
-              disabled={loadingBrokers}
+              name="agentName"
+              value={commonData.agentName}
+              onChange={handleAgentChange}
+              disabled={loadingAgents}
               className="w-full"
-              placeholder={loadingBrokers ? "Loading brokers..." : "Select Broker"}
+              placeholder={loadingAgents ? "Loading agents..." : "Select Agent"}
             >
-              <Option value="">{loadingBrokers ? "Loading brokers..." : "Select Broker"}</Option>
-              {brokers.map((broker) => (
-                <Option key={broker._id} value={broker.name || broker.docName}>
-                  {broker.name || broker.docName}
+              <Option value="">{loadingAgents ? "Loading agents..." : "Select Agent"}</Option>
+              {agents.map((agent) => (
+                <Option key={agent._id} value={agent.name || agent.docName}>
+                  {agent.name || agent.docName}
                 </Option>
               ))}
             </Select>

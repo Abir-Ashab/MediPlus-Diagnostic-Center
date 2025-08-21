@@ -21,9 +21,9 @@ const Book_Appointment = () => {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [doctors, setDoctors] = useState([]);
-  const [brokers, setBrokers] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
-  const [loadingBrokers, setLoadingBrokers] = useState(true);
+  const [loadingAgents, setLoadingAgents] = useState(true);
   const [bookedAppointments, setBookedAppointments] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -40,7 +40,7 @@ const Book_Appointment = () => {
     address: "",
     email: "",
     doctorName: "",
-    brokerName: "",
+    agentName: "",
   });
 
   const [appointmentData, setAppointmentData] = useState({
@@ -98,22 +98,22 @@ const Book_Appointment = () => {
   }, []);
 
   useEffect(() => {
-    const fetchBrokers = async () => {
+    const fetchAgents = async () => {
       try {
-        setLoadingBrokers(true);
-        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
-        setBrokers(response.data);
-        setLoadingBrokers(false);
+        setLoadingAgents(true);
+        const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/agents");
+        setAgents(response.data);
+        setLoadingAgents(false);
       } catch (error) {
-        console.error("Error fetching brokers:", error);
-        toast.error("⚠️ Failed to load brokers. Please refresh the page and try again.", {
+        console.error("Error fetching agents:", error);
+        toast.error("⚠️ Failed to load agents. Please refresh the page and try again.", {
           position: "top-right",
           autoClose: 4000,
         });
-        setLoadingBrokers(false);
+        setLoadingAgents(false);
       }
     };
-    fetchBrokers();
+    fetchAgents();
   }, []);
 
   useEffect(() => {
@@ -186,8 +186,8 @@ const Book_Appointment = () => {
     setCommonData(prev => ({ ...prev, doctorName: value }));
   };
 
-  const handleBrokerChange = (value) => {
-    setCommonData(prev => ({ ...prev, brokerName: value }));
+  const handleAgentChange = (value) => {
+    setCommonData(prev => ({ ...prev, agentName: value }));
   };
 
   const handleModeSpecificChange = (e) => {
@@ -588,13 +588,13 @@ const Book_Appointment = () => {
                     commonData={commonData}
                     appointmentData={appointmentData}
                     doctors={doctors}
-                    brokers={brokers}
+                    agents={agents}
                     availableTimeSlots={availableTimeSlots}
                     loadingDoctors={loadingDoctors}
-                    loadingBrokers={loadingBrokers}
+                    loadingAgents={loadingAgents}
                     handleCommonDataChange={handleCommonDataChange}
                     handleDoctorChange={handleDoctorChange}
-                    handleBrokerChange={handleBrokerChange}
+                    handleAgentChange={handleAgentChange}
                     handleModeSpecificChange={handleModeSpecificChange}
                     setCommonData={setCommonData}
                     setAppointmentData={setAppointmentData}

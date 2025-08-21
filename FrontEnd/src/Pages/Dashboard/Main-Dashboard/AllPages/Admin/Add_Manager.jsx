@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import nurse from "../../../../../img/nurseavatar.png";
+import manager from "../../../../../img/manageravatar.png";
 import { useDispatch, useSelector } from "react-redux";
-import { NurseRegister, SendPassword } from "../../../../../Redux/auth/action";
+import { managerRegister, SendPassword } from "../../../../../Redux/auth/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,7 +17,7 @@ const Add_Manager = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const InitData = {
-    nurseName: "",
+    managerName: "",
     age: "",
     mobile: "",
     email: "",
@@ -26,21 +26,21 @@ const Add_Manager = () => {
     address: "",
     education: "",
     department: "",
-    nurseID: Date.now(),
+    managerID: Date.now(),
     password: "",
     details: "",
     bloodGroup: "",
   };
-  const [NurseValue, setNurseValue] = useState(InitData);
+  const [managerValue, setmanagerValue] = useState(InitData);
 
   const HandleDoctorChange = (e) => {
-    setNurseValue({ ...NurseValue, [e.target.name]: e.target.value });
+    setmanagerValue({ ...managerValue, [e.target.name]: e.target.value });
   };
 
   const HandleDoctorSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    dispatch(NurseRegister(NurseValue)).then((res) => {
+    dispatch(managerRegister(managerValue)).then((res) => {
       if (res.message === "Manager already exists") {
         setLoading(false);
         return notify("Manager Already Exist");
@@ -54,12 +54,12 @@ const Add_Manager = () => {
       let data = {
         email: res.data.email,
         password: res.data.password,
-        userId: res.data.nurseID,
+        userId: res.data.managerID,
       };
       console.log(data);
       dispatch(SendPassword(data)).then((res) => notify("Account Detais Sent"));
       setLoading(false);
-      setNurseValue(InitData);
+      setmanagerValue(InitData);
     });
   };
 
@@ -80,7 +80,7 @@ const Add_Manager = () => {
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
             <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Add Manager</h1>
             <div className="flex justify-center mb-8">
-              <img src={nurse} alt="manager" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
+              <img src={manager} alt="manager" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
             </div>
             <form onSubmit={HandleDoctorSubmit} className="space-y-6">
               <div>
@@ -89,8 +89,8 @@ const Add_Manager = () => {
                   <input
                     type="text"
                     placeholder="Full Name"
-                    name="nurseName"
-                    value={NurseValue.nurseName}
+                    name="managerName"
+                    value={managerValue.managerName}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -104,7 +104,7 @@ const Add_Manager = () => {
                     type="number"
                     placeholder="Age"
                     name="age"
-                    value={NurseValue.age}
+                    value={managerValue.age}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -118,7 +118,7 @@ const Add_Manager = () => {
                     type="number"
                     placeholder="Emergency Number"
                     name="mobile"
-                    value={NurseValue.mobile}
+                    value={managerValue.mobile}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -132,7 +132,7 @@ const Add_Manager = () => {
                     type="email"
                     placeholder="abc@abc.com"
                     name="email"
-                    value={NurseValue.email}
+                    value={managerValue.email}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -144,7 +144,7 @@ const Add_Manager = () => {
                 <div>
                   <select
                     name="gender"
-                    value={NurseValue.gender}
+                    value={managerValue.gender}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -163,7 +163,7 @@ const Add_Manager = () => {
                     type="date"
                     placeholder="dd-mm-yy"
                     name="DOB"
-                    value={NurseValue.DOB}
+                    value={managerValue.DOB}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -177,7 +177,7 @@ const Add_Manager = () => {
                     type="text"
                     placeholder="Address"
                     name="address"
-                    value={NurseValue.address}
+                    value={managerValue.address}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -191,7 +191,7 @@ const Add_Manager = () => {
                     type="text"
                     placeholder="eg.MBBS"
                     name="education"
-                    value={NurseValue.education}
+                    value={managerValue.education}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -205,7 +205,7 @@ const Add_Manager = () => {
                     type="text"
                     placeholder="Department"
                     name="department"
-                    value={NurseValue.department}
+                    value={managerValue.department}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -217,7 +217,7 @@ const Add_Manager = () => {
                 <div>
                   <select
                     name="bloodGroup"
-                    value={NurseValue.bloodGroup}
+                    value={managerValue.bloodGroup}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -241,7 +241,7 @@ const Add_Manager = () => {
                     type="text"
                     placeholder="Password"
                     name="password"
-                    value={NurseValue.password}
+                    value={managerValue.password}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -257,7 +257,7 @@ const Add_Manager = () => {
                     rows="4"
                     cols="50"
                     name="details"
-                    value={NurseValue.details}
+                    value={managerValue.details}
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"

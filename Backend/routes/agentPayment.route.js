@@ -1,29 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const BrokerPayment = require('../models/brokerPayment.model')
+const AgentPayment = require('../models/agentPayment.model')
 const axios = require('axios');
 
-// POST: Save or update payment for a broker
+// POST: Save or update payment for a agent
 router.post('/', async (req, res) => {
   try {
-    const { brokerName, paymentAmount, dateFilter, customDateRange } = req.body;
+    const { agentName, paymentAmount, dateFilter, customDateRange } = req.body;
 
     // Fetch records to calculate total revenue
-    const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?brokerName=${brokerName}`);
+    const testOrdersResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?agentName=${agentName}`);
 
-    const brokerTestOrders = testOrdersResponse.data.filter((order) => order.brokerName === brokerName);
-    const formattedTestOrders = brokerTestOrders.map((order) => ({
-      brokerRevenue: order.brokerRevenue || 0,
+    const agentTestOrders = testOrdersResponse.data.filter((order) => order.agentName === agentName);
+    const formattedTestOrders = agentTestOrders.map((order) => ({
+      agentRevenue: order.agentRevenue || 0,
     }));
 
-    const totalRevenue = formattedTestOrders.reduce((sum, record) => sum + Number(record.brokerRevenue), 0);
+    const totalRevenue = formattedTestOrders.reduce((sum, record) => sum + Number(record.agentRevenue), 0);
     const dueAmount = totalRevenue - paymentAmount;
 
     if (paymentAmount > totalRevenue) {
       return res.status(400).json({ message: 'Payment cannot exceed total revenue' });
     }
 
-    let payment = await BrokerPayment.findOne({ brokerName, dateFilter });
+    let payment = await AgentPayment.findOne({ agentName, dateFilter });
     if (payment) {
       payment.paymentAmount = paymentAmount;
       payment.dueAmount = dueAmount;
@@ -32,8 +32,8 @@ router.post('/', async (req, res) => {
       payment.createdAt = Date.now();
       await payment.save();
     } else {
-      payment = new BrokerPayment({
-        brokerName,
+      payment = new AgentPayment({
+        agentName,
         paymentAmount,
         dueAmount,
         totalAmount: totalRevenue,
@@ -50,15 +50,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET: Retrieve payments for a broker
-router.get('/:brokerName', async (req, res) => {
+// GET: Retrieve payments for a agent
+router.get('/:agentName', async (req, res) => {
   try {
-    const { brokerName } = req.params;
+    const { agentName } = req.params;
     const { dateFilter } = req.query;
-    const query = { brokerName };
+    const query = { agentName };
     if (dateFilter) query.dateFilter = dateFilter;
 
-    const payments = await BrokerPayment.find(query);
+    const payments = await AgentPayment.find(query);
     res.status(200).json(payments);
   } catch (error) {
     console.error('Error fetching payments:', error);

@@ -5,19 +5,19 @@ import * as XLSX from "xlsx";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const BrokerRevenue = ({
-  brokerDateFilter,
-  brokerCustomDateRange,
-  selectedBroker,
-  setBrokerCustomDateRange,
-  handleBrokerDateFilterChange,
-  applyBrokerDateFilter,
-  resetBrokerFilters,
+const AgentRevenue = ({
+  agentDateFilter,
+  agentCustomDateRange,
+  selectedAgent,
+  setAgentCustomDateRange,
+  handleAgentDateFilterChange,
+  applyAgentDateFilter,
+  resetAgentFilters,
   filterRecordsByDateRange,
-  handleBrokerSelect,
+  handleAgentSelect,
 }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-  const [brokerPayments, setBrokerPayments] = useState({});
+  const [agentPayments, setAgentPayments] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
@@ -61,7 +61,7 @@ const BrokerRevenue = ({
         const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/tests?isActive=true");
         const map = {};
         res.data.forEach(t => {
-          map[t.title.toLowerCase()] = t.brokerCommissionPercentage || 0;
+          map[t.title.toLowerCase()] = t.agentCommissionPercentage || 0;
         });
         setTestsMap(map);
       } catch (error) {
@@ -75,9 +75,9 @@ const BrokerRevenue = ({
     fetchTests();
   }, []);
 
-  // Function to calculate broker revenue for an order
-  const calculateBrokerRevenue = (order) => {
-    let brokerRev = 0;
+  // Function to calculate agent revenue for an order
+  const calculateAgentRevenue = (order) => {
+    let agentRev = 0;
     (order.tests || []).forEach(test => {
       let perc = testsMap[test.testName.toLowerCase()] || 0;
       if (perc === 0) {
@@ -85,10 +85,10 @@ const BrokerRevenue = ({
         perc = (cat === 'CARDIAC' && ['ECHOCARDIOGRAM-2D & M-MODE', 'Video Endoscopy'].includes(test.testName)) ? 20 : commissionPercentages[cat] || 0;
       }
       if (perc > 0) {
-        brokerRev += (test.testPrice || 0) * (perc / 100);
+        agentRev += (test.testPrice || 0) * (perc / 100);
       }
     });
-    return brokerRev;
+    return agentRev;
   };
 
   // Fetch all test orders
@@ -110,45 +110,45 @@ const BrokerRevenue = ({
 
   // Compute filtered test orders
   const filteredTestOrders = useMemo(
-    () => filterRecordsByDateRange(allTestOrders, brokerDateFilter, brokerCustomDateRange),
-    [allTestOrders, brokerDateFilter, brokerCustomDateRange, filterRecordsByDateRange]
+    () => filterRecordsByDateRange(allTestOrders, agentDateFilter, agentCustomDateRange),
+    [allTestOrders, agentDateFilter, agentCustomDateRange, filterRecordsByDateRange]
   );
 
-  // Compute brokers data
-  const computedBrokers = useMemo(() => {
-    const brokerMap = {};
+  // Compute agents data
+  const computedAgents = useMemo(() => {
+    const agentMap = {};
     filteredTestOrders.forEach((order) => {
-      const brokerName = order.brokerName;
-      if (!brokerName) return;
-      if (!brokerMap[brokerName]) {
-        brokerMap[brokerName] = { _id: brokerName, totalRevenue: 0, appointments: 0 };
+      const agentName = order.agentName;
+      if (!agentName) return;
+      if (!agentMap[agentName]) {
+        agentMap[agentName] = { _id: agentName, totalRevenue: 0, appointments: 0 };
       }
-      const brokerRev = order.brokerRevenue || calculateBrokerRevenue(order);
-      brokerMap[brokerName].totalRevenue += brokerRev;
-      brokerMap[brokerName].appointments += 1;
+      const agentRev = order.agentRevenue || calculateAgentRevenue(order);
+      agentMap[agentName].totalRevenue += agentRev;
+      agentMap[agentName].appointments += 1;
     });
-    return Object.values(brokerMap);
+    return Object.values(agentMap);
   }, [filteredTestOrders, testsMap]);
 
-  const totalBrokerRevenue = computedBrokers.reduce((sum, b) => sum + b.totalRevenue, 0);
+  const totalAgentRevenue = computedAgents.reduce((sum, b) => sum + b.totalRevenue, 0);
   const totalRecords = filteredTestOrders.length;
-  const activeBrokers = computedBrokers.length;
+  const activeAgents = computedAgents.length;
 
   // Fetch payment data
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const promises = computedBrokers.map((broker) =>
-          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments/${broker._id}`, {
-            params: { dateFilter: brokerDateFilter },
+        const promises = computedAgents.map((agent) =>
+          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments/${agent._id}`, {
+            params: { dateFilter: agentDateFilter },
           })
         );
         const responses = await Promise.all(promises);
         const payments = responses.reduce((acc, res, index) => {
-          const payment = res.data.find((p) => p.dateFilter === brokerDateFilter) || {};
-          return { ...acc, [computedBrokers[index]._id]: payment.paymentAmount || 0 };
+          const payment = res.data.find((p) => p.dateFilter === agentDateFilter) || {};
+          return { ...acc, [computedAgents[index]._id]: payment.paymentAmount || 0 };
         }, {});
-        setBrokerPayments(payments);
+        setAgentPayments(payments);
       } catch (error) {
         console.error("Error fetching payments:", error.message, error.response?.data, error.response?.status);
         toast.error(`Failed to fetch payment data: ${error.message}`, {
@@ -157,43 +157,43 @@ const BrokerRevenue = ({
         });
       }
     };
-    if (computedBrokers.length > 0) {
+    if (computedAgents.length > 0) {
       fetchPayments();
     }
-  }, [computedBrokers, brokerDateFilter]);
+  }, [computedAgents, agentDateFilter]);
 
   // Handle payment input change
-  const handlePaymentChange = (brokerId, payment) => {
+  const handlePaymentChange = (agentId, payment) => {
     const paymentAmount = Math.max(Number(payment) || 0, 0);
-    setBrokerPayments((prev) => ({
+    setAgentPayments((prev) => ({
       ...prev,
-      [brokerId]: paymentAmount,
+      [agentId]: paymentAmount,
     }));
   };
 
   // Save payment to backend
-  const handleSavePayment = async (brokerId) => {
-    setSaveLoading((prev) => ({ ...prev, [brokerId]: true }));
-    const paymentAmount = brokerPayments[brokerId] || 0;
+  const handleSavePayment = async (agentId) => {
+    setSaveLoading((prev) => ({ ...prev, [agentId]: true }));
+    const paymentAmount = agentPayments[agentId] || 0;
 
     try {
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments`, {
-        brokerName: brokerId,
+      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments`, {
+        agentName: agentId,
         paymentAmount,
-        dateFilter: brokerDateFilter,
-        customDateRange: brokerDateFilter === 'custom' ? brokerCustomDateRange : {},
+        dateFilter: agentDateFilter,
+        customDateRange: agentDateFilter === 'custom' ? agentCustomDateRange : {},
       });
       if (response.data.message === 'Payment cannot exceed total revenue') {
         toast.error("Payment cannot exceed total revenue!", {
           position: "top-right",
           autoClose: 4000,
         });
-        setSaveLoading((prev) => ({ ...prev, [brokerId]: false }));
+        setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
         return;
       }
-      setBrokerPayments((prev) => ({
+      setAgentPayments((prev) => ({
         ...prev,
-        [brokerId]: response.data.paymentAmount || 0,
+        [agentId]: response.data.paymentAmount || 0,
       }));
       toast.success("Payment saved successfully!", {
         position: "top-right",
@@ -206,26 +206,26 @@ const BrokerRevenue = ({
         autoClose: 4000,
       });
     } finally {
-      setSaveLoading((prev) => ({ ...prev, [brokerId]: false }));
+      setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
     }
   };
 
-  // Export broker data
-  const handleExportBroker = async (brokerName) => {
+  // Export agent data
+  const handleExportAgent = async (agentName) => {
     if (exportLoading) return;
     setExportLoading(true);
     try {
-      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/brokerPayments/${brokerName}`, {
-        params: { dateFilter: brokerDateFilter },
+      const paymentResponse = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments/${agentName}`, {
+        params: { dateFilter: agentDateFilter },
       });
-      const paymentData = paymentResponse.data.find((p) => p.dateFilter === brokerDateFilter) || {};
+      const paymentData = paymentResponse.data.find((p) => p.dateFilter === agentDateFilter) || {};
       const payment = Number(paymentData.paymentAmount) || 0;
 
-      const filteredRecords = filteredTestOrders.filter((order) => order.brokerName === brokerName);
-      const totalRevenue = filteredRecords.reduce((sum, order) => sum + (order.brokerRevenue || calculateBrokerRevenue(order)), 0);
+      const filteredRecords = filteredTestOrders.filter((order) => order.agentName === agentName);
+      const totalRevenue = filteredRecords.reduce((sum, order) => sum + (order.agentRevenue || calculateAgentRevenue(order)), 0);
 
       const data = filteredRecords.map((order) => {
-        const recordRevenue = order.brokerRevenue || calculateBrokerRevenue(order);
+        const recordRevenue = order.agentRevenue || calculateAgentRevenue(order);
         const paymentShare = totalRevenue > 0 ? (recordRevenue / totalRevenue) * payment : 0;
         const dueAmount = recordRevenue - paymentShare;
         return {
@@ -248,15 +248,15 @@ const BrokerRevenue = ({
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `Broker_${brokerName}`);
-      XLSX.writeFile(wb, `broker_${brokerName}_monthly_revenue.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, `Agent_${agentName}`);
+      XLSX.writeFile(wb, `agent_${agentName}_monthly_revenue.xlsx`);
       toast.success("Report exported successfully!", {
         position: "top-right",
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error exporting broker revenue:", error.message, error.response?.data, error.response?.status);
-      toast.error(`Failed to export broker revenue: ${error.message}`, {
+      console.error("Error exporting agent revenue:", error.message, error.response?.data, error.response?.status);
+      toast.error(`Failed to export agent revenue: ${error.message}`, {
         position: "top-right",
         autoClose: 4000,
       });
@@ -265,21 +265,21 @@ const BrokerRevenue = ({
     }
   };
 
-  const brokerChartData = computedBrokers.map((broker) => ({
-    name: broker._id,
-    value: broker.totalRevenue,
+  const agentChartData = computedAgents.map((agent) => ({
+    name: agent._id,
+    value: agent.totalRevenue,
   }));
 
-  const displayRecords = selectedBroker
+  const displayRecords = selectedAgent
     ? filteredTestOrders
-        .filter((order) => order.brokerName === selectedBroker)
+        .filter((order) => order.agentName === selectedAgent)
         .map((order) => ({
           patientName: order.patientName,
           date: order.date,
           recordType: "Test Order",
           tests: order.tests,
           totalAmount: order.totalAmount || 0,
-          brokerRevenue: order.brokerRevenue || calculateBrokerRevenue(order),
+          agentRevenue: order.agentRevenue || calculateAgentRevenue(order),
         }))
     : [];
 
@@ -288,34 +288,34 @@ const BrokerRevenue = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Broker Revenue</h3>
-          <p className="text-2xl font-bold text-orange-600">{totalBrokerRevenue.toFixed(0)} Taka</p>
+          <h3 className="text-lg font-semibold text-gray-700">Total Agent Revenue</h3>
+          <p className="text-2xl font-bold text-orange-600">{totalAgentRevenue.toFixed(0)} Taka</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700">Total Records</h3>
           <p className="text-2xl font-bold text-orange-600">{totalRecords}</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Active Brokers</h3>
-          <p className="text-2xl font-bold text-orange-600">{activeBrokers}</p>
+          <h3 className="text-lg font-semibold text-gray-700">Active Agents</h3>
+          <p className="text-2xl font-bold text-orange-600">{activeAgents}</p>
         </div>
       </div>
 
       {/* Date Filter */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Broker Revenue</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Agent Revenue</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Broker</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Agent</label>
             <select
-              value={selectedBroker || ''}
-              onChange={(e) => handleBrokerSelect(e.target.value)}
+              value={selectedAgent || ''}
+              onChange={(e) => handleAgentSelect(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
-              <option value="">Select a Broker</option>
-              {computedBrokers.map((broker) => (
-                <option key={broker._id} value={broker._id}>
-                  {broker._id}
+              <option value="">Select a Agent</option>
+              {computedAgents.map((agent) => (
+                <option key={agent._id} value={agent._id}>
+                  {agent._id}
                 </option>
               ))}
             </select>
@@ -323,8 +323,8 @@ const BrokerRevenue = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
             <select
-              value={brokerDateFilter}
-              onChange={(e) => handleBrokerDateFilterChange(e.target.value)}
+              value={agentDateFilter}
+              onChange={(e) => handleAgentDateFilterChange(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="all">All Time</option>
@@ -334,14 +334,14 @@ const BrokerRevenue = ({
               <option value="custom">Custom Range</option>
             </select>
           </div>
-          {brokerDateFilter === "custom" && (
+          {agentDateFilter === "custom" && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                 <input
                   type="date"
-                  value={brokerCustomDateRange.start}
-                  onChange={(e) => setBrokerCustomDateRange({ ...brokerCustomDateRange, start: e.target.value })}
+                  value={agentCustomDateRange.start}
+                  onChange={(e) => setAgentCustomDateRange({ ...agentCustomDateRange, start: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
@@ -349,8 +349,8 @@ const BrokerRevenue = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                 <input
                   type="date"
-                  value={brokerCustomDateRange.end}
-                  onChange={(e) => setBrokerCustomDateRange({ ...brokerCustomDateRange, end: e.target.value })}
+                  value={agentCustomDateRange.end}
+                  onChange={(e) => setAgentCustomDateRange({ ...agentCustomDateRange, end: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
@@ -358,29 +358,29 @@ const BrokerRevenue = ({
           )}
           <div className="flex gap-2">
             <button
-              onClick={applyBrokerDateFilter}
+              onClick={applyAgentDateFilter}
               className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors flex items-center gap-2"
             >
               <Calendar className="w-4 h-4" />
               Apply Filter
             </button>
             <button
-              onClick={resetBrokerFilters}
+              onClick={resetAgentFilters}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
             >
               Reset
             </button>
           </div>
         </div>
-        {brokerDateFilter !== "all" && (
+        {agentDateFilter !== "all" && (
           <div className="mt-4 p-3 bg-orange-50 rounded-md">
             <p className="text-sm text-orange-700">
               Showing records for: <strong>
-                {brokerDateFilter === "week" && "This Week"}
-                {brokerDateFilter === "month" && "This Month"}
-                {brokerDateFilter === "year" && "This Year"}
-                {brokerDateFilter === "custom" && brokerCustomDateRange.start && brokerCustomDateRange.end &&
-                  `${brokerCustomDateRange.start} to ${brokerCustomDateRange.end}`}
+                {agentDateFilter === "week" && "This Week"}
+                {agentDateFilter === "month" && "This Month"}
+                {agentDateFilter === "year" && "This Year"}
+                {agentDateFilter === "custom" && agentCustomDateRange.start && agentCustomDateRange.end &&
+                  `${agentCustomDateRange.start} to ${agentCustomDateRange.end}`}
               </strong>
             </p>
           </div>
@@ -389,12 +389,12 @@ const BrokerRevenue = ({
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Broker</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Distribution by Agent</h3>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={brokerChartData.filter((entry) => entry.name && entry.value)}
+                data={agentChartData.filter((entry) => entry.name && entry.value)}
                 cx="50%"
                 cy="50%"
                 labelLine={true}
@@ -402,7 +402,7 @@ const BrokerRevenue = ({
                 outerRadius={150}
                 dataKey="value"
               >
-                {brokerChartData.map((entry, index) => (
+                {agentChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -412,21 +412,21 @@ const BrokerRevenue = ({
         </div>
       </div>
 
-      {/* Broker Details */}
+      {/* Agent Details */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Broker Details</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Agent Details</h3>
         <div className="max-h-96 overflow-y-auto">
-          {computedBrokers.map((broker, index) => (
-            broker._id && (
+          {computedAgents.map((agent, index) => (
+            agent._id && (
               <div key={index} className="p-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <div className="font-medium text-gray-900">{broker._id}</div>
+                  <div className="font-medium text-gray-900">{agent._id}</div>
                   <div className="flex gap-4 items-center">
                     <div className="text-right">
                       <div className="font-bold text-orange-600">
-                        {(broker.totalRevenue - (brokerPayments[broker._id] || 0)).toFixed(0)} Taka (Due)
+                        {(agent.totalRevenue - (agentPayments[agent._id] || 0)).toFixed(0)} Taka (Due)
                       </div>
-                      <div className="text-sm text-gray-600">Records: {broker.appointments}</div>
+                      <div className="text-sm text-gray-600">Records: {agent.appointments}</div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="block text-sm font-medium text-gray-700">Payment</label>
@@ -434,28 +434,28 @@ const BrokerRevenue = ({
                         <input
                           type="number"
                           min="0"
-                          value={brokerPayments[broker._id] || ""}
-                          onChange={(e) => handlePaymentChange(broker._id, e.target.value)}
+                          value={agentPayments[agent._id] || ""}
+                          onChange={(e) => handlePaymentChange(agent._id, e.target.value)}
                           className="w-24 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           placeholder="Enter payment"
                         />
                         <button
-                          onClick={() => handleSavePayment(broker._id)}
-                          className={`px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${saveLoading[broker._id] ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={saveLoading[broker._id]}
+                          onClick={() => handleSavePayment(agent._id)}
+                          className={`px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${saveLoading[agent._id] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={saveLoading[agent._id]}
                         >
-                          {saveLoading[broker._id] ? 'Saving...' : 'Save Payment'}
+                          {saveLoading[agent._id] ? 'Saving...' : 'Save Payment'}
                         </button>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleBrokerSelect(broker._id)}
+                      onClick={() => handleAgentSelect(agent._id)}
                       className="px-3 py-1 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
                     >
                       View Details
                     </button>
                     <button
-                      onClick={() => handleExportBroker(broker._id)}
+                      onClick={() => handleExportAgent(agent._id)}
                       className={`px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${exportLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       disabled={exportLoading}
                     >
@@ -464,7 +464,7 @@ const BrokerRevenue = ({
                   </div>
                 </div>
                 <div className="text-sm text-gray-600 mt-2">
-                  Avg: {broker.appointments > 0 ? (broker.totalRevenue / broker.appointments).toFixed(0) : 0} Taka
+                  Avg: {agent.appointments > 0 ? (agent.totalRevenue / agent.appointments).toFixed(0) : 0} Taka
                 </div>
               </div>
             )
@@ -475,7 +475,7 @@ const BrokerRevenue = ({
       {/* Records Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Records for {selectedBroker || 'Select a Broker'}
+          Records for {selectedAgent || 'Select a Agent'}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -502,7 +502,7 @@ const BrokerRevenue = ({
                     </td>
                     <td className="p-3 text-right border-b border-gray-200">{record.totalAmount.toFixed(0)} Taka</td>
                     <td className="p-3 text-right border-b border-gray-200 font-bold text-orange-600">
-                      {record.brokerRevenue.toFixed(0)} Taka
+                      {record.agentRevenue.toFixed(0)} Taka
                     </td>
                   </tr>
                 ))}
@@ -515,7 +515,7 @@ const BrokerRevenue = ({
                 <td className="p-3 text-right font-bold text-orange-600">
                   {displayRecords
                     .slice(0, 10)
-                    .reduce((sum, record) => sum + record.brokerRevenue, 0)
+                    .reduce((sum, record) => sum + record.agentRevenue, 0)
                     .toFixed(0)} Taka
                 </td>
               </tr>
@@ -532,4 +532,4 @@ const BrokerRevenue = ({
   );
 };
 
-export default BrokerRevenue;
+export default AgentRevenue;

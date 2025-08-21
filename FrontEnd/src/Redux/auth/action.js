@@ -2,15 +2,15 @@ import * as types from "./types";
 import axios from "axios";
 
 //login user
-export const NurseLogin = (data) => async (dispatch) => {
+export const managerLogin = (data) => async (dispatch) => {
   try {
-    dispatch({ type: types.LOGIN_NURSE_REQUEST });
+    dispatch({ type: types.LOGIN_manager_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/login",
+      "https://medi-plus-diagnostic-center-bdbv.vercel.app/managers/login",
       data
     );
     dispatch({
-      type: types.LOGIN_NURSE_SUCCESS,
+      type: types.LOGIN_manager_SUCCESS,
       payload: {
         message: res.data.message,
         user: res.data.user,
@@ -20,7 +20,7 @@ export const NurseLogin = (data) => async (dispatch) => {
     return res.data;
   } catch (error) {
     dispatch({
-      type: types.LOGIN_NURSE_ERROR,
+      type: types.LOGIN_manager_ERROR,
       payload: {
         message: error,
       },
@@ -113,18 +113,18 @@ export const DoctorRegister = (data) => async (dispatch) => {
   }
 };
 
-// REGISTER NURSE
-export const NurseRegister = (data) => async (dispatch) => {
+// REGISTER manager
+export const managerRegister = (data) => async (dispatch) => {
   try {
-    dispatch({ type: types.REGISTER_NURSE_REQUEST });
+    dispatch({ type: types.REGISTER_manager_REQUEST });
     const res = await axios.post(
-      "https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/register",
+      "https://medi-plus-diagnostic-center-bdbv.vercel.app/managers/register",
       data
     );
     // console.log(res);
     return res.data;
     // dispatch({
-    //   type: types.REGISTER_NURSE_SUCCESS,
+    //   type: types.REGISTER_manager_SUCCESS,
     //   payload: {
     //     message: res.data.message,
     //     user: res.data.user,
@@ -134,7 +134,7 @@ export const NurseRegister = (data) => async (dispatch) => {
     // });
   } catch (error) {
     dispatch({
-      type: types.REGISTER_NURSE_ERROR,
+      type: types.REGISTER_manager_ERROR,
       payload: {
         message: error,
       },
@@ -210,16 +210,16 @@ export const authLogout = () => async (dispatch) => {
   }
 };
 
-//update nurse
-export const UpdateNurse = (data, id) => async (dispatch) => {
+//update manager
+export const Updatemanager = (data, id) => async (dispatch) => {
   try {
-    dispatch({ type: types.EDIT_NURSE_REQUEST });
+    dispatch({ type: types.EDIT_manager_REQUEST });
     const res = await axios.patch(
-      `https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses/${id}`,
+      `https://medi-plus-diagnostic-center-bdbv.vercel.app/managers/${id}`,
       data
     );
     console.log(res);
-    dispatch({ type: types.EDIT_NURSE_SUCCESS, payload: res.data.user });
+    dispatch({ type: types.EDIT_manager_SUCCESS, payload: res.data.user });
   } catch (error) {
     console.log(error);
   }

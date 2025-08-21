@@ -2,7 +2,7 @@ import { Table, Modal, Button, Spin, Avatar, Tag, Descriptions } from "antd";
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { MdPersonAdd, MdPayment, MdOutlineBedroomParent } from "react-icons/md";
-import { FaUserNurse, FaBed, FaAmbulance } from "react-icons/fa";
+import { FaHospitalUser, FaBed, FaAmbulance } from "react-icons/fa";
 import { RiEmpathizeLine, RiAdminLine } from "react-icons/ri";
 import { BsFillBookmarkCheckFill } from "react-icons/bs";
 import Sidebar from "./Sidebar";
@@ -12,8 +12,8 @@ import { GetAllData, GetPatients } from "../../../../Redux/Datas/action";
 const FrontPage = () => {
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
-  const [brokers, setBrokers] = useState([]);
-  const [nurses, setNurses] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [managers, setmanagers] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatientsList] = useState([]);
@@ -41,21 +41,21 @@ const FrontPage = () => {
     setLoading(true);
     await Promise.all([
       fetchDoctors(),
-      fetchBrokers(),
-      fetchNurses(),
+      fetchAgents(),
+      fetchmanagers(),
       fetchAdmins(),
       fetchAppointments(),
     ]);
     setLoading(false);
   };
 
-  const fetchBrokers = async () => {
+  const fetchAgents = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers");
-      setBrokers(response.data);
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/agents");
+      setAgents(response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching brokers:", error);
+      console.error("Error fetching agents:", error);
       return [];
     }
   };
@@ -82,13 +82,13 @@ const FrontPage = () => {
     }
   };
 
-  const fetchNurses = async () => {
+  const fetchmanagers = async () => {
     try {
-      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/nurses");
-      setNurses(response.data);
+      const response = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/managers");
+      setmanagers(response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching nurses:", error);
+      console.error("Error fetching managers:", error);
       return [];
     }
   };
@@ -148,8 +148,8 @@ const FrontPage = () => {
             key: "image",
             render: (text) => <Avatar src={text || "https://res.cloudinary.com/diverse/image/upload/v1674562453/diverse/oipm1ecb1yudf9eln7az.jpg"} />
           },
-          { title: "ID", dataIndex: "nurseID", key: "nurseID" },
-          { title: "Name", dataIndex: "nurseName", key: "nurseName" },
+          { title: "ID", dataIndex: "managerID", key: "managerID" },
+          { title: "Name", dataIndex: "managerName", key: "managerName" },
           { title: "Email", dataIndex: "email", key: "email" },
           { title: "Mobile", dataIndex: "mobile", key: "mobile" },
           { title: "Education", dataIndex: "education", key: "education" },
@@ -163,9 +163,9 @@ const FrontPage = () => {
             )
           },
         ];
-        data = nurses;
+        data = managers;
         break;
-      case "broker":
+      case "agent":
         columns = [
           {
             title: "Image",
@@ -173,7 +173,7 @@ const FrontPage = () => {
             key: "image",
             render: (text) => <Avatar src={text || "https://res.cloudinary.com/diverse/image/upload/v1674562453/diverse/oipm1ecb1yudf9eln7az.jpg"} />
           },
-          { title: "ID", dataIndex: "brokerID", key: "brokerID" },
+          { title: "ID", dataIndex: "agentID", key: "agentID" },
           { title: "Name", dataIndex: "name", key: "name" },
           { title: "Email", dataIndex: "email", key: "email" },
           { title: "Mobile", dataIndex: "mobile", key: "mobile" },
@@ -192,13 +192,13 @@ const FrontPage = () => {
             title: "Actions", 
             key: "actions", 
             render: (_, record) => (
-              <Button type="primary" onClick={() => viewDetails(record, "broker")}>
+              <Button type="primary" onClick={() => viewDetails(record, "agent")}>
                 View Details
               </Button>
             )
           },
         ];
-        data = brokers;
+        data = agents;
         break;
       case "admin":
         columns = [
@@ -336,10 +336,10 @@ const FrontPage = () => {
                 src={record.image || "https://res.cloudinary.com/diverse/image/upload/v1674562453/diverse/oipm1ecb1yudf9eln7az.jpg"}
                 size={100}
               />
-              <h2>{record.nurseName}</h2>
+              <h2>{record.managerName}</h2>
             </div>
             <Descriptions bordered column={2}>
-              <Descriptions.Item label="Nurse ID">{record.nurseID}</Descriptions.Item>
+              <Descriptions.Item label="manager ID">{record.managerID}</Descriptions.Item>
               <Descriptions.Item label="Email">{record.email}</Descriptions.Item>
               <Descriptions.Item label="Mobile">{record.mobile}</Descriptions.Item>
               <Descriptions.Item label="Age">{record.age}</Descriptions.Item>
@@ -352,7 +352,7 @@ const FrontPage = () => {
             </Descriptions>
           </div>
         );
-      case "broker":
+      case "agent":
         return (
           <div>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -366,7 +366,7 @@ const FrontPage = () => {
               </Tag>
             </div>
             <Descriptions bordered column={2}>
-              <Descriptions.Item label="Broker ID">{record.brokerID}</Descriptions.Item>
+              <Descriptions.Item label="Agent ID">{record.agentID}</Descriptions.Item>
               <Descriptions.Item label="Email">{record.email}</Descriptions.Item>
               <Descriptions.Item label="Mobile">{record.mobile}</Descriptions.Item>
               <Descriptions.Item label="Age">{record.age}</Descriptions.Item>
@@ -419,7 +419,7 @@ const FrontPage = () => {
               <Descriptions.Item label="Mobile">{record.mobile}</Descriptions.Item>
               <Descriptions.Item label="Disease">{record.disease}</Descriptions.Item>
               <Descriptions.Item label="Doctor">{record.doctorName}</Descriptions.Item>
-              <Descriptions.Item label="Broker">{record.brokerName}</Descriptions.Item>
+              <Descriptions.Item label="Agent">{record.agentName}</Descriptions.Item>
               <Descriptions.Item label="Address">{record.address}</Descriptions.Item>
             </Descriptions>
             
@@ -438,7 +438,7 @@ const FrontPage = () => {
               <Descriptions.Item label="Total Amount">₹{record.totalAmount}</Descriptions.Item>
               <Descriptions.Item label="Hospital Revenue">₹{record.hospitalRevenue}</Descriptions.Item>
               <Descriptions.Item label="Doctor Revenue">₹{record.doctorRevenue}</Descriptions.Item>
-              <Descriptions.Item label="Broker Revenue">₹{record.brokerRevenue}</Descriptions.Item>
+              <Descriptions.Item label="Agent Revenue">₹{record.agentRevenue}</Descriptions.Item>
             </Descriptions>
           </div>
         );
@@ -484,21 +484,21 @@ const FrontPage = () => {
     },
     {
       title: "Manager",
-      count: nurses.length || data?.nurse || 0,
-      icon: <FaUserNurse className="text-4xl" />,
+      count: managers.length || data?.manager || 0,
+      icon: <FaHospitalUser className="text-4xl" />,
       bgColor: "bg-gradient-to-br from-green-500 to-green-600",
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
       onClick: () => showModal("Manager Details", "manager")
     },
     {
-      title: "Broker",
-      count: brokers.length || 0,
+      title: "Agent",
+      count: agents.length || 0,
       icon: <RiEmpathizeLine className="text-4xl" />,
       bgColor: "bg-gradient-to-br from-purple-500 to-purple-600",
       iconBg: "bg-purple-100",
       iconColor: "text-purple-600",
-      onClick: () => showModal("Broker Details", "broker")
+      onClick: () => showModal("Agent Details", "agent")
     },
     {
       title: "Admin",

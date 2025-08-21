@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GiHamburgerMenu, GiMedicines } from "react-icons/gi";
 import { CgProfile } from "react-icons/cg";
-import { FaUserMd, FaUserNurse, FaHandshake, FaNotesMedical, FaClipboardList, FaMoneyBillWave, FaDollarSign, FaDatabase } from "react-icons/fa";
+import { FaUserMd, FaHospitalUser, FaHandshake, FaNotesMedical, FaClipboardList, FaMoneyBillWave, FaDollarSign, FaDatabase } from "react-icons/fa";
 import { MdDashboard, MdAdminPanelSettings, MdPayment } from "react-icons/md";
 import { BsCalendarPlus, BsCalendarCheck } from "react-icons/bs";
 import { BiLogOut } from "react-icons/bi";
@@ -53,7 +53,7 @@ const Sidebar = ({ onCollapse }) => {
         <div className="flex flex-col h-full overflow-y-auto">
           <nav className="flex-1 py-4">
             
-            {user?.userType === "nurse" && (
+            {user?.userType === "manager" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/manager-profile"
@@ -72,7 +72,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {user?.userType === "nurse" && (
+            {user?.userType === "manager" && (
               <Link 
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/dashboard"
@@ -111,7 +111,7 @@ const Sidebar = ({ onCollapse }) => {
             )}
 
             {/* Appointments Section */}
-            {user?.userType === "nurse" && (
+            {user?.userType === "manager" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/bookappointment"
@@ -130,7 +130,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link> 
             )}
 
-            {/* {user?.userType === "nurse" && (
+            {/* {user?.userType === "manager" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/appointments"
@@ -149,7 +149,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )} */}
             
-            {user?.userType === "nurse" && (
+            {user?.userType === "manager" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/testorders"
@@ -168,7 +168,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {(user?.userType === "nurse" || user?.userType === "admin") && (
+            {(user?.userType === "manager" || user?.userType === "admin") && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/adddoctor"
@@ -193,7 +193,7 @@ const Sidebar = ({ onCollapse }) => {
                 to="/addManager"
               >
                 <div className="flex items-center justify-center w-8 h-8">
-                  <FaUserNurse className="text-xl text-pink-400 group-hover:text-pink-300" />
+                  <FaHospitalUser className="text-xl text-pink-400 group-hover:text-pink-300" />
                 </div>
                 <span 
                   className={`
@@ -225,7 +225,7 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )}
 
-            {(user?.userType === "nurse" || user?.userType === "admin") && (
+            {(user?.userType === "manager" || user?.userType === "admin") && (
               <Link 
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
                 to="/test-management"
@@ -263,10 +263,10 @@ const Sidebar = ({ onCollapse }) => {
               </Link>
             )} */}
 
-            {user?.userType === "nurse" && (
+            {user?.userType === "manager" && (
               <Link
                 className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
-                to="/addbroker"
+                to="/addagent"
               >
                 <div className="flex items-center justify-center w-8 h-8">
                   <FaHandshake className="text-xl text-yellow-400 group-hover:text-yellow-300" />
@@ -277,7 +277,7 @@ const Sidebar = ({ onCollapse }) => {
                     ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
                   `}
                 >
-                  Add Broker
+                  Add Agent
                 </span>
               </Link>
             )}

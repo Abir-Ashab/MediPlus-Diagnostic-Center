@@ -6,7 +6,7 @@ import Sidebar from "../../GlobalFiles/Sidebar";
 
 const notify = (text) => toast(text);
 
-const AddBroker = () => {
+const AddAgent = () => {
   const [loading, setLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -17,43 +17,43 @@ const AddBroker = () => {
     email: "",
     gender: "",
     address: "",
-    brokerID: Date.now(),
+    agentID: Date.now(),
     password: "password123", // Default password
     commissionRate: 5,
     status: "active",
     notes: "",
   };
-  const [BrokerValue, setBrokerValue] = useState(initData);
+  const [AgentValue, setAgentValue] = useState(initData);
 
-  const HandleBrokerChange = (e) => {
-    setBrokerValue({ ...BrokerValue, [e.target.name]: e.target.value });
+  const HandleAgentChange = (e) => {
+    setAgentValue({ ...AgentValue, [e.target.name]: e.target.value });
   };
 
-  const HandleBrokerSubmit = async (e) => {
+  const HandleAgentSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/brokers/register", {
+      const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/agents/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(BrokerValue),
+        body: JSON.stringify(AgentValue),
       });
       
       const data = await response.json();
       
-      if (data.message === "Broker already exists") {
-        notify("Broker Already Exists");
+      if (data.message === "Agent already exists") {
+        notify("Agent Already Exists");
       } else {
-        notify("Broker Added Successfully");
-        console.log("BROKER REGISTERED:", data);
+        notify("Agent Added Successfully");
+        console.log("AGENT REGISTERED:", data);
         // Reset form after successful submission
-        setBrokerValue(initData);
+        setAgentValue(initData);
       }
     } catch (error) {
-      console.error("Error adding broker:", error);
+      console.error("Error adding agent:", error);
       notify("Something went wrong, Please try Again");
     } finally {
       setLoading(false);
@@ -74,8 +74,8 @@ const AddBroker = () => {
                   <UserPlus className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Add Broker</h1>
-                  <p className="text-gray-600">Register a new broker to the system</p>
+                  <h1 className="text-2xl font-bold text-gray-900">Add Agent</h1>
+                  <p className="text-gray-600">Register a new agent to the system</p>
                 </div>
               </div>
               <div className="w-32 h-32 mx-auto mt-4 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
@@ -83,20 +83,20 @@ const AddBroker = () => {
               </div>
             </div>
 
-            <form onSubmit={HandleBrokerSubmit} className="space-y-6">
+            <form onSubmit={HandleAgentSubmit} className="space-y-6">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Broker Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name *</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Full Name"
                         name="name"
-                        value={BrokerValue.name}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.name}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -110,8 +110,8 @@ const AddBroker = () => {
                         type="number"
                         placeholder="Age"
                         name="age"
-                        value={BrokerValue.age}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.age}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="0"
@@ -127,8 +127,8 @@ const AddBroker = () => {
                         type="number"
                         placeholder="Mobile Number"
                         name="mobile"
-                        value={BrokerValue.mobile}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.mobile}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -142,8 +142,8 @@ const AddBroker = () => {
                         type="email"
                         placeholder="abc@abc.com"
                         name="email"
-                        value={BrokerValue.email}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.email}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -153,8 +153,8 @@ const AddBroker = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                     <select
                       name="gender"
-                      value={BrokerValue.gender}
-                      onChange={HandleBrokerChange}
+                      value={AgentValue.gender}
+                      onChange={HandleAgentChange}
                       required
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
@@ -172,8 +172,8 @@ const AddBroker = () => {
                         type="text"
                         placeholder="Address"
                         name="address"
-                        value={BrokerValue.address}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.address}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -193,8 +193,8 @@ const AddBroker = () => {
                         type="number"
                         placeholder="Commission Rate"
                         name="commissionRate"
-                        value={BrokerValue.commissionRate}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.commissionRate}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="0"
@@ -208,8 +208,8 @@ const AddBroker = () => {
                       <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <select
                         name="status"
-                        value={BrokerValue.status}
-                        onChange={HandleBrokerChange}
+                        value={AgentValue.status}
+                        onChange={HandleAgentChange}
                         required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
@@ -242,4 +242,4 @@ const AddBroker = () => {
   );
 };
 
-export default AddBroker;
+export default AddAgent;
