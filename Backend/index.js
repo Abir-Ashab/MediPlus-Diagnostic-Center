@@ -14,7 +14,7 @@ const reportRouter = require('./routes/Reports.Route');
 const agentRoutes = require('./routes/Agents.Route');
 const testOrder = require('./routes/testOrderRoutes');
 const testsRouter = require('./routes/Tests.Route');
-const agentPaymentRoutes = require('./routes/agentPayment.route');
+const agentPaymentRoutes = require('./routes/agentPayment.route')
 
 const app = express();
 

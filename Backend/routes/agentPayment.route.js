@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const AgentPayment = require('../models/agentPayment.model')
+const AgentPayment = require('../models/agentPayment.model');
 const axios = require('axios');
 
 // POST: Save or update payment for a agent
