@@ -381,6 +381,112 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
   }
 });
 
+// Update agent revenue after payment (mirrors doctor logic)
+router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
+  try {
+    const { agentName } = req.params;
+    const { paymentAmount, dateFilter, customDateRange } = req.body;
+    if (!agentName || paymentAmount === undefined) {
+      return res.status(400).json({ message: "Agent name and payment amount are required" });
+    }
+    let dateQuery = {};
+    const now = new Date();
+    switch (dateFilter) {
+      case "week":
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: weekStart, $lte: weekEnd };
+        break;
+      case "month":
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: monthStart, $lte: monthEnd };
+        break;
+      case "year":
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31);
+        yearEnd.setHours(23, 59, 59, 999);
+        dateQuery.createdAt = { $gte: yearStart, $lte: yearEnd };
+        break;
+      case "custom":
+        if (customDateRange && customDateRange.start && customDateRange.end) {
+          const startDate = new Date(customDateRange.start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(customDateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          dateQuery.createdAt = { $gte: startDate, $lte: endDate };
+        }
+        break;
+    }
+    const query = {
+      agentName,
+      agentRevenue: { $gt: 0 },
+      ...dateQuery,
+    };
+    const testOrders = await TestOrderModel.find(query).sort({ createdAt: 1 });
+    if (testOrders.length === 0) {
+      return res.status(404).json({ message: "No pending revenue found for this agent in the specified period" });
+    }
+    const totalPendingRevenue = testOrders.reduce((sum, order) => sum + (order.agentRevenue || 0), 0);
+    if (paymentAmount > totalPendingRevenue) {
+      return res.status(400).json({
+        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(2)})`,
+      });
+    }
+    let remainingPayment = paymentAmount;
+    const updatedOrders = [];
+    for (const order of testOrders) {
+      if (remainingPayment <= 0) break;
+      const orderRevenue = order.agentRevenue || 0;
+      const paymentForThisOrder = Math.min(remainingPayment, orderRevenue);
+      const newAgentRevenue = orderRevenue - paymentForThisOrder;
+      const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
+      const updatedOrder = await TestOrderModel.findByIdAndUpdate(
+        order._id,
+        {
+          agentRevenue: newAgentRevenue,
+          hospitalRevenue: newHospitalRevenue,
+          lastPaymentDate: new Date(),
+          lastPaymentAmount: paymentForThisOrder,
+          totalPaymentsMade: (order.totalPaymentsMade || 0) + paymentForThisOrder,
+          $push: {
+            paymentHistory: {
+              paymentDate: new Date(),
+              paymentAmount: paymentForThisOrder,
+              previousRevenue: orderRevenue,
+              newRevenue: newAgentRevenue,
+            },
+          },
+        },
+        { new: true }
+      );
+      updatedOrders.push(updatedOrder);
+      remainingPayment -= paymentForThisOrder;
+    }
+    res.status(200).json({
+      message: "Agent revenue updated successfully",
+      paymentProcessed: paymentAmount,
+      ordersUpdated: updatedOrders.length,
+      remainingPayment,
+      updatedOrders: updatedOrders.map((order) => ({
+        orderId: order._id,
+        patientName: order.patientName,
+        previousRevenue: testOrders.find((o) => o._id.toString() === order._id.toString())?.agentRevenue || 0,
+        newRevenue: order.agentRevenue,
+        paymentApplied: (testOrders.find((o) => o._id.toString() === order._id.toString())?.agentRevenue || 0) - order.agentRevenue,
+      })),
+    });
+  } catch (error) {
+    console.error("Error updating agent revenue:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get revenue distribution report
 router.get("/reports/revenue", async (req, res) => {
   try {

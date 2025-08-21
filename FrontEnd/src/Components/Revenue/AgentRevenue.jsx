@@ -22,6 +22,7 @@ const AgentRevenue = ({
   const [saveLoading, setSaveLoading] = useState({});
   const [allTestOrders, setAllTestOrders] = useState([]);
   const [testsMap, setTestsMap] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0); // For force refresh after payment
   const [commissionOverrides, setCommissionOverrides] = useState({});
 
   // Fetch all tests for commissions
@@ -84,7 +85,7 @@ const AgentRevenue = ({
     setCommissionOverrides(prev => ({ ...prev, [key]: Number(value) }));
   };
 
-  // Fetch all test orders
+  // Fetch all test orders (refresh when payment is made)
   useEffect(() => {
     const fetchAllTestOrders = async () => {
       try {
@@ -99,7 +100,7 @@ const AgentRevenue = ({
       }
     };
     fetchAllTestOrders();
-  }, []);
+  }, [refreshKey]);
 
 
   // Compute agents data
@@ -122,33 +123,11 @@ const AgentRevenue = ({
   const totalRecords = filteredTestOrders.length;
   const activeAgents = computedAgents.length;
 
-  // Fetch payment data
+  // Fetch payment data (dummy, for UI parity; real due is from test orders)
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        const promises = computedAgents.map((agent) =>
-          axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments/${agent._id}`, {
-            params: { dateFilter: agentDateFilter },
-          })
-        );
-        const responses = await Promise.all(promises);
-        const payments = responses.reduce((acc, res, index) => {
-          const payment = res.data.find((p) => p.dateFilter === agentDateFilter) || {};
-          return { ...acc, [computedAgents[index]._id]: payment.paymentAmount || 0 };
-        }, {});
-        setAgentPayments(payments);
-      } catch (error) {
-        console.error("Error fetching payments:", error.message, error.response?.data, error.response?.status);
-        toast.error(`Failed to fetch payment data: ${error.message}`, {
-          position: "top-right",
-          autoClose: 4000,
-        });
-      }
-    };
-    if (computedAgents.length > 0) {
-      fetchPayments();
-    }
-  }, [computedAgents, agentDateFilter]);
+    // Optionally, fetch agent payment records if you have a separate payment log
+    // For now, we just keep the input state
+  }, [computedAgents, agentDateFilter, refreshKey]);
 
   // Handle payment input change
   const handlePaymentChange = (agentId, payment) => {
@@ -159,40 +138,81 @@ const AgentRevenue = ({
     }));
   };
 
-  // Save payment to backend
+  // Save payment to backend and update test orders (mirrors doctor logic)
   const handleSavePayment = async (agentId) => {
+    if (!agentId || !agentDateFilter) {
+      toast.error("Agent name or date filter is missing");
+      return;
+    }
+
     setSaveLoading((prev) => ({ ...prev, [agentId]: true }));
-    const paymentAmount = agentPayments[agentId] || 0;
+    const paymentAmount = Number(agentPayments[agentId]) || 0;
+
+    if (isNaN(paymentAmount) || paymentAmount < 0) {
+      toast.error("Invalid payment amount");
+      setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
+      return;
+    }
+
+    if (paymentAmount === 0) {
+      toast.error("Payment amount must be greater than 0");
+      setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
+      return;
+    }
+
+    // Prepare payload for agent payment
+    const paymentPayload = {
+      agentName: agentId,
+      paymentAmount,
+      dateFilter: agentDateFilter,
+    };
+
+    // Only include customDateRange if dateFilter is 'custom' and it has valid values
+    if (agentDateFilter === 'custom' && agentCustomDateRange.start && agentCustomDateRange.end) {
+      paymentPayload.customDateRange = {
+        start: agentCustomDateRange.start,
+        end: agentCustomDateRange.end,
+      };
+    }
+
+    // Prepare payload for reducing agent revenue from test orders
+    const revenueUpdatePayload = {
+      paymentAmount,
+      dateFilter: agentDateFilter,
+    };
+
+    if (agentDateFilter === 'custom' && agentCustomDateRange.start && agentCustomDateRange.end) {
+      revenueUpdatePayload.customDateRange = {
+        start: agentCustomDateRange.start,
+        end: agentCustomDateRange.end,
+      };
+    }
 
     try {
-      const response = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments`, {
-        agentName: agentId,
-        paymentAmount,
-        dateFilter: agentDateFilter,
-        customDateRange: agentDateFilter === 'custom' ? agentCustomDateRange : {},
-      });
-      if (response.data.message === 'Payment cannot exceed total revenue') {
-        toast.error("Payment cannot exceed total revenue!", {
-          position: "top-right",
-          autoClose: 4000,
-        });
-        setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
-        return;
-      }
+      // Optionally, save the payment record if you have a payment log API
+      // await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/agentPayments`, paymentPayload);
+
+      // Update the test orders to reduce agent revenue
+      const revenueResponse = await axios.patch(
+        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/agents/${agentId}/reduce-revenue`,
+        revenueUpdatePayload
+      );
+
       setAgentPayments((prev) => ({
         ...prev,
-        [agentId]: response.data.paymentAmount || 0,
+        [agentId]: paymentAmount,
       }));
-      toast.success("Payment saved successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+
+      setRefreshKey(prev => prev + 1);
+
+      toast.success(`Payment saved successfully! Updated ${revenueResponse.data.ordersUpdated} orders.`);
     } catch (error) {
-      console.error("Error saving payment:", error.message, error.response?.data, error.response?.status);
-      toast.error(`Failed to save payment: ${error.message}`, {
-        position: "top-right",
-        autoClose: 4000,
-      });
+      console.error("Error saving payment:", error);
+      const errorMessage = error.response?.data?.message || "Failed to save payment";
+      toast.error(errorMessage);
+      if (error.response?.status === 400) {
+        console.log("Bad Request details:", error.response.data);
+      }
     } finally {
       setSaveLoading((prev) => ({ ...prev, [agentId]: false }));
     }
