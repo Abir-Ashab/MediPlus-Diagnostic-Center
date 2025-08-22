@@ -47,10 +47,10 @@ export const usePrintReport = () => {
     }
 
     const baseAmount = order.baseAmount || order.totalAmount || 0;
-    const vatRate = order.vatRate || 0;
-    const vatAmount = order.vatAmount || 0;
+    // const vatRate = order.vatRate || 0;
+    // const vatAmount = order.vatAmount || 0;
     const discountAmount = order.discountAmount || 0;
-    const totalWithVat = baseAmount + vatAmount - discountAmount;
+    const totalWithVat = baseAmount - discountAmount;
     const paidAmount = order.paidAmount || 0;
     const dueAmount = order.dueAmount || (totalWithVat - discountAmount - paidAmount);
 
@@ -231,7 +231,7 @@ export const usePrintReport = () => {
           <div class="totals-box">
             <div class="total-line"><strong>Total:</strong> ${baseAmount.toFixed(2)}</div>
             <div class="total-line"><strong>Discount:</strong> ${discountAmount.toFixed(2)}</div>
-            <div class="total-line"><strong>Add Vat (${vatRate}%):</strong> ${vatAmount.toFixed(2)}</div>
+            // <div class="total-line"><strong>Add Vat (0%):</strong> 0 </div>
             <br/>
             <div style="border-top: 1px solid #000; width: 150px; margin-bottom: 5px;"></div>
             <div class="total-line"><strong>Total+Vat:</strong> ${totalWithVat.toFixed(2)}</div>

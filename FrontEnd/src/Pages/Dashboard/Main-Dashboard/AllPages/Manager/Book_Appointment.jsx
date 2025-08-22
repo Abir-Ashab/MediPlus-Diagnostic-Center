@@ -55,7 +55,7 @@ const Book_Appointment = () => {
 
   const [selectedTests, setSelectedTests] = useState([{ id: Date.now(), testId: "", customPrice: null }]);
   const [baseTotal, setBaseTotal] = useState(0);
-  const [vatRate, setVatRate] = useState(1); 
+  const [vatRate, setVatRate] = useState(0); 
   const [vatAmount, setVatAmount] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [useManualTotal, setUseManualTotal] = useState(false);
@@ -63,7 +63,7 @@ const Book_Appointment = () => {
   const [paidAmount, setPaidAmount] = useState(0);
   const [testsList, setTestsList] = useState([]);
 
-  const finalTotal = useManualTotal ? manualTotal : (baseTotal + vatAmount - discountAmount);
+  const finalTotal = useManualTotal ? manualTotal : (baseTotal - discountAmount);
   const dueAmount = finalTotal - paidAmount;
 
   useEffect(() => {
@@ -165,12 +165,12 @@ const Book_Appointment = () => {
     setBaseTotal(base);
     
     // Calculate VAT amount
-    const vat = (base * vatRate) / 100;
-    setVatAmount(vat);
+    // const vat = (base * vatRate) / 100;
+    // setVatAmount(vat);
     
     // Set manual total if not manually overridden
     if (!useManualTotal) {
-      setManualTotal(base + vat - discountAmount);
+      setManualTotal(base - discountAmount);
     }
   }, [selectedTests, testsList, useManualTotal, vatRate, discountAmount]);
 
@@ -320,7 +320,7 @@ const Book_Appointment = () => {
     setManualTotal(0);
     setPaidAmount(0);
     setDiscountAmount(0);
-    setVatRate(1);
+    setVatRate(0);
   };
 
   // Step navigation functions
@@ -436,8 +436,8 @@ const Book_Appointment = () => {
         time: testData.time,
         tests: testsWithPrices,
         baseAmount: baseTotal,
-        vatRate: vatRate,
-        vatAmount: vatAmount,
+        // vatRate: vatRate,
+        // vatAmount: vatAmount,
         discountAmount: discountAmount,
         totalAmount: finalTotal,
         paidAmount: paidAmount,
@@ -626,8 +626,8 @@ const Book_Appointment = () => {
                     selectedTests={selectedTests}
                     testsList={testsList}
                     baseTotal={baseTotal}
-                    vatRate={vatRate}
-                    vatAmount={vatAmount}
+                    // vatRate={vatRate}
+                    // vatAmount={vatAmount}
                     discountAmount={discountAmount}
                     finalTotal={finalTotal}
                     paidAmount={paidAmount}
@@ -638,7 +638,7 @@ const Book_Appointment = () => {
                     setUseManualTotal={setUseManualTotal}
                     setManualTotal={setManualTotal}
                     setPaidAmount={setPaidAmount}
-                    setVatRate={setVatRate}
+                    // setVatRate={setVatRate}
                     setDiscountAmount={setDiscountAmount}
                     HandleTestOrderSubmit={HandleTestOrderSubmit}
                     deselectTest={deselectTest}

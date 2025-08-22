@@ -204,7 +204,6 @@ const DoctorRevenue = ({
     try {
       console.log("Sending payment payload:", paymentPayload); // Debug log
       
-      // First, save the payment record
       const paymentResponse = await axios.post(`https://medi-plus-diagnostic-center-bdbv.vercel.app/doctorPayments`, paymentPayload);
       
       // Then, update the test orders to reduce doctor revenue

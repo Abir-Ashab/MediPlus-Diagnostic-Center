@@ -70,7 +70,7 @@ const testOrderSchema = new mongoose.Schema(
     },
     vatRate: {
       type: Number,
-      default: 1,
+      default: 0,
       min: 0,
     },
     vatAmount: {
@@ -196,17 +196,18 @@ testOrderSchema.pre("save", async function (next) {
       testOrder.totalAmount = testOrder.baseAmount + testOrder.vatAmount - (testOrder.discountAmount || 0);
     }
     if (!testOrder.isModified("dueAmount")) {
-      testOrder.dueAmount = testOrder.totalAmount - (testOrder.paidAmount || 0);
+      let due = testOrder.totalAmount - (testOrder.paidAmount || 0);
+      testOrder.dueAmount = due < 0 ? 0 : due;
     }
 
-    // Aggregate dueAmount for the patient
     if (testOrder.patientID) {
       const previousOrders = await TestOrderModel.find({
         patientID: testOrder.patientID,
-        _id: { $ne: testOrder._id }, // Exclude current order
+        _id: { $ne: testOrder._id }, 
       });
       const previousDueAmount = previousOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
-      testOrder.dueAmount = testOrder.totalAmount - (testOrder.paidAmount || 0) + previousDueAmount;
+      let due = testOrder.totalAmount - (testOrder.paidAmount || 0) + previousDueAmount;
+      testOrder.dueAmount = due < 0 ? 0 : due;
     }
 
     next();

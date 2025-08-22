@@ -46,7 +46,7 @@ const appointmentSchema = mongoose.Schema({
   // VAT percentage and amount
   vatRate: {
     type: Number,
-    default: 1 // 1% default VAT
+    default: 0 // 0% default VAT
   },
 
   vatAmount: {

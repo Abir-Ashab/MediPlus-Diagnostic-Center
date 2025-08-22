@@ -11,7 +11,9 @@ const recalculatePatientDueAmounts = async (patientID) => {
   for (const order of orders) {
     const orderDue = order.totalAmount - (order.paidAmount || 0);
     totalDue += orderDue;
-    await TestOrderModel.findByIdAndUpdate(order._id, { dueAmount: totalDue }, { new: true });
+    // Ensure dueAmount is never negative
+    const safeDue = totalDue < 0 ? 0 : totalDue;
+    await TestOrderModel.findByIdAndUpdate(order._id, { dueAmount: safeDue }, { new: true });
   }
 };
 
@@ -74,10 +76,10 @@ router.post("/", async (req, res) => {
       doctorName,
       agentName,
       baseAmount,
-      vatRate: vatRate || 1,
-      vatAmount: baseAmount ? (baseAmount * (vatRate || 1)) / 100 : 0,
+      vatRate: vatRate || 0,
+      vatAmount: baseAmount ? (baseAmount * (vatRate || 0)) / 100 : 0,
       discountAmount: discountAmount || 0,
-      totalAmount: totalAmount || baseAmount + (baseAmount * (vatRate || 1)) / 100 - (discountAmount || 0),
+      totalAmount: totalAmount || baseAmount + (baseAmount * (vatRate || 0)) / 100 - (discountAmount || 0),
       paidAmount: paidAmount || 0,
       doctorRevenue,
       hospitalRevenue,

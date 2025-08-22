@@ -56,7 +56,7 @@ const FinancialSummaryForm = ({
                   </div>
                   
                   {/* VAT Settings */}
-                  <div className="flex justify-between items-center py-2">
+                  {/* <div className="flex justify-between items-center py-2">
                     <span className="text-sm font-medium text-gray-600">VAT Rate:</span>
                     <div className="flex items-center gap-2">
                       <div className="relative">
@@ -72,12 +72,12 @@ const FinancialSummaryForm = ({
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                   
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                  {/* <div className="flex justify-between items-center py-2 border-b border-slate-200">
                     <span className="text-sm font-medium text-gray-600">VAT Amount:</span>
                     <span className="text-base font-semibold text-green-600">৳{vatAmount.toFixed(2)}</span>
-                  </div>
+                  </div> */}
                   
                   {/* Discount/Less Settings */}
                   <div className="flex justify-between items-center py-2">
@@ -130,7 +130,7 @@ const FinancialSummaryForm = ({
                       />
                     </div>
                     <div className="text-xs text-indigo-600 bg-indigo-50 p-2 rounded-lg">
-                      Manual override active. Auto-calculated: ৳{(baseTotal + vatAmount - discountAmount).toFixed(2)}
+                      Manual override active. Auto-calculated: ৳{(baseTotal - discountAmount).toFixed(2)}
                     </div>
                   </div>
                 ) : (
@@ -171,7 +171,7 @@ const FinancialSummaryForm = ({
                   onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                   className="h-12 pl-10 rounded-xl border-2 border-indigo-200 focus:border-indigo-400"
                   min="0"
-                  max={finalTotal}
+                  max={finalTotal + previousDue}
                 />
               </div>
             </div>

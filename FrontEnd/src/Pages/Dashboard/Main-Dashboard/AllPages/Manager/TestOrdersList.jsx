@@ -120,7 +120,7 @@ const TestOrdersList = () => {
         time: formData.time ? moment(formData.time).format("HH:mm") : undefined,
         totalAmount: formData.baseAmount
           ? Number(formData.baseAmount) +
-            (Number(formData.baseAmount) * Number(formData.vatRate || 1)) / 100 -
+            (Number(formData.baseAmount) * Number(formData.vatRate || 0)) / 100 -
             Number(formData.discountAmount || 0)
           : formData.totalAmount,
         dueAmount: formData.totalAmount
@@ -192,7 +192,7 @@ const TestOrdersList = () => {
       date: moment(order.date).format("YYYY-MM-DD"),
       time: moment(order.time, "HH:mm"),
       baseAmount: order.baseAmount || 0,
-      vatRate: order.vatRate || 1,
+      vatRate: order.vatRate || 0,
       vatAmount: order.vatAmount || 0,
       discountAmount: order.discountAmount || 0,
       paidAmount: order.paidAmount || 0,
@@ -868,7 +868,7 @@ const TestOrdersList = () => {
                             ৳{selectedOrder.baseAmount || 0}
                           </span>
                         </div>
-                        <div className="flex justify-between">
+                        {/* <div className="flex justify-between">
                           <span className="text-gray-600">VAT Rate:</span>
                           <span className="font-medium text-gray-900">
                             {selectedOrder.vatRate || 1}%
@@ -879,7 +879,7 @@ const TestOrdersList = () => {
                           <span className="font-medium text-gray-900">
                             ৳{selectedOrder.vatAmount || 0}
                           </span>
-                        </div>
+                        </div> */}
                         <div className="flex justify-between">
                           <span className="text-gray-600">Discount Amount:</span>
                           <span className="font-medium text-gray-900">
@@ -1163,7 +1163,7 @@ const TestOrdersList = () => {
                           onChange={handleInputChange}
                         />
                       </div>
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           VAT Rate (%)
                         </label>
@@ -1173,8 +1173,8 @@ const TestOrdersList = () => {
                           value={formData.vatRate || 1}
                           onChange={handleInputChange}
                         />
-                      </div>
-                      <div>
+                      </div> */}
+                      {/* <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           VAT Amount
                         </label>
@@ -1184,7 +1184,7 @@ const TestOrdersList = () => {
                           value={formData.vatAmount || ""}
                           onChange={handleInputChange}
                         />
-                      </div>
+                      </div> */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Discount Amount
@@ -1228,39 +1228,6 @@ const TestOrdersList = () => {
                           value={formData.dueAmount || ""}
                           onChange={handleInputChange}
                           disabled
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Hospital Revenue
-                        </label>
-                        <Input
-                          type="number"
-                          name="hospitalRevenue"
-                          value={formData.hospitalRevenue || ""}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Doctor Revenue
-                        </label>
-                        <Input
-                          type="number"
-                          name="doctorRevenue"
-                          value={formData.doctorRevenue || ""}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Agent Revenue
-                        </label>
-                        <Input
-                          type="number"
-                          name="agentRevenue"
-                          value={formData.agentRevenue || ""}
-                          onChange={handleInputChange}
                         />
                       </div>
                     </div>
