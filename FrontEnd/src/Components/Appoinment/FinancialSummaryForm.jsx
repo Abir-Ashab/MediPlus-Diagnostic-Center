@@ -24,7 +24,7 @@ const FinancialSummaryForm = ({
   setDiscountAmount,
   HandleTestOrderSubmit,
   deselectTest,
-  previousDue
+  previousDue = 0
 }) => {
   return (
     <div className="space-y-8">

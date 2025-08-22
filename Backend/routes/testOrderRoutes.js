@@ -90,7 +90,13 @@ router.post("/", async (req, res) => {
 
     const newTestOrder = new TestOrderModel(testOrderData);
     const savedTestOrder = await newTestOrder.save();
-    res.status(201).json(savedTestOrder);
+    // Calculate previous due for this patient (excluding this new order)
+    let previousDue = 0;
+    if (patientID) {
+      const otherOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id } });
+      previousDue = otherOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+    }
+    res.status(201).json({ ...savedTestOrder.toObject(), previousDue });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -185,11 +191,15 @@ router.put("/:id", async (req, res) => {
     const updatedTestOrder = await testOrder.save();
 
     // Recalculate dueAmount for all patient orders
+    let previousDue = 0;
     if (testOrder.patientID) {
       await recalculatePatientDueAmounts(testOrder.patientID);
+      // Calculate previous due for this patient (excluding this updated order)
+      const otherOrders = await TestOrderModel.find({ patientID: testOrder.patientID, _id: { $ne: testOrder._id } });
+      previousDue = otherOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
     }
 
-    res.status(200).json(updatedTestOrder);
+    res.status(200).json({ ...updatedTestOrder.toObject(), previousDue });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
