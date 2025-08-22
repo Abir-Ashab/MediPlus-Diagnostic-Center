@@ -219,8 +219,8 @@ testOrderSchema.pre("save", async function (next) {
 // Post-save middleware to update agent's totalCommission dynamically (test-wise)
 testOrderSchema.post("save", async function (doc) {
   try {
+    // 1. Update agent commission as before
     if (doc.agentName && doc.tests && doc.tests.length > 0) {
-      // Sum up agent commission for all tests in this order
       const totalAgentCommission = doc.tests.reduce((sum, t) => sum + ((t.testPrice || 0) * (t.agentCommission || 0) / 100), 0);
       if (totalAgentCommission > 0) {
         const AgentModel = mongoose.model("agent");
@@ -231,8 +231,25 @@ testOrderSchema.post("save", async function (doc) {
         }
       }
     }
+
+    // 2. Recalculate and update dueAmount for all test orders of this patient
+    if (doc.patientID) {
+      const TestOrderModel = mongoose.model("testorder");
+      const allOrders = await TestOrderModel.find({ patientID: doc.patientID }).sort({ createdAt: 1 });
+      let runningDue = 0;
+      for (const order of allOrders) {
+        const thisDue = (order.totalAmount || 0) - (order.paidAmount || 0);
+        runningDue += thisDue;
+        // Ensure dueAmount is never negative
+        const safeDue = runningDue < 0 ? 0 : runningDue;
+        if (order.dueAmount !== safeDue) {
+          order.dueAmount = safeDue;
+          await order.save();
+        }
+      }
+    }
   } catch (error) {
-    console.error("Error updating agent commission:", error);
+    console.error("Error updating agent commission or recalculating due:", error);
   }
 });
 

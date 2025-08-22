@@ -64,7 +64,8 @@ const Book_Appointment = () => {
   const [testsList, setTestsList] = useState([]);
 
   const finalTotal = useManualTotal ? manualTotal : (baseTotal - discountAmount);
-  const dueAmount = finalTotal - paidAmount;
+  // Allow paidAmount up to (finalTotal + previousDue), due is (finalTotal + previousDue - paidAmount)
+  const dueAmount = finalTotal + previousDue - paidAmount;
 
   useEffect(() => {
     const fetchTests = async () => {

@@ -171,19 +171,20 @@ const FinancialSummaryForm = ({
                   onChange={(e) => setPaidAmount(parseFloat(e.target.value))}
                   className="h-12 pl-10 rounded-xl border-2 border-indigo-200 focus:border-indigo-400"
                   min="0"
-                  max={finalTotal}
+                  max={finalTotal + previousDue}
                 />
+                <div className="text-xs text-gray-500 mt-1">Max: ৳{(finalTotal + previousDue).toFixed(2)} (includes previous due)</div>
               </div>
             </div>
 
             {/* Due Amount */}
             <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl p-6 border border-red-200/50">
-              <div className="text-2xl font-bold text-red-600 mb-3">৳{(dueAmount + previousDue).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-600 mb-3">৳{(finalTotal + previousDue - paidAmount).toFixed(2)}</div>
               <div className="text-sm text-red-700 mb-4">Due Amount</div>
               <div className={`h-12 rounded-xl flex items-center px-4 font-medium ${
-                (dueAmount + previousDue) <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                (finalTotal + previousDue - paidAmount) <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
               }`}>
-                {(dueAmount + previousDue) <= 0 ? (
+                {(finalTotal + previousDue - paidAmount) <= 0 ? (
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4" />
                     <span>Fully Paid</span>

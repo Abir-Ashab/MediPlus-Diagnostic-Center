@@ -231,7 +231,6 @@ export const usePrintReport = () => {
           <div class="totals-box">
             <div class="total-line"><strong>Total:</strong> ${baseAmount.toFixed(2)}</div>
             <div class="total-line"><strong>Discount:</strong> ${discountAmount.toFixed(2)}</div>
-            // <div class="total-line"><strong>Add Vat (0%):</strong> 0 </div>
             <br/>
             <div style="border-top: 1px solid #000; width: 150px; margin-bottom: 5px;"></div>
             <div class="total-line"><strong>Total+Vat:</strong> ${totalWithVat.toFixed(2)}</div>
