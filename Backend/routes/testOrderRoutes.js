@@ -88,13 +88,40 @@ router.post("/", async (req, res) => {
       tests: updatedTests,
     };
 
+    let overPayment = 0;
+    let paid = paidAmount || 0;
+    let currentDue = (testOrderData.totalAmount || 0) - paid;
+    if (currentDue < 0) {
+      overPayment = -currentDue;
+      currentDue = 0;
+      paid = testOrderData.totalAmount; // Only pay up to this order's total
+    }
+    testOrderData.paidAmount = paid;
+    testOrderData.dueAmount = currentDue;
+
+    // Save the new order first
     const newTestOrder = new TestOrderModel(testOrderData);
     const savedTestOrder = await newTestOrder.save();
-    // Calculate previous due for this patient (excluding this new order)
+
+    // If there is overpayment, apply it to previous unpaid orders (oldest first)
     let previousDue = 0;
     if (patientID) {
-      const otherOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id } });
-      previousDue = otherOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+      let remaining = overPayment;
+      const otherOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id }, dueAmount: { $gt: 0 } }).sort({ createdAt: 1 });
+      for (const order of otherOrders) {
+        if (remaining <= 0) break;
+        const orderDue = order.dueAmount || 0;
+        const payToThisOrder = Math.min(orderDue, remaining);
+        if (payToThisOrder > 0) {
+          order.paidAmount = (order.paidAmount || 0) + payToThisOrder;
+          order.dueAmount = orderDue - payToThisOrder;
+          await order.save();
+          remaining -= payToThisOrder;
+        }
+      }
+      // Calculate previous due after payment
+      const updatedOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id } });
+      previousDue = updatedOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
     }
     res.status(201).json({ ...savedTestOrder.toObject(), previousDue });
   } catch (error) {

@@ -24,7 +24,7 @@ const FinancialSummaryForm = ({
   setDiscountAmount,
   HandleTestOrderSubmit,
   deselectTest,
-  previousDue = 0
+  previousDue
 }) => {
   return (
     <div className="space-y-8">
@@ -168,10 +168,10 @@ const FinancialSummaryForm = ({
                 <Input
                   type="number"
                   value={paidAmount}
-                  onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setPaidAmount(parseFloat(e.target.value))}
                   className="h-12 pl-10 rounded-xl border-2 border-indigo-200 focus:border-indigo-400"
                   min="0"
-                  max={finalTotal + previousDue}
+                  max={finalTotal}
                 />
               </div>
             </div>
