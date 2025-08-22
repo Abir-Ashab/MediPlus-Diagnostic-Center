@@ -134,7 +134,8 @@ const Book_Appointment = () => {
               email: latest.email || "",
               address: latest.address || "",
             }));
-            setExistingPatientID(latest.patientID);
+            // Use patientID if available, otherwise fallback to _id
+            setExistingPatientID(latest.patientID || latest._id);
             const totalPrevDue = prevOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
             setPreviousDue(totalPrevDue);
           } else {
@@ -370,21 +371,18 @@ const Book_Appointment = () => {
 
   const HandleTestOrderSubmit = async (e) => {
     e.preventDefault();
-    
     if (commonData.gender === "") {
       return toast.error("Please fill all the required fields", {
         position: "top-right",
         autoClose: 3000,
       });
     }
-    
     if (!testData.date) {
       return toast.error("Please select a date for the test order", {
         position: "top-right",
         autoClose: 3000,
       });
     }
-    
     const hasSelectedTest = selectedTests.some(test => test.testId !== "");
     if (!hasSelectedTest) {
       return toast.error("Please select at least one test", {
@@ -392,17 +390,14 @@ const Book_Appointment = () => {
         autoClose: 3000,
       });
     }
-
     const testsWithPrices = selectedTests
       .filter(test => test.testId !== "")
       .map(test => {
         const selectedTest = testsList.find(t => t.testId === parseInt(test.testId)) || 
                            TestsList.find(t => t.id === parseInt(test.testId));
-        
         const finalPrice = test.customPrice !== null && test.customPrice !== undefined 
           ? test.customPrice 
           : selectedTest.price;
-        
         return { 
           testName: selectedTest.title, 
           testPrice: finalPrice,
@@ -411,7 +406,6 @@ const Book_Appointment = () => {
           category: selectedTest.category
         };
       });
-
     setLoading(true);
     try {
       const patientInfo = {
@@ -422,46 +416,61 @@ const Book_Appointment = () => {
         email: commonData.email,
         address: commonData.address,
       };
-
       let patientID;
       if (existingPatientID) {
         patientID = existingPatientID;
       } else {
-        const patientResponse = await dispatch(AddPatients({...patientInfo, patientId: Date.now()}));
-        patientID = patientResponse.id;
-      }
+        // Create patient and use backend-generated _id
+        const patientResponse = await dispatch(AddPatients({...patientInfo}));
+        // Try to get _id from different possible locations
+        console.log("Patient Response:", patientResponse);
 
+        patientID = patientResponse?._id || patientResponse?.data?._id || patientResponse?.id;
+      }
+      if (!patientID) {
+        setLoading(false);
+        toast.error("Could not determine patient ID after patient creation.", {
+          position: "top-right",
+          autoClose: 4000,
+        });
+        return;
+      }
       const testOrderData = {
         ...commonData,
         date: testData.date,
         time: testData.time,
         tests: testsWithPrices,
         baseAmount: baseTotal,
-        // vatRate: vatRate,
-        // vatAmount: vatAmount,
         discountAmount: discountAmount,
         totalAmount: finalTotal,
         paidAmount: paidAmount,
-        dueAmount: finalTotal - paidAmount,
         orderType: 'test',
         patientID,
       };
-      
+
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
+
+      // Use the correct patientID for pay-due endpoint
+      if (paidAmount > finalTotal) {
+        const payPrevDue = paidAmount - finalTotal;
+        try {
+          await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/${commonData.mobile}/pay-due`, {
+            paymentAmount: payPrevDue
+          });
+        } catch (err) {
+          toast.warn("Paid for previous due, but could not update all previous orders.");
+        }
+      }
       setLoading(false);
-      
       setLastCreatedOrder({
         ...testOrderData,
         _id: response.data._id || Date.now().toString()
       });
-      
       setShowPrintModal(true);
-      
       toast.success("Test order created successfully!", {
         position: "top-right",
         autoClose: 3000,
       });
-      
       clearFormAfterSubmit();
     } catch (error) {
       setLoading(false);

@@ -131,15 +131,15 @@ router.post("/", async (req, res) => {
 });
 
 // Pay due for a patient: distribute payment across all unpaid test orders (oldest first)
-router.patch("/patients/:patientId/pay-due", async (req, res) => {
+// Pay due for a patient: distribute payment across all unpaid test orders (oldest first) using mobile
+router.patch("/patients/pay-due", async (req, res) => {
   try {
-    const { patientId } = req.params;
-    const { paymentAmount } = req.body;
-    if (!patientId || typeof paymentAmount !== "number" || paymentAmount <= 0) {
-      return res.status(400).json({ message: "patientId and positive paymentAmount are required" });
+    const { mobile, paymentAmount } = req.body;
+    if (!mobile || typeof paymentAmount !== "number" || paymentAmount <= 0) {
+      return res.status(400).json({ message: "mobile and positive paymentAmount are required" });
     }
-    // Find all unpaid test orders for this patient, oldest first
-    const orders = await TestOrderModel.find({ patientID: patientId, dueAmount: { $gt: 0 } }).sort({ createdAt: 1 });
+  // Find all unpaid test orders for this patient by mobile, sort by dueAmount descending (largest due first)
+  const orders = await TestOrderModel.find({ mobile, dueAmount: { $gt: 0 } }).sort({ dueAmount: -1, createdAt: 1 });
     if (!orders.length) {
       return res.status(404).json({ message: "No unpaid test orders found for this patient" });
     }
@@ -162,7 +162,7 @@ router.patch("/patients/:patientId/pay-due", async (req, res) => {
       }
     }
     // Optionally, recalculate all dueAmounts for this patient to ensure consistency
-    await recalculatePatientDueAmounts(patientId);
+    await recalculatePatientDueAmounts(orders[0].patientID);
     res.status(200).json({
       message: "Payment distributed across test orders",
       paymentProcessed: paymentAmount - remaining,
