@@ -52,7 +52,8 @@ export const usePrintReport = () => {
     const discountAmount = order.discountAmount || 0;
     const totalWithVat = baseAmount - discountAmount;
     const paidAmount = order.paidAmount || 0;
-    const dueAmount = order.dueAmount || (totalWithVat - discountAmount - paidAmount);
+    let dueAmount = order.dueAmount || (totalWithVat - discountAmount - paidAmount);
+    if (dueAmount < 0) dueAmount = 0;
 
     printWindow.document.write(`
       <html>

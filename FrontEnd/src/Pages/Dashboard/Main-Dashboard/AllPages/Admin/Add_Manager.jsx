@@ -171,7 +171,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address </label>
                 <NarayanganjAddressSelect
                   value={managerValue.address}
                   onChange={val => setmanagerValue({ ...managerValue, address: val })}

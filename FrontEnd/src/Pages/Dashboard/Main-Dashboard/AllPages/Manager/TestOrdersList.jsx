@@ -48,7 +48,7 @@ const TestOrdersList = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("schedule");
+  const [sortBy, setSortBy] = useState("created");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -376,7 +376,7 @@ const TestOrdersList = () => {
                                   Patient
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
-                                  Contact
+                                  Last Paid
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
                                   Tests
@@ -423,20 +423,9 @@ const TestOrdersList = () => {
                                     </div>
                                   </td>
                                   <td className="p-4">
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm text-gray-700">
-                                          {order.mobile}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <MapPin className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm text-gray-700">
-                                          {order.email || "N/A"}
-                                        </span>
-                                      </div>
-                                    </div>
+                                    <span className="text-sm text-green-700 font-semibold">
+                                      {order.updatedAt ? `${new Date(order.updatedAt).toLocaleDateString()} ${new Date(order.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}` : 'N/A'}
+                                    </span>
                                   </td>
                                   <td className="p-4">
                                     <div className="space-y-1">
