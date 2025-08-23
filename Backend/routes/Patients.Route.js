@@ -31,13 +31,13 @@ router.post("/register", async (req, res) => {
     if (patient) {
       return res.send({
         message: "Patient already exists",
-        id: patient.id,
+        id: patient._id,
       });
     }
     const newPatient = new PatientModel(req.body);
     await newPatient.save();
     res.send({
-      id: newPatient.id,
+      id: newPatient._id,
     });
   } catch (error) {
     res.send({ error });

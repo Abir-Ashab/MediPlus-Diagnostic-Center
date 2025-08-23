@@ -419,12 +419,12 @@ const Book_Appointment = () => {
         email: commonData.email,
         address: commonData.address,
       };
-      let patientID = Date.now();
+      let patientID;
       if (existingPatientID) {
         patientID = existingPatientID;
       } else {
         console.log("Creating new patient:", patientInfo);
-        const patientResponse = await dispatch(AddPatients({...patientInfo, patientId: Date.now()}));
+        const patientResponse = await dispatch(AddPatients({...patientInfo, patientID: Date.now()}));
         console.log("patientResponse:", patientResponse);
 
         patientID = patientResponse.id;
