@@ -136,7 +136,10 @@ const Book_Appointment = () => {
             }));
             // Use patientID if available, otherwise fallback to _id
             setExistingPatientID(latest.patientID || latest._id);
-            const totalPrevDue = prevOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+            // Only sum due for orders with matching mobile
+            const totalPrevDue = prevOrders.reduce((sum, order) => {
+              return order.mobile === commonData.mobile ? sum + (order.dueAmount || 0) : sum;
+            }, 0);
             setPreviousDue(totalPrevDue);
           } else {
             setExistingPatientID(null);
@@ -454,7 +457,8 @@ const Book_Appointment = () => {
       if (paidAmount > finalTotal) {
         const payPrevDue = paidAmount - finalTotal;
         try {
-          await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/${commonData.mobile}/pay-due`, {
+          await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/pay-due`, {
+            mobile: commonData.mobile,
             paymentAmount: payPrevDue
           });
         } catch (err) {

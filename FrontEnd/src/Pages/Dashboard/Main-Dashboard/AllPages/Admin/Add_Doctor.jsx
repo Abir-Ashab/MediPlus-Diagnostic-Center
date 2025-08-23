@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import NarayanganjAddressSelect from "../../../../../Components/AddressAutocomplete";
 import doctor from "../../../../../img/doctoravatar.png";
 import { useDispatch, useSelector } from "react-redux";
 import { DoctorRegister, SendPassword } from "../../../../../Redux/auth/action";
@@ -30,10 +31,54 @@ const AddDoctor = () => {
     docID: Date.now(),
     password: "password123",
     details: "",
-    remuneration: "",
-    testReferralCommission: "",
+  // remuneration and testReferralCommission removed
   };
   const [DoctorValue, setDoctorValue] = useState(initData);
+  const [deptSearch, setDeptSearch] = useState("");
+  const [showDeptDropdown, setShowDeptDropdown] = useState(false);
+  const [showOtherDepartment, setShowOtherDepartment] = useState(false);
+  const deptDropdownRef = useRef(null);
+
+  const departmentOptions = [
+    "General",
+    "Cardiology",
+    "Neurology",
+    "ENT",
+    "Ophthalmologist",
+    "Anesthesiologist",
+    "Dermatologist",
+    "Oncologist",
+    "Psychiatrist",
+    "Orthopedics",
+    "Pediatrics",
+    "Radiology",
+    "Pathology",
+    "Gastroenterology",
+    "Nephrology",
+    "Urology",
+    "Pulmonology",
+    "Endocrinology",
+    "Rheumatology",
+    "Plastic Surgery",
+    "Emergency Medicine",
+    "Family Medicine",
+    "Obstetrics & Gynecology",
+    "Hematology",
+    "Infectious Disease",
+    "Other"
+  ];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(event.target)) {
+        setShowDeptDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const HandleDoctorChange = (e) => {
     setDoctorValue({ ...DoctorValue, [e.target.name]: e.target.value });
@@ -57,7 +102,7 @@ const AddDoctor = () => {
         userId: res.data.docID,
       };
       console.log(data, "DOCTOR REGISTER SUCCESSFULLY");
-      dispatch(SendPassword(data)).then((res) => notify("Account Detais Sent"));
+      dispatch(SendPassword(data)).then((res) => notify("DOCTOR REGISTER SUCCESSFULLY"));
       setLoading(false);
       setDoctorValue(initData);
     });
@@ -139,7 +184,7 @@ const AddDoctor = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email </label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -148,7 +193,6 @@ const AddDoctor = () => {
                         name="email"
                         value={DoctorValue.email}
                         onChange={HandleDoctorChange}
-                        required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
@@ -165,7 +209,6 @@ const AddDoctor = () => {
                       <option value="Choose Gender">Choose Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      <option value="Others">Others</option>
                     </select>
                   </div>
                   <div>
@@ -189,7 +232,7 @@ const AddDoctor = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate </label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -197,25 +240,17 @@ const AddDoctor = () => {
                         name="DOB"
                         value={DoctorValue.DOB}
                         onChange={HandleDoctorChange}
-                        required
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Address"
-                        name="address"
-                        value={DoctorValue.address}
-                        onChange={HandleDoctorChange}
-                        required
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
+                    <NarayanganjAddressSelect
+                      value={DoctorValue.address}
+                      onChange={val => setDoctorValue({ ...DoctorValue, address: val })}
+                      placeholder="Type to search or select address in Narayanganj..."
+                    />
                   </div>
                 </div>
               </div>
@@ -240,58 +275,58 @@ const AddDoctor = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
-                    <select
-                      name="department"
-                      value={DoctorValue.department}
-                      onChange={HandleDoctorChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="General">Select</option>
-                      <option value="Cardiology">Cardiology</option>
-                      <option value="Neurology">Neurology</option>
-                      <option value="ENT">ENT</option>
-                      <option value="Ophthalmologist">Ophthalmologist</option>
-                      <option value="Anesthesiologist">Anesthesiologist</option>
-                      <option value="Dermatologist">Dermatologist</option>
-                      <option value="Oncologist">Oncologist</option>
-                      <option value="Psychiatrist">Psychiatrist</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Fee per Consultation (৳) *</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="relative" ref={deptDropdownRef}>
                       <input
-                        type="number"
-                        placeholder="e.g. 500"
-                        name="remuneration"
-                        value={DoctorValue.remuneration}
-                        onChange={HandleDoctorChange}
+                        type="text"
+                        name="department"
+                        placeholder="Type or select department..."
+                        value={showOtherDepartment ? "Other" : (deptSearch || DoctorValue.department)}
+                        onChange={e => {
+                          setDeptSearch(e.target.value);
+                          setShowDeptDropdown(true);
+                          setShowOtherDepartment(false);
+                          setDoctorValue({ ...DoctorValue, department: e.target.value });
+                        }}
+                        onFocus={() => setShowDeptDropdown(true)}
+                        autoComplete="off"
                         required
-                        min="0"
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
+                      {showDeptDropdown && !showOtherDepartment && (
+                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                          {departmentOptions.filter(dept => dept.toLowerCase().includes((deptSearch || "").toLowerCase())).length > 0 ? (
+                            departmentOptions.filter(dept => dept.toLowerCase().includes((deptSearch || "").toLowerCase())).map((dept, idx) => (
+                              <div
+                                key={dept}
+                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                                onClick={() => {
+                                  setDoctorValue({ ...DoctorValue, department: dept });
+                                  setDeptSearch("");
+                                  setShowDeptDropdown(false);
+                                  if (dept === "Other") setShowOtherDepartment(true);
+                                  else setShowOtherDepartment(false);
+                                }}
+                              >
+                                {dept}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-gray-500 text-sm">No matching department</div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">Fee charged per patient consultation</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Test Referral Commission (%) *</label>
-                    <div className="relative">
-                      <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {showOtherDepartment && (
                       <input
-                        type="number"
-                        placeholder="e.g. 10"
-                        name="testReferralCommission"
-                        value={DoctorValue.testReferralCommission}
-                        onChange={HandleDoctorChange}
+                        type="text"
+                        name="department"
+                        placeholder="Enter department name"
+                        value={DoctorValue.department === "Other" ? "" : DoctorValue.department}
+                        onChange={e => setDoctorValue({ ...DoctorValue, department: e.target.value })}
+                        className="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
-                        min="0"
-                        max="100"
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">Commission percentage for test referrals (0-100%)</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import manager from "../../../../../img/manageravatar.png";
+import managerAvatar from "../../../../../img/manageravatar.png";
+import NarayanganjAddressSelect from "../../../../../Components/AddressAutocomplete";
 import { useDispatch, useSelector } from "react-redux";
 import { managerRegister, SendPassword } from "../../../../../Redux/auth/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
@@ -80,11 +81,11 @@ const Add_Manager = () => {
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
             <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Add Manager</h1>
             <div className="flex justify-center mb-8">
-              <img src={manager} alt="manager" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
+              <img src={managerAvatar} alt="manager" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500" />
             </div>
             <form onSubmit={HandleDoctorSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                 <div>
                   <input
                     type="text"
@@ -98,7 +99,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                 <div>
                   <input
                     type="number"
@@ -112,7 +113,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                 <div>
                   <input
                     type="number"
@@ -126,7 +127,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                 <div>
                   <input
                     type="email"
@@ -140,7 +141,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                 <div>
                   <select
                     name="gender"
@@ -157,7 +158,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate </label>
                 <div>
                   <input
                     type="date"
@@ -165,61 +166,38 @@ const Add_Manager = () => {
                     name="DOB"
                     value={managerValue.DOB}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Address"
-                    name="address"
-                    value={managerValue.address}
-                    onChange={HandleDoctorChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                <NarayanganjAddressSelect
+                  value={managerValue.address}
+                  onChange={val => setmanagerValue({ ...managerValue, address: val })}
+                  placeholder="Type to search or select address in Narayanganj..."
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Education </label>
                 <div>
                   <input
                     type="text"
-                    placeholder="eg.MBBS"
+                    placeholder="eg. BSS"
                     name="education"
                     value={managerValue.education}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Department"
-                    name="department"
-                    value={managerValue.department}
-                    onChange={HandleDoctorChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Blood Group</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Blood Group </label>
                 <div>
                   <select
                     name="bloodGroup"
                     value={managerValue.bloodGroup}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="Choose Blood Group">Select</option>
@@ -235,7 +213,7 @@ const Add_Manager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                 <div>
                   <input
                     type="text"
@@ -245,22 +223,6 @@ const Add_Manager = () => {
                     onChange={HandleDoctorChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Other Info</label>
-                <div>
-                  <textarea
-                    type="text"
-                    placeholder="Extra Info"
-                    rows="4"
-                    cols="50"
-                    name="details"
-                    value={managerValue.details}
-                    onChange={HandleDoctorChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
                   />
                 </div>
               </div>

@@ -25,7 +25,6 @@ const doctorSchema = mongoose.Schema({
 
   password: {
     type: String,
-    required: true,
   },
 
   age: {

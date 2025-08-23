@@ -24,12 +24,6 @@ const AgentModel = mongoose.models.agent || mongoose.model("agent", mongoose.Sch
 
   email: {
     type: String,
-    required: true,
-  },
-
-  password: {
-    type: String,
-    default: "password",
   },
 
   age: {
@@ -50,7 +44,7 @@ const AgentModel = mongoose.models.agent || mongoose.model("agent", mongoose.Sch
 
   commissionRate: {
     type: Number,
-    default: 5, // Default 5% commission
+    default: 0, 
   },
 
   status: {

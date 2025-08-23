@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NarayanganjAddressSelect from "../../../../../Components/AddressAutocomplete";
 import { useDispatch, useSelector } from "react-redux";
 import { AdminRegister, SendPassword } from "../../../../../Redux/auth/action";
 import Sidebar from "../../GlobalFiles/Sidebar";
@@ -78,7 +79,7 @@ const Add_Admin = () => {
             </div>
             <form onSubmit={HandleDoctorSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                 <div>
                   <input
                     type="text"
@@ -92,7 +93,7 @@ const Add_Admin = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                 <div>
                   <input
                     type="number"
@@ -106,7 +107,7 @@ const Add_Admin = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                 <div>
                   <input
                     type="number"
@@ -120,21 +121,21 @@ const Add_Admin = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                 <div>
                   <input
                     type="email"
                     placeholder="abc@abc.com"
                     name="email"
+                    required
                     value={AdminValue.email}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                 <div>
                   <select
                     name="gender"
@@ -146,12 +147,11 @@ const Add_Admin = () => {
                     <option value="Choose Gender">Choose Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
-                    <option value="Others">Others</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Birthdate </label>
                 <div>
                   <input
                     type="date"
@@ -159,41 +159,33 @@ const Add_Admin = () => {
                     name="DOB"
                     value={AdminValue.DOB}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Address"
-                    name="address"
-                    value={AdminValue.address}
-                    onChange={HandleDoctorChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address </label>
+                <NarayanganjAddressSelect
+                  value={AdminValue.address}
+                  onChange={val => setAdminValue({ ...AdminValue, address: val })}
+                  placeholder="Type to search or select address in Narayanganj..."
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Education </label>
                 <div>
                   <input
                     type="text"
-                    placeholder="eg.MBBS"
+                    placeholder="eg. BSC in Bangla"
                     name="education"
                     value={AdminValue.education}
                     onChange={HandleDoctorChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                 <div>
                   <input
                     type="text"
