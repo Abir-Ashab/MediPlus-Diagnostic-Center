@@ -1,84 +1,49 @@
 const mongoose = require("mongoose");
 
-const agentSchema = mongoose.Schema({
-  userType: {
+const patientSchema = mongoose.Schema({
+  patientID: {
     type: String,
-    default: "agent",
+    unique: true,
+    required: true,
   },
-
-  agentID: {
+  patientName: {
+    type: String,
+    required: true,
+  },
+  age: {
     type: Number,
     required: true,
   },
-
-  name: {
+  gender: {
     type: String,
     required: true,
+    enum: ["Male", "Female", "Other"],
   },
-
   mobile: {
-    type: Number,
-    minlength: 10,
+    type: String,
+    required: true,
     unique: true,
   },
-
   email: {
     type: String,
-    required: false,
   },
-
+  address: {
+    type: String,
+  },
   password: {
     type: String,
     default: "password",
   },
-
-  age: {
-    type: Number,
-  },
-
-  gender: {
-    type: String,
-  },
-
-  address: {
-    type: String,
-  },
-
-  image: {
-    type: String,
-  },
-
-  commissionRate: {
-    type: Number,
-    default: 5, // Default 5% commission
-  },
-
-  status: {
-    type: String,
-    enum: ['active', 'inactive'],
-    default: 'active'
-  },
-
-  referrals: {
-    type: Number,
-    default: 0
-  },
-
-  totalCommission: {
-    type: Number,
-    default: 0
-  },
-
-  dateJoined: {
+  createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
-
-  notes: {
-    type: String,
-  }
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-const AgentModel = mongoose.model("agent", agentSchema);
+const PatientModel = mongoose.model("patient", patientSchema);
 
-module.exports = { AgentModel };
+module.exports = { PatientModel };

@@ -419,17 +419,18 @@ const Book_Appointment = () => {
         email: commonData.email,
         address: commonData.address,
       };
-      let patientID;
+      let patientID = Date.now();
       if (existingPatientID) {
         patientID = existingPatientID;
       } else {
-        // Create patient and use backend-generated _id
-        const patientResponse = await dispatch(AddPatients({...patientInfo}));
-        // Try to get _id from different possible locations
-        console.log("Patient Response:", patientResponse);
+        console.log("Creating new patient:", patientInfo);
+        const patientResponse = await dispatch(AddPatients({...patientInfo, patientId: Date.now()}));
+        console.log("patientResponse:", patientResponse);
 
-        patientID = patientResponse?._id || patientResponse?.data?._id || patientResponse?.id;
+        patientID = patientResponse.id;
       }
+
+      console.log("Patient ID:", patientID);
       if (!patientID) {
         setLoading(false);
         toast.error("Could not determine patient ID after patient creation.", {
@@ -453,7 +454,6 @@ const Book_Appointment = () => {
 
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
 
-      // Use the correct patientID for pay-due endpoint
       if (paidAmount > finalTotal) {
         const payPrevDue = paidAmount - finalTotal;
         try {

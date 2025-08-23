@@ -18,23 +18,26 @@ router.get("/", async (req, res) => {
 
 // This register route will be used when adding a patient via patient or doctor or admin
 router.post("/register", async (req, res) => {
-  const { email } = req.body;
+  const { mobile, patientID } = req.body;
   try {
-    const patient = await PatientModel.findOne({ email });
+    if (!patientID) {
+      return res.status(400).send({ error: 'patientID is required' });
+    }
+    // Check for existing patient by patientID or mobile
+    let patient = await PatientModel.findOne({ patientID });
+    if (!patient && mobile) {
+      patient = await PatientModel.findOne({ mobile });
+    }
     if (patient) {
       return res.send({
         message: "Patient already exists",
-        id: patient.patientID,
-        _id: patient._id,
-        patientID: patient.patientID
+        id: patient.id,
       });
     }
     const newPatient = new PatientModel(req.body);
     await newPatient.save();
     res.send({
-      id: newPatient.patientID,
-      _id: newPatient._id,
-      patientID: newPatient.patientID
+      id: newPatient.id,
     });
   } catch (error) {
     res.send({ error });
