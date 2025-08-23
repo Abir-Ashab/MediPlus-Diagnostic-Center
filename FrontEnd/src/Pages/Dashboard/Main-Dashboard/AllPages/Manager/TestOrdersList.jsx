@@ -245,17 +245,10 @@ const TestOrdersList = () => {
     setFormData({ ...formData, time });
   };
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "bg-emerald-100 text-emerald-700";
-      case "in progress":
-        return "bg-amber-100 text-amber-700";
-      case "cancelled":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-blue-100 text-blue-700";
-    }
+  // Status color based on computed status
+  const getStatusColor = (order) => {
+    if ((order.dueAmount || 0) === 0) return "bg-emerald-100 text-emerald-700";
+    return "bg-blue-100 text-blue-700";
   };
 
   return (
@@ -496,28 +489,11 @@ const TestOrdersList = () => {
                                     </div>
                                   </td>
                                   <td className="p-4">
-                                    <button
-                                      onClick={() => {
-                                        const statuses = [
-                                          "Pending",
-                                          "In Progress",
-                                          "Completed",
-                                          "Cancelled",
-                                        ];
-                                        const currentIndex = statuses.findIndex(
-                                          (s) =>
-                                            s.toLowerCase() ===
-                                            (order.status || "pending").toLowerCase()
-                                        );
-                                        const nextIndex = (currentIndex + 1) % statuses.length;
-                                        updateOrderStatus(order._id, statuses[nextIndex]);
-                                      }}
-                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${getStatusColor(
-                                        order.status
-                                      )}`}
+                                    <span
+                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${getStatusColor(order)}`}
                                     >
-                                      {order.status || "Pending"}
-                                    </button>
+                                      {(order.dueAmount || 0) === 0 ? "Completed" : "Pending"}
+                                    </span>
                                   </td>
                                   <td className="p-4">
                                     <span className="text-sm text-gray-700">
@@ -936,22 +912,9 @@ const TestOrdersList = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
-                        <select
-                          value={selectedOrder.status || "Pending"}
-                          onChange={(e) => {
-                            updateOrderStatus(selectedOrder._id, e.target.value);
-                            setSelectedOrder({
-                              ...selectedOrder,
-                              status: e.target.value,
-                            });
-                          }}
-                          className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
+                        <span className={`font-medium text-gray-900 ${getStatusColor(selectedOrder)}`}>
+                          {(selectedOrder.dueAmount || 0) === 0 ? "Completed" : "Pending"}
+                        </span>
                       </div>
                     </div>
                   </div>

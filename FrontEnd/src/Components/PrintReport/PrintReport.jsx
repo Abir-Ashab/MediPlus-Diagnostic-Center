@@ -173,7 +173,6 @@ export const usePrintReport = () => {
             <div class="info-line"><strong>Age</strong> ${order.age}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <strong>Sex</strong> ${order.gender}</div>
             <div class="info-line"><strong>Refd By</strong> ${order.doctorName || 'Self'}</div>
-            ${order.agentName ? `<div class="info-line"><strong>Agent</strong> ${order.agentName}</div>` : ''}
           </div>
           <div class="patient-right">
             <div class="info-line"><strong>Entry Date</strong> ${entryDate}</div>

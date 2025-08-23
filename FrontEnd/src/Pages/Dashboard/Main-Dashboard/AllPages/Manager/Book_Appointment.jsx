@@ -134,8 +134,12 @@ const Book_Appointment = () => {
               email: latest.email || "",
               address: latest.address || "",
             }));
-            // Use patientID if available, otherwise fallback to _id
-            setExistingPatientID(latest.patientID || latest._id);
+            // Always use string _id for patientID
+            let extractedId = latest.patientID || latest._id;
+            if (typeof extractedId === 'object' && extractedId !== null && extractedId.toString) {
+              extractedId = extractedId.toString();
+            }
+            setExistingPatientID(extractedId);
             // Only sum due for orders with matching mobile
             const totalPrevDue = prevOrders.reduce((sum, order) => {
               return order.mobile === commonData.mobile ? sum + (order.dueAmount || 0) : sum;
@@ -416,7 +420,6 @@ const Book_Appointment = () => {
         age: commonData.age,
         gender: commonData.gender,
         mobile: commonData.mobile,
-        email: commonData.email,
         address: commonData.address,
       };
       let patientID;
@@ -424,10 +427,13 @@ const Book_Appointment = () => {
         patientID = existingPatientID;
       } else {
         console.log("Creating new patient:", patientInfo);
-        const patientResponse = await dispatch(AddPatients({...patientInfo, patientID: Date.now()}));
+        const patientResponse = await dispatch(AddPatients({ ...patientInfo, patientID: Date.now() }));
         console.log("patientResponse:", patientResponse);
-
-        patientID = patientResponse.id;
+        let extractedId = patientResponse.id || patientResponse._id || patientResponse.patientID;
+        if (typeof extractedId === 'object' && extractedId !== null && extractedId.toString) {
+          extractedId = extractedId.toString();
+        }
+        patientID = extractedId;
       }
 
       console.log("Patient ID:", patientID);
@@ -456,6 +462,7 @@ const Book_Appointment = () => {
 
       if (paidAmount > finalTotal) {
         const payPrevDue = paidAmount - finalTotal;
+
         try {
           await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/pay-due`, {
             mobile: commonData.mobile,

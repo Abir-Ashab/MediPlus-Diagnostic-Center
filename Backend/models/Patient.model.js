@@ -3,8 +3,6 @@ const mongoose = require("mongoose");
 const patientSchema = mongoose.Schema({
   patientID: {
     type: String,
-    unique: true,
-    required: true,
   },
   patientName: {
     type: String,
@@ -23,9 +21,6 @@ const patientSchema = mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-  },
-  email: {
-    type: String,
   },
   address: {
     type: String,

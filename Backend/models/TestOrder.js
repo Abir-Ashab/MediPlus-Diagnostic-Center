@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const testOrderSchema = new mongoose.Schema(
   {
     patientID: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "patients",
+      type: String,
+      required: true,
     },
     patientName: {
       type: String,
@@ -23,7 +23,6 @@ const testOrderSchema = new mongoose.Schema(
     mobile: {
       type: String,
       required: true,
-      unique: true,
     },
     email: {
       type: String,

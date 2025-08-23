@@ -132,12 +132,6 @@ export const AddPatients = (data) => async (dispatch) => {
       data
     );
     return res.data;
-    // dispatch({
-    //   type: types.ADD_PATIENT_SUCCESS,
-    //   payload: {
-    //
-    //   },
-    // });
   } catch (error) {
     dispatch({
       type: types.ADD_PATIENT_ERROR,

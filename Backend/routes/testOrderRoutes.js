@@ -135,19 +135,29 @@ router.post("/", async (req, res) => {
 router.patch("/patients/pay-due", async (req, res) => {
   try {
     const { mobile, paymentAmount } = req.body;
+    console.log("[pay-due] Request body:", req.body);
     if (!mobile || typeof paymentAmount !== "number" || paymentAmount <= 0) {
       return res.status(400).json({ message: "mobile and positive paymentAmount are required" });
     }
-  // Find all unpaid test orders for this patient by mobile, sort by dueAmount descending (largest due first)
-  const orders = await TestOrderModel.find({ mobile, dueAmount: { $gt: 0 } }).sort({ dueAmount: -1, createdAt: 1 });
+    // Find all unpaid test orders for this patient by mobile, sort by dueAmount descending (largest due first)
+    const orders = await TestOrderModel.find({ mobile, dueAmount: { $gt: 0 } }).sort({ dueAmount: -1, createdAt: 1 });
+    console.log(`[pay-due] Found ${orders.length} unpaid orders for mobile ${mobile}`);
     if (!orders.length) {
-      return res.status(404).json({ message: "No unpaid test orders found for this patient" });
+      console.log("[pay-due] No unpaid orders, returning early.");
+      return res.status(200).json({
+        message: "No unpaid test orders found for this patient",
+        paymentProcessed: 0,
+        ordersUpdated: 0,
+        updatedOrders: [],
+        remainingUnapplied: paymentAmount,
+      });
     }
     let remaining = paymentAmount;
     const updatedOrders = [];
     for (const order of orders) {
       if (remaining <= 0) break;
       const payToThisOrder = Math.min(order.dueAmount, remaining);
+      console.log(`[pay-due] Applying payment to order ${order._id}: due=${order.dueAmount}, payToThisOrder=${payToThisOrder}, remaining before=${remaining}`);
       if (payToThisOrder > 0) {
         order.paidAmount = (order.paidAmount || 0) + payToThisOrder;
         order.dueAmount = (order.dueAmount || 0) - payToThisOrder;
@@ -159,10 +169,15 @@ router.patch("/patients/pay-due", async (req, res) => {
           paymentApplied: payToThisOrder,
         });
         remaining -= payToThisOrder;
+        console.log(`[pay-due] After payment: paidAmount=${order.paidAmount}, dueAmount=${order.dueAmount}, remaining now=${remaining}`);
       }
     }
-    // Optionally, recalculate all dueAmounts for this patient to ensure consistency
-    await recalculatePatientDueAmounts(orders[0].patientID);
+    // Only recalculate if there are orders and patientID is present
+    if (orders.length && orders[0].patientID) {
+      console.log(`[pay-due] Recalculating due amounts for patientID: ${orders[0].patientID}`);
+      await recalculatePatientDueAmounts(orders[0].patientID.toString());
+    }
+    console.log(`[pay-due] Done. Processed: ${paymentAmount - remaining}, Remaining unapplied: ${remaining}`);
     res.status(200).json({
       message: "Payment distributed across test orders",
       paymentProcessed: paymentAmount - remaining,
