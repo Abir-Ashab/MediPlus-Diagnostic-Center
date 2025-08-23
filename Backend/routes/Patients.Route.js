@@ -25,11 +25,17 @@ router.post("/register", async (req, res) => {
       return res.send({
         message: "Patient already exists",
         id: patient.patientID,
+        _id: patient._id,
+        patientID: patient.patientID
       });
     }
     const newPatient = new PatientModel(req.body);
     await newPatient.save();
-    res.send({ id: newPatient.patientID });
+    res.send({
+      id: newPatient.patientID,
+      _id: newPatient._id,
+      patientID: newPatient.patientID
+    });
   } catch (error) {
     res.send({ error });
   }
