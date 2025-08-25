@@ -499,7 +499,8 @@ const Book_Appointment = () => {
       setLoading(false);
       setLastCreatedOrder({
         ...testOrderData,
-        _id: response.data._id || Date.now().toString()
+        _id: response.data._id || Date.now().toString(),
+        dueAmount: finalTotal + previousDue - paidAmount
       });
       setShowPrintModal(true);
       toast.success("Test order created successfully!", {

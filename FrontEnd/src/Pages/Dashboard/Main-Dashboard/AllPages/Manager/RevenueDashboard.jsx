@@ -11,8 +11,9 @@ const ManagerRevenueDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [doctorData, setDoctorData] = useState([]);
   const [agentData, setAgentData] = useState([]);
+  const [hospitalData, setHospitalData] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("doctors");
+  const [activeTab, setActiveTab] = useState("hospital");
   const [selectedMonth, setSelectedMonth] = useState(moment().format("YYYY-MM"));
   const [patientModal, setPatientModal] = useState({ visible: false, title: '', patients: [], exportData: [] });
   const [allOrders, setAllOrders] = useState([]);
@@ -42,10 +43,10 @@ const ManagerRevenueDashboard = () => {
         },
       });
 
-  const { doctorBreakdown, agentBreakdown, orders } = response.data;
-  setAllOrders(orders || []);
+      const { doctorBreakdown, agentBreakdown, orders } = response.data;
+      setAllOrders(orders || []);
 
-      // Helper: get detailed patient info for a doctor/agent
+      // Helper: get detailed patient info for a doctor/agent/date
       const getPatientDetails = (filterKey, filterValue) => {
         return orders
           .filter(order => order[filterKey] === filterValue)
@@ -82,6 +83,28 @@ const ManagerRevenueDashboard = () => {
 
       setDoctorData(doctorSummary);
       setAgentData(agentSummary);
+
+      // Hospital daily summary
+      const hospitalSummary = {};
+      orders.forEach(order => {
+        const date = order.date;
+        if (date) {
+          if (!hospitalSummary[date]) {
+            hospitalSummary[date] = { totalAmount: 0, paidAmount: 0, dueAmount: 0 };
+          }
+          hospitalSummary[date].totalAmount += order.totalAmount || 0;
+          hospitalSummary[date].paidAmount += order.paidAmount || 0;
+          hospitalSummary[date].dueAmount += order.dueAmount || 0;
+        }
+      });
+
+      const hospitalDaily = Object.entries(hospitalSummary).map(([date, data]) => ({
+        date,
+        ...data,
+        getPatientDetails: () => getPatientDetails('date', date),
+      })).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setHospitalData(hospitalDaily);
     } catch (error) {
       toast.error("Error fetching revenue data");
       console.error("Error fetching revenue data:", error);
@@ -104,6 +127,26 @@ const ManagerRevenueDashboard = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
     XLSX.writeFile(workbook, `${filename}_${selectedMonth}.xlsx`);
   };
+
+  const hospitalColumns = [
+    { key: "date", label: "Date", render: (record) => (
+      <button
+        className="text-blue-600 underline hover:text-blue-800"
+        onClick={() => setPatientModal({
+          visible: true,
+          title: `Patients on ${record.date}`,
+          patients: record.getPatientDetails(),
+          exportData: record.getPatientDetails(),
+        })}
+        type="button"
+      >
+        {record.date}
+      </button>
+    ) },
+    { key: "totalAmount", label: "Total Provided (₹)", render: (record) => record.totalAmount.toFixed(2) },
+    { key: "paidAmount", label: "Paid (₹)", render: (record) => record.paidAmount.toFixed(2) },
+    { key: "dueAmount", label: "Due (₹)", render: (record) => record.dueAmount.toFixed(2) },
+  ];
 
   const doctorColumns = [
     { key: "doctorName", label: "Doctor Name", render: (record) => (
@@ -143,7 +186,7 @@ const ManagerRevenueDashboard = () => {
     { key: "totalDue", label: "Total Due (₹)", render: (record) => record.totalDue.toFixed(2) },
   ];
 
-  const renderTable = (columns, data) => (
+  const renderTable = (columns, data, showFooter = false) => (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
@@ -166,6 +209,16 @@ const ManagerRevenueDashboard = () => {
             </tr>
           ))}
         </tbody>
+        {showFooter && (
+          <tfoot>
+            <tr className="bg-gray-200 font-bold">
+              <td className="p-3">Total</td>
+              <td className="p-3">{data.reduce((sum, r) => sum + r.totalAmount, 0).toFixed(2)}</td>
+              <td className="p-3">{data.reduce((sum, r) => sum + r.paidAmount, 0).toFixed(2)}</td>
+              <td className="p-3">{data.reduce((sum, r) => sum + r.dueAmount, 0).toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
@@ -220,6 +273,8 @@ const ManagerRevenueDashboard = () => {
                       <th className="p-2 border">Total</th>
                       <th className="p-2 border">Paid</th>
                       <th className="p-2 border">Due</th>
+                      <th className="p-2 border">Doctor</th>
+                      <th className="p-2 border">Agent</th>
                       <th className="p-2 border">Date</th>
                     </tr>
                   </thead>
@@ -236,6 +291,8 @@ const ManagerRevenueDashboard = () => {
                         <td className="p-2 border">{p.totalAmount}</td>
                         <td className="p-2 border">{p.paidAmount}</td>
                         <td className="p-2 border">{p.dueAmount}</td>
+                        <td className="p-2 border">{p.doctorName}</td>
+                        <td className="p-2 border">{p.agentName}</td>
                         <td className="p-2 border">{p.date}</td>
                       </tr>
                     ))}
@@ -267,7 +324,7 @@ const ManagerRevenueDashboard = () => {
                   className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
-                  onClick={() => exportToExcel(activeTab === "doctors" ? doctorData : agentData, activeTab)}
+                  onClick={() => exportToExcel(activeTab === "hospital" ? hospitalData : activeTab === "doctors" ? doctorData : agentData, activeTab)}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
                 >
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -285,6 +342,15 @@ const ManagerRevenueDashboard = () => {
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex border-b border-gray-200 mb-6">
+                  <button
+                    className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "hospital" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+                    onClick={() => setActiveTab("hospital")}
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Hospital
+                  </button>
                   <button
                     className={`px-4 py-2 font-medium text-sm flex items-center ${activeTab === "doctors" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
                     onClick={() => setActiveTab("doctors")}
@@ -304,6 +370,7 @@ const ManagerRevenueDashboard = () => {
                     Agents
                   </button>
                 </div>
+                {activeTab === "hospital" && renderTable(hospitalColumns, hospitalData, true)}
                 {activeTab === "doctors" && renderTable(doctorColumns, doctorData)}
                 {activeTab === "agents" && renderTable(agentColumns, agentData)}
               </div>

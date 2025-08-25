@@ -163,8 +163,8 @@ export const usePrintReport = () => {
       <body>
         <div class="header-box">
           <div class="clinic-name">MEDIPLUS MEDICAL SERVICES (Pvt) LTD.</div>
-          <div class="clinic-subtitle">The Most Advanced & Modernized Diagnostic Complex</div>
-          <div class="clinic-address">177 R.B Road (President Road) Narayangonj Phone: 9715761</div>
+          <div class="clinic-address">253/1 President Road, Narayangonj</div>
+          <div class="clinic-subtitle"> Phone: 7633972, 01956699976 </div>
         </div>
 
         <div class="patient-info">
