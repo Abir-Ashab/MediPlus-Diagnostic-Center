@@ -117,11 +117,13 @@ const Book_Appointment = () => {
     fetchAgents();
   }, []);
 
+
   useEffect(() => {
-    const fetchPatientData = async () => {
-      if (commonData.mobile.length === 11) {
+    const handler = setTimeout(async () => {
+      const phone = commonData.mobile;
+      if (phone && phone.length >= 8 && phone.length <= 13) {
         try {
-          const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?mobile=${commonData.mobile}`);
+          const response = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders?mobile=${phone}`);
           const prevOrders = response.data;
           if (prevOrders.length > 0) {
             prevOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -142,22 +144,34 @@ const Book_Appointment = () => {
             setExistingPatientID(extractedId);
             // Only sum due for orders with matching mobile
             const totalPrevDue = prevOrders.reduce((sum, order) => {
-              return order.mobile === commonData.mobile ? sum + (order.dueAmount || 0) : sum;
+              return order.mobile === phone ? sum + (order.dueAmount || 0) : sum;
             }, 0);
             setPreviousDue(totalPrevDue);
           } else {
             setExistingPatientID(null);
             setPreviousDue(0);
+            toast.info("No previous patient found for this phone number.", {
+              position: "top-right",
+              autoClose: 2000,
+            });
           }
         } catch (error) {
+          setExistingPatientID(null);
+          setPreviousDue(0);
+          toast.error("Error fetching patient data.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
           console.error("Error fetching patient data:", error);
         }
+      } else {
+        setExistingPatientID(null);
+        setPreviousDue(0);
       }
-    };
-    fetchPatientData();
+    }, 400); 
+    return () => clearTimeout(handler);
   }, [commonData.mobile]);
 
-  // Calculate base total and apply VAT
   useEffect(() => {
     const base = selectedTests.reduce((sum, test) => {
       if (!test.testId) return sum;
@@ -378,13 +392,16 @@ const Book_Appointment = () => {
 
   const HandleTestOrderSubmit = async (e) => {
     e.preventDefault();
+    console.log('[Book_Appointment] Submit triggered');
     if (commonData.gender === "") {
+      console.log('[Book_Appointment] Gender missing');
       return toast.error("Please fill all the required fields", {
         position: "top-right",
         autoClose: 3000,
       });
     }
     if (!testData.date) {
+      console.log('[Book_Appointment] Test date missing');
       return toast.error("Please select a date for the test order", {
         position: "top-right",
         autoClose: 3000,
@@ -392,6 +409,7 @@ const Book_Appointment = () => {
     }
     const hasSelectedTest = selectedTests.some(test => test.testId !== "");
     if (!hasSelectedTest) {
+      console.log('[Book_Appointment] No test selected');
       return toast.error("Please select at least one test", {
         position: "top-right",
         autoClose: 3000,
@@ -425,18 +443,20 @@ const Book_Appointment = () => {
       let patientID;
       if (existingPatientID) {
         patientID = existingPatientID;
+        console.log('[Book_Appointment] Using existing patientID:', patientID);
       } else {
-        console.log("Creating new patient:", patientInfo);
+        console.log("[Book_Appointment] Creating new patient:", patientInfo);
         const patientResponse = await dispatch(AddPatients({ ...patientInfo, patientID: Date.now() }));
-        console.log("patientResponse:", patientResponse);
+        console.log("[Book_Appointment] patientResponse:", patientResponse);
         let extractedId = patientResponse.id || patientResponse._id || patientResponse.patientID;
         if (typeof extractedId === 'object' && extractedId !== null && extractedId.toString) {
           extractedId = extractedId.toString();
         }
         patientID = extractedId;
+        console.log('[Book_Appointment] New patientID:', patientID);
       }
 
-      console.log("Patient ID:", patientID);
+      console.log("[Book_Appointment] Final patient ID:", patientID);
       if (!patientID) {
         setLoading(false);
         toast.error("Could not determine patient ID after patient creation.", {
@@ -458,17 +478,21 @@ const Book_Appointment = () => {
         patientID,
       };
 
+      console.log('[Book_Appointment] Creating test order:', testOrderData);
       const response = await axios.post("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", testOrderData);
-
+      console.log('[Book_Appointment] Test order response:', response.data);
+      
       if (paidAmount > finalTotal) {
         const payPrevDue = paidAmount - finalTotal;
-
+        console.log('[Book_Appointment] Paid more than finalTotal, paying previous due:', payPrevDue);
         try {
-          await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/pay-due`, {
+          const payDueRes = await axios.patch(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/pay-due`, {
             mobile: commonData.mobile,
             paymentAmount: payPrevDue
           });
+          console.log('[Book_Appointment] pay-due response:', payDueRes.data);
         } catch (err) {
+          console.error('[Book_Appointment] Error paying previous due:', err);
           toast.warn("Paid for previous due, but could not update all previous orders.");
         }
       }
@@ -490,7 +514,7 @@ const Book_Appointment = () => {
         position: "top-right",
         autoClose: 5000,
       });
-      console.error("Error:", error);
+      console.error("[Book_Appointment] Error:", error);
     }
   };
 

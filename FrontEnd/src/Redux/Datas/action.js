@@ -12,28 +12,31 @@ export const GET_ALL_TEST_ORDERS_FAILURE = "GET_ALL_TEST_ORDERS_FAILURE";
 export const CreateTestOrder = (data) => async (dispatch) => {
   try {
     dispatch({ type: CREATE_TEST_ORDER_REQUEST });
-    
+
     // Make API call to create test order
-    const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    
+    const response = await fetch(
+      "https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
     const result = await response.json();
     console.log(result);
-    
+
     if (!response.ok) {
       throw new Error(result.message || "Something went wrong");
     }
-    
+
     dispatch({
       type: CREATE_TEST_ORDER_SUCCESS,
       payload: result,
     });
-    
+
     return result;
   } catch (error) {
     dispatch({
@@ -47,22 +50,24 @@ export const CreateTestOrder = (data) => async (dispatch) => {
 export const GetAllTestOrders = () => async (dispatch) => {
   try {
     dispatch({ type: GET_ALL_TEST_ORDERS_REQUEST });
-    
+
     // Make API call to fetch all test orders
-    const response = await fetch("https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders");
-    
+    const response = await fetch(
+      "https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders"
+    );
+
     const result = await response.json();
     console.log(result);
-    
+
     if (!response.ok) {
       throw new Error(result.message || "Something went wrong");
     }
-    
+
     dispatch({
       type: GET_ALL_TEST_ORDERS_SUCCESS,
       payload: result,
     });
-    
+
     return result;
   } catch (error) {
     dispatch({
@@ -196,7 +201,9 @@ export const CreatePayment = (data) => async (dispatch) => {
 export const GetBeds = () => async (dispatch) => {
   try {
     dispatch({ type: types.GET_BED_REQUEST });
-    const res = await axios.get("https://medi-plus-diagnostic-center-bdbv.vercel.app/beds");
+    const res = await axios.get(
+      "https://medi-plus-diagnostic-center-bdbv.vercel.app/beds"
+    );
     console.log(res);
     dispatch({
       type: types.GET_BED_SUCCESS,

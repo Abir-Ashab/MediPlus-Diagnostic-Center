@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 const TestOrderModel = require("../models/TestOrder");
@@ -14,12 +13,17 @@ const recalculatePatientDueAmounts = async (patientID) => {
     totalDue += orderDue;
     // Ensure dueAmount is never negative
     const safeDue = totalDue < 0 ? 0 : totalDue;
-    await TestOrderModel.findByIdAndUpdate(order._id, { dueAmount: safeDue }, { new: true });
+    await TestOrderModel.findByIdAndUpdate(
+      order._id,
+      { dueAmount: safeDue },
+      { new: true }
+    );
   }
 };
 
 router.post("/", async (req, res) => {
   try {
+    console.log("[testOrderRoutes] POST /testorders called");
     const {
       patientID,
       patientName,
@@ -34,6 +38,7 @@ router.post("/", async (req, res) => {
       tests = [],
       ...otherData
     } = req.body;
+    console.log("[testOrderRoutes] Incoming body:", req.body);
 
     let doctorRevenue = 0;
     let hospitalRevenue = totalAmount || baseAmount;
@@ -43,6 +48,7 @@ router.post("/", async (req, res) => {
     // Calculate doctor revenue (unchanged)
     if (doctorName) {
       const doctor = await DoctorModel.findOne({ docName: doctorName });
+      console.log("[testOrderRoutes] Doctor found:", doctor);
       if (doctor) {
         if (orderType === "appointment") {
           doctorRevenue = doctor.remuneration || 0;
@@ -59,13 +65,21 @@ router.post("/", async (req, res) => {
     // Calculate agent commission per test (dynamic)
     if (agentName && updatedTests.length > 0) {
       const agent = await AgentModel.findOne({ name: agentName });
+      console.log("[testOrderRoutes] Agent found:", agent);
       if (agent) {
         // If frontend provides per-test commission, use it; else use agent.commissionRate
-        updatedTests = updatedTests.map(test => {
-          let commission = typeof test.agentCommission === 'number' ? test.agentCommission : (agent.commissionRate || 0);
+        updatedTests = updatedTests.map((test) => {
+          let commission =
+            typeof test.agentCommission === "number"
+              ? test.agentCommission
+              : agent.commissionRate || 0;
           return { ...test, agentCommission: commission };
         });
-        agentRevenue = updatedTests.reduce((sum, t) => sum + ((t.testPrice || 0) * (t.agentCommission || 0) / 100), 0);
+        agentRevenue = updatedTests.reduce(
+          (sum, t) =>
+            sum + ((t.testPrice || 0) * (t.agentCommission || 0)) / 100,
+          0
+        );
         hospitalRevenue -= agentRevenue;
       }
     }
@@ -80,7 +94,11 @@ router.post("/", async (req, res) => {
       vatRate: vatRate || 0,
       vatAmount: baseAmount ? (baseAmount * (vatRate || 0)) / 100 : 0,
       discountAmount: discountAmount || 0,
-      totalAmount: totalAmount || baseAmount + (baseAmount * (vatRate || 0)) / 100 - (discountAmount || 0),
+      totalAmount:
+        totalAmount ||
+        baseAmount +
+          (baseAmount * (vatRate || 0)) / 100 -
+          (discountAmount || 0),
       paidAmount: paidAmount || 0,
       doctorRevenue,
       hospitalRevenue,
@@ -88,6 +106,7 @@ router.post("/", async (req, res) => {
       orderType: orderType || "test",
       tests: updatedTests,
     };
+    console.log("[testOrderRoutes] testOrderData:", testOrderData);
 
     let overPayment = 0;
     let paid = paidAmount || 0;
@@ -99,16 +118,29 @@ router.post("/", async (req, res) => {
     }
     testOrderData.paidAmount = paid;
     testOrderData.dueAmount = currentDue;
+    console.log(
+      "[testOrderRoutes] Final testOrderData before save:",
+      testOrderData
+    );
 
     // Save the new order first
     const newTestOrder = new TestOrderModel(testOrderData);
     const savedTestOrder = await newTestOrder.save();
+    console.log("[testOrderRoutes] Saved test order:", savedTestOrder);
 
     // If there is overpayment, apply it to previous unpaid orders (oldest first)
     let previousDue = 0;
     if (patientID) {
       let remaining = overPayment;
-      const otherOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id }, dueAmount: { $gt: 0 } }).sort({ createdAt: 1 });
+      const otherOrders = await TestOrderModel.find({
+        patientID,
+        _id: { $ne: savedTestOrder._id },
+        dueAmount: { $gt: 0 },
+      }).sort({ createdAt: 1 });
+      console.log(
+        "[testOrderRoutes] Found other orders for overpayment:",
+        otherOrders.length
+      );
       for (const order of otherOrders) {
         if (remaining <= 0) break;
         const orderDue = order.dueAmount || 0;
@@ -118,14 +150,29 @@ router.post("/", async (req, res) => {
           order.dueAmount = orderDue - payToThisOrder;
           await order.save();
           remaining -= payToThisOrder;
+          console.log(
+            `[testOrderRoutes] Overpayment applied to order ${order._id}: paidAmount=${order.paidAmount}, dueAmount=${order.dueAmount}, remaining=${remaining}`
+          );
         }
       }
       // Calculate previous due after payment
-      const updatedOrders = await TestOrderModel.find({ patientID, _id: { $ne: savedTestOrder._id } });
-      previousDue = updatedOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+      const updatedOrders = await TestOrderModel.find({
+        patientID,
+        _id: { $ne: savedTestOrder._id },
+      });
+      previousDue = updatedOrders.reduce(
+        (sum, order) => sum + (order.dueAmount || 0),
+        0
+      );
+      console.log(
+        "[testOrderRoutes] previousDue after overpayment:",
+        previousDue
+      );
     }
     res.status(201).json({ ...savedTestOrder.toObject(), previousDue });
+    console.log("[testOrderRoutes] Response sent");
   } catch (error) {
+    console.error("[testOrderRoutes] Error in POST /testorders:", error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -137,11 +184,18 @@ router.patch("/patients/pay-due", async (req, res) => {
     const { mobile, paymentAmount } = req.body;
     console.log("[pay-due] Request body:", req.body);
     if (!mobile || typeof paymentAmount !== "number" || paymentAmount <= 0) {
-      return res.status(400).json({ message: "mobile and positive paymentAmount are required" });
+      return res
+        .status(400)
+        .json({ message: "mobile and positive paymentAmount are required" });
     }
     // Find all unpaid test orders for this patient by mobile, sort by dueAmount descending (largest due first)
-    const orders = await TestOrderModel.find({ mobile, dueAmount: { $gt: 0 } }).sort({ dueAmount: -1, createdAt: 1 });
-    console.log(`[pay-due] Found ${orders.length} unpaid orders for mobile ${mobile}`);
+    const orders = await TestOrderModel.find({
+      mobile,
+      dueAmount: { $gt: 0 },
+    }).sort({ dueAmount: -1, createdAt: 1 });
+    console.log(
+      `[pay-due] Found ${orders.length} unpaid orders for mobile ${mobile}`
+    );
     if (!orders.length) {
       console.log("[pay-due] No unpaid orders, returning early.");
       return res.status(200).json({
@@ -157,7 +211,9 @@ router.patch("/patients/pay-due", async (req, res) => {
     for (const order of orders) {
       if (remaining <= 0) break;
       const payToThisOrder = Math.min(order.dueAmount, remaining);
-      console.log(`[pay-due] Applying payment to order ${order._id}: due=${order.dueAmount}, payToThisOrder=${payToThisOrder}, remaining before=${remaining}`);
+      console.log(
+        `[pay-due] Applying payment to order ${order._id}: due=${order.dueAmount}, payToThisOrder=${payToThisOrder}, remaining before=${remaining}`
+      );
       if (payToThisOrder > 0) {
         order.paidAmount = (order.paidAmount || 0) + payToThisOrder;
         order.dueAmount = (order.dueAmount || 0) - payToThisOrder;
@@ -169,15 +225,23 @@ router.patch("/patients/pay-due", async (req, res) => {
           paymentApplied: payToThisOrder,
         });
         remaining -= payToThisOrder;
-        console.log(`[pay-due] After payment: paidAmount=${order.paidAmount}, dueAmount=${order.dueAmount}, remaining now=${remaining}`);
+        console.log(
+          `[pay-due] After payment: paidAmount=${order.paidAmount}, dueAmount=${order.dueAmount}, remaining now=${remaining}`
+        );
       }
     }
     // Only recalculate if there are orders and patientID is present
     if (orders.length && orders[0].patientID) {
-      console.log(`[pay-due] Recalculating due amounts for patientID: ${orders[0].patientID}`);
+      console.log(
+        `[pay-due] Recalculating due amounts for patientID: ${orders[0].patientID}`
+      );
       await recalculatePatientDueAmounts(orders[0].patientID.toString());
     }
-    console.log(`[pay-due] Done. Processed: ${paymentAmount - remaining}, Remaining unapplied: ${remaining}`);
+    console.log(
+      `[pay-due] Done. Processed: ${
+        paymentAmount - remaining
+      }, Remaining unapplied: ${remaining}`
+    );
     res.status(200).json({
       message: "Payment distributed across test orders",
       paymentProcessed: paymentAmount - remaining,
@@ -193,7 +257,9 @@ router.patch("/patients/pay-due", async (req, res) => {
 // Get all test orders
 router.get("/", async (req, res) => {
   try {
-    const testOrders = await TestOrderModel.find(req.query).sort({ createdAt: -1 });
+    const testOrders = await TestOrderModel.find(req.query).sort({
+      createdAt: -1,
+    });
     res.status(200).json(testOrders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -267,11 +333,17 @@ router.put("/:id", async (req, res) => {
     testOrder.time = time || testOrder.time;
     testOrder.baseAmount = baseAmount || testOrder.baseAmount;
     testOrder.vatRate = vatRate || testOrder.vatRate;
-    testOrder.vatAmount = vatAmount || (baseAmount ? (baseAmount * (vatRate || testOrder.vatRate)) / 100 : testOrder.vatAmount);
+    testOrder.vatAmount =
+      vatAmount ||
+      (baseAmount
+        ? (baseAmount * (vatRate || testOrder.vatRate)) / 100
+        : testOrder.vatAmount);
     testOrder.discountAmount = discountAmount || testOrder.discountAmount;
     testOrder.totalAmount = totalAmount || testOrder.totalAmount;
     testOrder.paidAmount = paidAmount || testOrder.paidAmount;
-    testOrder.dueAmount = (totalAmount || testOrder.totalAmount) - (paidAmount || testOrder.paidAmount);
+    testOrder.dueAmount =
+      (totalAmount || testOrder.totalAmount) -
+      (paidAmount || testOrder.paidAmount);
     testOrder.hospitalRevenue = hospitalRevenue || testOrder.hospitalRevenue;
     testOrder.doctorRevenue = doctorRevenue || testOrder.doctorRevenue;
     testOrder.agentRevenue = newAgentRevenue;
@@ -283,8 +355,14 @@ router.put("/:id", async (req, res) => {
     if (testOrder.patientID) {
       await recalculatePatientDueAmounts(testOrder.patientID);
       // Calculate previous due for this patient (excluding this updated order)
-      const otherOrders = await TestOrderModel.find({ patientID: testOrder.patientID, _id: { $ne: testOrder._id } });
-      previousDue = otherOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
+      const otherOrders = await TestOrderModel.find({
+        patientID: testOrder.patientID,
+        _id: { $ne: testOrder._id },
+      });
+      previousDue = otherOrders.reduce(
+        (sum, order) => sum + (order.dueAmount || 0),
+        0
+      );
     }
 
     res.status(200).json({ ...updatedTestOrder.toObject(), previousDue });
@@ -297,7 +375,11 @@ router.put("/:id", async (req, res) => {
 router.patch("/:id/status", async (req, res) => {
   try {
     const { status } = req.body;
-    const updatedTestOrder = await TestOrderModel.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const updatedTestOrder = await TestOrderModel.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
     if (!updatedTestOrder) {
       return res.status(404).json({ message: "Test order not found" });
     }
@@ -315,12 +397,16 @@ router.patch("/:id/results", async (req, res) => {
     if (!testOrder) {
       return res.status(404).json({ message: "Test order not found" });
     }
-    const testIndex = testOrder.tests.findIndex((test) => test._id.toString() === testId);
+    const testIndex = testOrder.tests.findIndex(
+      (test) => test._id.toString() === testId
+    );
     if (testIndex === -1) {
       return res.status(404).json({ message: "Test not found in this order" });
     }
     testOrder.tests[testIndex].testResult = testResult;
-    const allTestsComplete = testOrder.tests.every((test) => test.testResult !== "Pending");
+    const allTestsComplete = testOrder.tests.every(
+      (test) => test.testResult !== "Pending"
+    );
     testOrder.status = allTestsComplete ? "Completed" : "In Progress";
     if (allTestsComplete) {
       testOrder.reportGeneratedAt = new Date();
@@ -352,7 +438,9 @@ router.patch("/:id/deliver", async (req, res) => {
 // Get test orders for a specific patient
 router.get("/patients/:patientId/testorders", async (req, res) => {
   try {
-    const testOrders = await TestOrderModel.find({ patientID: req.params.patientId });
+    const testOrders = await TestOrderModel.find({
+      patientID: req.params.patientId,
+    });
     res.status(200).json(testOrders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -362,7 +450,9 @@ router.get("/patients/:patientId/testorders", async (req, res) => {
 // Delete a test order
 router.delete("/:id", async (req, res) => {
   try {
-    const deletedTestOrder = await TestOrderModel.findByIdAndDelete(req.params.id);
+    const deletedTestOrder = await TestOrderModel.findByIdAndDelete(
+      req.params.id
+    );
     if (!deletedTestOrder) {
       return res.status(404).json({ message: "Test order not found" });
     }
@@ -381,7 +471,9 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
     const { doctorName } = req.params;
     const { paymentAmount, dateFilter, customDateRange } = req.body;
     if (!doctorName || paymentAmount === undefined) {
-      return res.status(400).json({ message: "Doctor name and payment amount are required" });
+      return res
+        .status(400)
+        .json({ message: "Doctor name and payment amount are required" });
     }
     let dateQuery = {};
     const now = new Date();
@@ -424,12 +516,22 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
     };
     const testOrders = await TestOrderModel.find(query).sort({ createdAt: 1 });
     if (testOrders.length === 0) {
-      return res.status(404).json({ message: "No pending revenue found for this doctor in the specified period" });
+      return res
+        .status(404)
+        .json({
+          message:
+            "No pending revenue found for this doctor in the specified period",
+        });
     }
-    const totalPendingRevenue = testOrders.reduce((sum, order) => sum + (order.doctorRevenue || 0), 0);
+    const totalPendingRevenue = testOrders.reduce(
+      (sum, order) => sum + (order.doctorRevenue || 0),
+      0
+    );
     if (paymentAmount > totalPendingRevenue) {
       return res.status(400).json({
-        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(2)})`,
+        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(
+          2
+        )})`,
       });
     }
     let remainingPayment = paymentAmount;
@@ -439,7 +541,8 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
       const orderRevenue = order.doctorRevenue || 0;
       const paymentForThisOrder = Math.min(remainingPayment, orderRevenue);
       const newDoctorRevenue = orderRevenue - paymentForThisOrder;
-      const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
+      const newHospitalRevenue =
+        (order.hospitalRevenue || 0) + paymentForThisOrder;
       const updatedOrder = await TestOrderModel.findByIdAndUpdate(
         order._id,
         {
@@ -447,7 +550,8 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
           hospitalRevenue: newHospitalRevenue,
           lastPaymentDate: new Date(),
           lastPaymentAmount: paymentForThisOrder,
-          totalPaymentsMade: (order.totalPaymentsMade || 0) + paymentForThisOrder,
+          totalPaymentsMade:
+            (order.totalPaymentsMade || 0) + paymentForThisOrder,
           $push: {
             paymentHistory: {
               paymentDate: new Date(),
@@ -470,9 +574,13 @@ router.patch("/doctors/:doctorName/reduce-revenue", async (req, res) => {
       updatedOrders: updatedOrders.map((order) => ({
         orderId: order._id,
         patientName: order.patientName,
-        previousRevenue: testOrders.find((o) => o._id.toString() === order._id.toString())?.doctorRevenue || 0,
+        previousRevenue:
+          testOrders.find((o) => o._id.toString() === order._id.toString())
+            ?.doctorRevenue || 0,
         newRevenue: order.doctorRevenue,
-        paymentApplied: (testOrders.find((o) => o._id.toString() === order._id.toString())?.doctorRevenue || 0) - order.doctorRevenue,
+        paymentApplied:
+          (testOrders.find((o) => o._id.toString() === order._id.toString())
+            ?.doctorRevenue || 0) - order.doctorRevenue,
       })),
     });
   } catch (error) {
@@ -487,7 +595,9 @@ router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
     const { agentName } = req.params;
     const { paymentAmount, dateFilter, customDateRange } = req.body;
     if (!agentName || paymentAmount === undefined) {
-      return res.status(400).json({ message: "Agent name and payment amount are required" });
+      return res
+        .status(400)
+        .json({ message: "Agent name and payment amount are required" });
     }
     let dateQuery = {};
     const now = new Date();
@@ -530,12 +640,22 @@ router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
     };
     const testOrders = await TestOrderModel.find(query).sort({ createdAt: 1 });
     if (testOrders.length === 0) {
-      return res.status(404).json({ message: "No pending revenue found for this agent in the specified period" });
+      return res
+        .status(404)
+        .json({
+          message:
+            "No pending revenue found for this agent in the specified period",
+        });
     }
-    const totalPendingRevenue = testOrders.reduce((sum, order) => sum + (order.agentRevenue || 0), 0);
+    const totalPendingRevenue = testOrders.reduce(
+      (sum, order) => sum + (order.agentRevenue || 0),
+      0
+    );
     if (paymentAmount > totalPendingRevenue) {
       return res.status(400).json({
-        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(2)})`,
+        message: `Payment amount (${paymentAmount}) exceeds pending revenue (${totalPendingRevenue.toFixed(
+          2
+        )})`,
       });
     }
     let remainingPayment = paymentAmount;
@@ -545,7 +665,8 @@ router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
       const orderRevenue = order.agentRevenue || 0;
       const paymentForThisOrder = Math.min(remainingPayment, orderRevenue);
       const newAgentRevenue = orderRevenue - paymentForThisOrder;
-      const newHospitalRevenue = (order.hospitalRevenue || 0) + paymentForThisOrder;
+      const newHospitalRevenue =
+        (order.hospitalRevenue || 0) + paymentForThisOrder;
       const updatedOrder = await TestOrderModel.findByIdAndUpdate(
         order._id,
         {
@@ -553,7 +674,8 @@ router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
           hospitalRevenue: newHospitalRevenue,
           lastPaymentDate: new Date(),
           lastPaymentAmount: paymentForThisOrder,
-          totalPaymentsMade: (order.totalPaymentsMade || 0) + paymentForThisOrder,
+          totalPaymentsMade:
+            (order.totalPaymentsMade || 0) + paymentForThisOrder,
           $push: {
             paymentHistory: {
               paymentDate: new Date(),
@@ -576,9 +698,13 @@ router.patch("/agents/:agentName/reduce-revenue", async (req, res) => {
       updatedOrders: updatedOrders.map((order) => ({
         orderId: order._id,
         patientName: order.patientName,
-        previousRevenue: testOrders.find((o) => o._id.toString() === order._id.toString())?.agentRevenue || 0,
+        previousRevenue:
+          testOrders.find((o) => o._id.toString() === order._id.toString())
+            ?.agentRevenue || 0,
         newRevenue: order.agentRevenue,
-        paymentApplied: (testOrders.find((o) => o._id.toString() === order._id.toString())?.agentRevenue || 0) - order.agentRevenue,
+        paymentApplied:
+          (testOrders.find((o) => o._id.toString() === order._id.toString())
+            ?.agentRevenue || 0) - order.agentRevenue,
       })),
     });
   } catch (error) {
@@ -611,7 +737,13 @@ router.get("/reports/revenue", async (req, res) => {
         acc.totalOrders += 1;
         return acc;
       },
-      { totalRevenue: 0, hospitalRevenue: 0, doctorRevenue: 0, agentRevenue: 0, totalOrders: 0 }
+      {
+        totalRevenue: 0,
+        hospitalRevenue: 0,
+        doctorRevenue: 0,
+        agentRevenue: 0,
+        totalOrders: 0,
+      }
     );
     const doctorBreakdown = {};
     testOrders.forEach((order) => {
@@ -623,8 +755,10 @@ router.get("/reports/revenue", async (req, res) => {
             orders: 0,
           };
         }
-        doctorBreakdown[order.doctorName].totalRevenue += order.totalAmount || 0;
-        doctorBreakdown[order.doctorName].commission += order.doctorRevenue || 0;
+        doctorBreakdown[order.doctorName].totalRevenue +=
+          order.totalAmount || 0;
+        doctorBreakdown[order.doctorName].commission +=
+          order.doctorRevenue || 0;
         doctorBreakdown[order.doctorName].orders += 1;
       }
     });
@@ -657,7 +791,10 @@ router.get("/reports/revenue", async (req, res) => {
 // Get doctor commission settings
 router.get("/doctors/commission", async (req, res) => {
   try {
-    const doctors = await DoctorModel.find({}, { docName: 1, department: 1, remuneration: 1, testReferralCommission: 1 });
+    const doctors = await DoctorModel.find(
+      {},
+      { docName: 1, department: 1, remuneration: 1, testReferralCommission: 1 }
+    );
     res.status(200).json(doctors);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -683,7 +820,9 @@ router.get("/revenue/agent", async (req, res) => {
         $group: {
           _id: null,
           totalAgentRevenue: { $sum: "$agentRevenue" },
-          totalAppointments: { $sum: { $cond: [{ $ne: ["$agentName", ""] }, 1, 0] } },
+          totalAppointments: {
+            $sum: { $cond: [{ $ne: ["$agentName", ""] }, 1, 0] },
+          },
         },
       },
     ]);

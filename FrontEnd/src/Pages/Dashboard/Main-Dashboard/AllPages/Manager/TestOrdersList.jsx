@@ -113,32 +113,73 @@ const TestOrdersList = () => {
   };
 
   const handleEdit = async () => {
-    try {
-      const formattedData = {
-        ...formData,
-        date: formData.date ? moment(formData.date).format("YYYY-MM-DD") : undefined,
-        time: formData.time ? moment(formData.time).format("HH:mm") : undefined,
-        totalAmount: formData.baseAmount
-          ? Number(formData.baseAmount) +
-            (Number(formData.baseAmount) * Number(formData.vatRate || 0)) / 100 -
-            Number(formData.discountAmount || 0)
-          : formData.totalAmount,
-        dueAmount: formData.totalAmount
-          ? Number(formData.totalAmount) - Number(formData.paidAmount || 0)
-          : formData.dueAmount,
-      };
-      await axios.put(
-        `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`,
-        formattedData
-      );
-      toast.success("Test order updated successfully");
+    const payDueAmount = Number(formData.payDueAmount || 0);
+    const discountOnDue = Number(formData.discountOnDue || 0);
+    let didSomething = false;
+    let errorOccurred = false;
+
+    // 1. Apply discount if present
+    let latestOrder = selectedOrder;
+    if (discountOnDue > 0) {
+      try {
+        const prevDiscount = Number(latestOrder.discountAmount || 0);
+        const newDiscount = prevDiscount + discountOnDue;
+        const totalAmount = Number(latestOrder.totalAmount || 0);
+        const paidAmount = Number(latestOrder.paidAmount || 0);
+        let newDue = totalAmount - (paidAmount + newDiscount);
+        if (newDue < 0) newDue = 0;
+        const formattedData = {
+          ...formData,
+          discountAmount: newDiscount,
+          dueAmount: newDue,
+          date: formData.date ? moment(formData.date).format("YYYY-MM-DD") : undefined,
+          time: formData.time ? moment(formData.time).format("HH:mm") : undefined,
+          payDueAmount: '',
+          discountOnDue: '',
+        };
+        await axios.put(
+          `https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`,
+          formattedData
+        );
+        toast.success('Discount applied successfully!');
+        didSomething = true;
+        setFormData((prev) => ({
+          ...prev,
+          discountOnDue: '',
+          discountAmount: newDiscount,
+          dueAmount: newDue,
+        }));
+        // Fetch latest order after discount applied
+        const refreshed = await axios.get(`https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/${selectedOrder._id}`);
+        latestOrder = refreshed.data;
+      } catch (error) {
+        errorOccurred = true;
+        toast.error(error.response?.data?.message || 'Failed to apply discount!');
+      }
+    }
+
+    if (payDueAmount > 0 && formData.mobile) {
+      try {
+        const res = await axios.patch('https://medi-plus-diagnostic-center-bdbv.vercel.app/testorders/patients/pay-due', {
+          mobile: formData.mobile,
+          paymentAmount: payDueAmount
+        });
+        toast.success(res.data.message || 'Due payment successful!');
+        didSomething = true;
+      } catch (error) {
+        errorOccurred = true;
+        toast.error(error.response?.data?.message || 'Due payment failed!');
+      }
+      setFormData((prev) => ({
+        ...prev,
+        payDueAmount: '',
+      }));
+    }
+
+    if (didSomething && !errorOccurred) {
+      fetchTestOrders();
       setIsEditModalVisible(false);
       setSelectedOrder(null);
-      setFormData({});
-      fetchTestOrders();
-    } catch (error) {
-      console.error("Error updating test order:", error);
-      toast.error("Failed to update test order");
     }
   };
 
@@ -948,44 +989,25 @@ const TestOrdersList = () => {
             >
               {selectedOrder && (
                 <div className="space-y-6 pt-4">
+                  {/* ...existing code for patient, medical, and schedule info... */}
                   <div className="bg-blue-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <User className="w-5 h-5 text-blue-600" />
                       <h4 className="font-semibold text-gray-900">Patient Information</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* ...existing code for patient fields... */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Name
-                        </label>
-                        <Input
-                          name="patientName"
-                          value={formData.patientName || ""}
-                          onChange={handleInputChange}
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <Input name="patientName" value={formData.patientName || ""} onChange={handleInputChange} required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Age
-                        </label>
-                        <Input
-                          type="number"
-                          name="age"
-                          value={formData.age || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <Input type="number" name="age" value={formData.age || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Gender
-                        </label>
-                        <Select
-                          name="gender"
-                          value={formData.gender || ""}
-                          onChange={(value) => setFormData({ ...formData, gender: value })}
-                          className="w-full"
-                        >
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <Select name="gender" value={formData.gender || ""} onChange={(value) => setFormData({ ...formData, gender: value })} className="w-full">
                           <Select.Option value="">Select Gender</Select.Option>
                           <Select.Option value="Male">Male</Select.Option>
                           <Select.Option value="Female">Female</Select.Option>
@@ -993,37 +1015,16 @@ const TestOrdersList = () => {
                         </Select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Mobile
-                        </label>
-                        <Input
-                          name="mobile"
-                          value={formData.mobile || ""}
-                          onChange={handleInputChange}
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                        <Input name="mobile" value={formData.mobile || ""} onChange={handleInputChange} required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Email
-                        </label>
-                        <Input
-                          type="email"
-                          name="email"
-                          value={formData.email || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <Input type="email" name="email" value={formData.email || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Address
-                        </label>
-                        <Input.TextArea
-                          name="address"
-                          value={formData.address || ""}
-                          onChange={handleInputChange}
-                          rows={3}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <Input.TextArea name="address" value={formData.address || ""} onChange={handleInputChange} rows={3} />
                       </div>
                     </div>
                   </div>
@@ -1035,34 +1036,16 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Disease
-                        </label>
-                        <Input
-                          name="disease"
-                          value={formData.disease || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Disease</label>
+                        <Input name="disease" value={formData.disease || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Doctor Name
-                        </label>
-                        <Input
-                          name="doctorName"
-                          value={formData.doctorName || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
+                        <Input name="doctorName" value={formData.doctorName || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Agent Name
-                        </label>
-                        <Input
-                          name="agentName"
-                          value={formData.agentName || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
+                        <Input name="agentName" value={formData.agentName || ""} onChange={handleInputChange} />
                       </div>
                     </div>
                   </div>
@@ -1074,26 +1057,12 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Date
-                        </label>
-                        <DatePicker
-                          value={formData.date ? moment(formData.date) : null}
-                          onChange={handleDateChange}
-                          className="w-full"
-                          format="YYYY-MM-DD"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <DatePicker value={formData.date ? moment(formData.date) : null} onChange={handleDateChange} className="w-full" format="YYYY-MM-DD" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Time
-                        </label>
-                        <TimePicker
-                          value={formData.time ? moment(formData.time, "HH:mm") : null}
-                          onChange={handleTimeChange}
-                          className="w-full"
-                          format="HH:mm"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                        <TimePicker value={formData.time ? moment(formData.time, "HH:mm") : null} onChange={handleTimeChange} className="w-full" format="HH:mm" />
                       </div>
                     </div>
                   </div>
@@ -1105,82 +1074,28 @@ const TestOrdersList = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Base Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="baseAmount"
-                          value={formData.baseAmount || ""}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      {/* <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          VAT Rate (%)
-                        </label>
-                        <Input
-                          type="number"
-                          name="vatRate"
-                          value={formData.vatRate || 1}
-                          onChange={handleInputChange}
-                        />
-                      </div> */}
-                      {/* <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          VAT Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="vatAmount"
-                          value={formData.vatAmount || ""}
-                          onChange={handleInputChange}
-                        />
-                      </div> */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Discount Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="discountAmount"
-                          value={formData.discountAmount || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Base Amount</label>
+                        <Input type="number" name="baseAmount" value={formData.baseAmount || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Total Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="totalAmount"
-                          value={formData.totalAmount || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                        <Input type="number" name="totalAmount" value={formData.totalAmount || ""} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Paid Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="paidAmount"
-                          value={formData.paidAmount || ""}
-                          onChange={handleInputChange}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
+                        <Input type="number" name="paidAmount" value={formData.paidAmount || ""} onChange={handleInputChange} disabled />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Due Amount
-                        </label>
-                        <Input
-                          type="number"
-                          name="dueAmount"
-                          value={formData.dueAmount || ""}
-                          onChange={handleInputChange}
-                          disabled
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Due Amount</label>
+                        <Input type="number" name="dueAmount" value={formData.dueAmount || ""} onChange={handleInputChange} disabled />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Pay Due Amount</label>
+                        <Input type="number" name="payDueAmount" value={formData.payDueAmount || ""} onChange={handleInputChange} min={0} max={formData.dueAmount || 0} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Add Discount to Due</label>
+                        <Input type="number" name="discountOnDue" value={formData.discountOnDue || ""} onChange={handleInputChange} min={0} max={formData.dueAmount || 0} />
                       </div>
                     </div>
                   </div>
