@@ -11,7 +11,6 @@ const recalculatePatientDueAmounts = async (patientID) => {
   for (const order of orders) {
     const orderDue = order.totalAmount - (order.paidAmount || 0);
     totalDue += orderDue;
-    // Ensure dueAmount is never negative
     const safeDue = totalDue < 0 ? 0 : totalDue;
     await TestOrderModel.findByIdAndUpdate(
       order._id,
@@ -62,7 +61,6 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Calculate agent commission per test (dynamic)
     if (agentName && updatedTests.length > 0) {
       const agent = await AgentModel.findOne({ name: agentName });
       console.log("[testOrderRoutes] Agent found:", agent);

@@ -300,6 +300,26 @@ const Sidebar = ({ onCollapse }) => {
                 </span>
               </Link>
             )}
+
+            
+            {(user?.userType === "manager") && (
+              <Link
+                className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-slate-700 transition-colors duration-200 group"
+                to="/statistics"
+              >
+                <div className="flex items-center justify-center w-8 h-8">
+                  <FaMoneyBillWave className="text-xl text-green-500 group-hover:text-green-400" />
+                </div>
+                <span 
+                  className={`
+                    ml-3 font-medium transition-all duration-300
+                    ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                  `}
+                >
+                  Statistics
+                </span>
+              </Link>
+            )}
           
           <div className="border-t border-slate-700 pt-4">
             <button

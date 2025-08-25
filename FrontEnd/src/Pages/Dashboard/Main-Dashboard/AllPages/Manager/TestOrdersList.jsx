@@ -435,7 +435,7 @@ const TestOrdersList = () => {
                                   Status
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
-                                  Due Amount
+                                  Due
                                 </th>
                                 <th className="text-left p-4 font-semibold text-gray-700">
                                   Actions

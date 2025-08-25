@@ -9,13 +9,13 @@ import Doctor_Profile from "../Pages/Dashboard/Main-Dashboard/AllPages/Doctor/Do
 import Book_Appointment from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Book_Appointment";
 import Manager_Profile from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Manager_Profile";
 import FrontPage from "../Pages/Dashboard/Main-Dashboard/GlobalFiles/FrontPage";
-import RevenueDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Revenue_Dashboard";
+import RevenueDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Revenue_Dashboard";
 import AddAgent from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/Add_Agent";
 import TestOrdersList from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/TestOrdersList";
 import AdminDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/Admin_Dashboard";
 import TestManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/TestManagement";
 import RevenueManagement from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/RevenueManagement";
-import DatabaseSeeder from "../Pages/Dashboard/Main-Dashboard/AllPages/Admin/DatabaseSeeder";
+import ManagerRevenueDashboard from "../Pages/Dashboard/Main-Dashboard/AllPages/Manager/RevenueDashboard";
 
 const AllRoutes = () => {
   return (
@@ -34,6 +34,7 @@ const AllRoutes = () => {
         <Route path="/bookappointment" element={<Book_Appointment />} />
         <Route path="/manager-profile" element={<Manager_Profile />} />
         <Route path="/revenue" element={<RevenueDashboard />} />
+        <Route path="/statistics" element={<ManagerRevenueDashboard />} />
         <Route path="/appointments" element={<Check_Appointment />} />
         <Route path="/test-management" element={<TestManagement />} />
         <Route path="/revenue-management" element={<RevenueManagement />} />
